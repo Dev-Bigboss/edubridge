@@ -1,102 +1,137 @@
-import Link from "next/link"
+import Link from "next/link";
 
 export default function Footer1() {
-    return (
-        <>
-            <footer className="footer-bg" data-bg-color="var(--tg-common-color-dark)">
-                <div className="footer__top-wrap">
-                    <div className="container">
-                        <div className="row">
-                            <div className="col-xl-3 col-lg-4 col-sm-6">
-                                <div className="footer-widget">
-                                    <div className="footer__about">
-                                        <div className="footer__logo logo">
-                                            <Link href="/"><img src="/assets/img/logo/secondary_logo.png" alt="img" /></Link>
-                                        </div>
-                                        <p>when an unknown printer took galley of type and scrambled it to make pspecimen bookt
-                                            has.</p>
-                                        <ul className="list-wrap m-0 p-0">
-                                            <li className="address">463 7th Ave, NY 10018, USA</li>
-                                            <li className="number">+123 88 9900 456</li>
-                                            <li className="socials">
-                                                <Link href="#"><i className="fab fa-facebook-f" /></Link>
-                                                <Link href="#"><i className="fab fa-twitter" /></Link>
-                                                <Link href="#"><i className="fab fa-whatsapp" /></Link>
-                                                <Link href="#"><i className="fab fa-linkedin-in" /></Link>
-                                                <Link href="#"><i className="fab fa-youtube" /></Link>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="col-xl-3 col-lg-4 col-sm-6">
-                                <div className="footer-widget widget_nav_menu">
-                                    <h4 className="fw-title">Resources</h4>
-                                    <ul className="list-wrap">
-                                        <li><Link href="/about-us">About</Link></li>
-                                        <li><Link href="/contact">Contact</Link></li>
-                                        <li><Link href="/contact">Help Center</Link></li>
-                                        <li><Link href="#">Refund</Link></li>
-                                        <li><Link href="#">Conditions</Link></li>
-                                        <li><Link href="#">Privacy Policy</Link></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div className="col-xl-3 col-lg-4 col-sm-6">
-                                <div className="footer-widget widget_nav_menu">
-                                    <h4 className="fw-title">Courses</h4>
-                                    <ul className="list-wrap">
-                                        <li><Link href="/courses">Life Coach</Link></li>
-                                        <li><Link href="/courses">Business Coach</Link></li>
-                                        <li><Link href="/courses">Health Coach</Link></li>
-                                        <li><Link href="/courses">Development</Link></li>
-                                        <li><Link href="/courses">Web Design</Link></li>
-                                        <li><Link href="/courses">SEO Optimize</Link></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div className="col-xl-3 col-lg-4 col-sm-6">
-                                <div className="footer-widget">
-                                    <h4 className="fw-title">Working Hours</h4>
-                                    <div className="footer__working-list">
-                                        <div className="footer__working-item">
-                                            <span className="day">Mon - Fri</span>
-                                            <span className="time">8:00 AM - 5:00 PM</span>
-                                        </div>
-                                        <div className="footer__working-item">
-                                            <span className="day">Mon - Fri</span>
-                                            <span className="time">9:00 AM - 6:00 PM</span>
-                                        </div>
-                                        <div className="footer__working-item">
-                                            <span className="day">Mon - Fri</span>
-                                            <span className="time">10:00 AM - 8:00 PM</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  return (
+    <footer
+      className="footer-bg text-white"
+      data-bg-color="var(--tg-common-color-dark)"
+    >
+      {/* Newsletter Section Inside Footer */}
+      <div className="newsletter-footer-wrap py-60 mt-20 border-bottom border-secondary">
+        <div className="container">
+          <div className="row align-items-center justify-content-between g-4">
+            <div className="col-lg-6">
+              <h5 className="mb-2 text-white">
+                Stay in the loop with EduBridge
+              </h5>
+              <p className="mb-0 text-white-50">
+                Get notified when we launch new features, tutors or classes.
+              </p>
+            </div>
+            <div className="col-lg-6">
+              <form className="d-flex flex-wrap gap-2 justify-content-lg-end">
+                <input
+                  type="email"
+                  required
+                  className="form-control"
+                  placeholder="Enter your email"
+                  style={{ maxWidth: "300px" }}
+                />
+                <button className="btn btn-primary" type="submit">
+                  Join Waitlist
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Main Content */}
+      <div className="footer__top-wrap pt-60 pb-40">
+        <div className="container">
+          <div className="row gy-4">
+            {/* Left */}
+            <div className="col-xl-4 col-md-6">
+              <div className="footer__about">
+                <div className="footer__logo mb-3">
+                  <Link href="/">
+                    <img
+                      src="/assets/img/logo/secondary_logo.png"
+                      alt="EduBridge Logo"
+                    />
+                  </Link>
                 </div>
-                <div className="copyright__wrapper">
-                    <div className="container">
-                        <div className="row">
-                            <div className="col-lg-8">
-                                <div className="copyright__text">
-                                    <p>Copyright © {new Date().getFullYear()} eduvalt. All rights reserved.</p>
-                                </div>
-                            </div>
-                            <div className="col-lg-4">
-                                <div className="copyright__menu">
-                                    <ul className="list-wrap d-flex flex-wrap justify-content-center justify-content-lg-end">
-                                        <li><Link href="#">Privacy Policy</Link></li>
-                                        <li><Link href="#">Terms  Conditions</Link></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <p className="mb-3">
+                  EduBridge connects students with top-rated tutors for
+                  personalized online learning across Nigeria and beyond.
+                </p>
+                <p className="mb-1">
+                  <strong>Abuja, Nigeria</strong>
+                </p>
+                <p className="mb-1">+234 800 000 0000</p>
+                <div className="social-links mt-3">
+                  <Link href="#">
+                    <i className="fab fa-facebook-f me-3" />
+                  </Link>
+                  <Link href="#">
+                    <i className="fab fa-twitter me-3" />
+                  </Link>
+                  <Link href="#">
+                    <i className="fab fa-linkedin-in me-3" />
+                  </Link>
+                  <Link href="#">
+                    <i className="fab fa-youtube" />
+                  </Link>
                 </div>
-            </footer>
-        </>
-    )
+              </div>
+            </div>
+
+            {/* Center */}
+            <div className="col-xl-4 col-md-6">
+              <h5 className="fw-bold mb-3">Quick Links</h5>
+              <ul className="list-unstyled">
+                <li>
+                  <Link href="/about-us">About Us</Link>
+                </li>
+                <li>
+                  <Link href="/contact">Contact</Link>
+                </li>
+                <li>
+                  <Link href="/faq">FAQs</Link>
+                </li>
+                <li>
+                  <Link href="/privacy">Privacy Policy</Link>
+                </li>
+                <li>
+                  <Link href="/terms">Terms & Conditions</Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Right */}
+            <div className="col-xl-4 col-md-6">
+              <Link href="/signup?type=tutor" className="fw-bold mb-3">
+                Become a Tutor
+              </Link>
+              <p className="mb-3">
+                Join EduBridge and start earning by teaching students online at
+                your own pace.
+              </p>
+              <Link
+                href="/become-tutor"
+                className="btn btn-outline-light btn-sm"
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Copyright */}
+      <div className="py-3 border-top border-secondary">
+        <div className="container d-flex flex-column flex-md-row justify-content-between text-center text-md-start">
+          <p className="mb-2 mb-md-0">
+            © {new Date().getFullYear()} EduBridge. All rights reserved.
+          </p>
+          <div>
+            <Link href="/privacy" className="me-3">
+              Privacy Policy
+            </Link>
+            <Link href="/terms">Terms</Link>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
 }

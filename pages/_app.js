@@ -4,7 +4,6 @@ import 'aos/dist/aos.css'
 import { useEffect, useState } from "react"
 import Cursor from "@/components/elements/CursorEffect"
 import { Provider } from "react-redux"
-import "slick-carousel/slick/slick.css"
 import { store } from "../features/store"
 import "/public/assets/css/animate.min.css"
 import "/public/assets/css/aos.css"
@@ -18,6 +17,9 @@ import "/public/assets/css/odometer.css"
 import "/public/assets/css/select2.min.css"
 import "/public/assets/css/spacing.css"
 import "/public/assets/css/tg-cursor.css"
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+
 function MyApp({ Component, pageProps }) {
 
     const [loading, setLoading] = useState(true)
