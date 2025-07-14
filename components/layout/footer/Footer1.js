@@ -108,7 +108,7 @@ export default function Footer1() {
                 your own pace.
               </p>
               <Link
-                href="/become-tutor"
+                href="/singup?type=tutor"
                 className="btn btn-outline-light btn-sm"
               >
                 Get Started
