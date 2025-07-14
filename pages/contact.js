@@ -46,7 +46,6 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* Contact Form */}
             <div className="col-lg-7">
               <div className="contact-form-wrap">
                 <h4 className="title mb-3">Send Us a Message</h4>
