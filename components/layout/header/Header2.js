@@ -86,7 +86,7 @@ export default function Header2({ scroll, isMobileMenu, handleMobileMenu }) {
                                                 </li>
                                                 <li className="header-phone d-none d-lg-block d-xl-none d-xxl-block"><Link href="/tel:993-00-67777"><i className="flaticon-phone-call" />
                                                     993-00-67777</Link></li>
-                                                <li className="header-btn login-btn"><Link href="/contact" className="btn">Log in</Link>
+                                                <li className="header-btn login-btn"><Link href="/login" className="btn">Log in</Link>
                                                 </li>
                                                 <li className="header-btn"><Link href="/contact" className="btn">Try For Free</Link></li>
                                             </ul>
