@@ -116,7 +116,7 @@ export default function About1() {
               </ul>
 
               <div className="tg-button-wrap">
-                <Link href="/how-it-works" className="btn tg-svg">
+                <Link href="/about" className="btn tg-svg">
                   <span className="text">How It Works</span>
                   <span
                     className="svg-icon"
