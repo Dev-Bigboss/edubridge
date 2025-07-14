@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/router";
 
 export default function Login() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -22,6 +24,10 @@ export default function Login() {
     console.log("Login attempt:", formData);
     // TODO: Send to backend
   };
+
+  const hanldeSignIn = () => {
+    router. push("/dashboard")
+  }
 
   const handleGoogleLogin = () => {
     console.log("Google login clicked");
@@ -204,6 +210,7 @@ export default function Login() {
                 border: "none",
                 boxShadow: "0 4px 15px rgba(33, 150, 243, 0.3)",
               }}
+              onClick={hanldeSignIn}
             >
               Sign In
             </button>

@@ -20,6 +20,7 @@ import "/public/assets/css/tg-cursor.css"
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
+
 function MyApp({ Component, pageProps }) {
 
     const [loading, setLoading] = useState(true)
