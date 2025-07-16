@@ -10,11 +10,8 @@ import {
   BookOpen,
   Search,
   Users,
-  Filter,
-  UserPlus,
-  MoreVertical,
   Clock,
-  Award,
+  MoreVertical,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -46,25 +43,39 @@ function StudentActionsDropdown({ onView, onMessage, onRemove }) {
           className="dropdown-menu show position-absolute"
           style={{ zIndex: 1000 }}
         >
-          <button className="dropdown-item" onClick={onView}>
-            <Eye size={16} className="me-2" />
-            View Details
+          <button
+            className="dropdown-item"
+            onClick={() => {
+              onView();
+              setOpen(false);
+            }}
+          >
+            <Eye size={16} className="me-2" /> View Details
           </button>
-          <button className="dropdown-item" onClick={onMessage}>
-            <MessageSquare size={16} className="me-2" />
-            Send Message
+          <button
+            className="dropdown-item"
+            onClick={() => {
+              onMessage();
+              setOpen(false);
+            }}
+          >
+            <MessageSquare size={16} className="me-2" /> Send Message
           </button>
           <div className="dropdown-divider" />
-          <button className="dropdown-item text-danger" onClick={onRemove}>
-            <Trash2 size={16} className="me-2" />
-            Remove Student
+          <button
+            className="dropdown-item text-danger"
+            onClick={() => {
+              onRemove();
+              setOpen(false);
+            }}
+          >
+            <Trash2 size={16} className="me-2" /> Remove Student
           </button>
         </div>
       )}
     </div>
   );
 }
-
 
 const mockStudents = [
   {
@@ -75,7 +86,7 @@ const mockStudents = [
     joined: "2024-10-01",
     status: "active",
     sessions: 15,
-    avatar: "/assets/img/avatar.png",
+    avatar: "/assets/img/profile.jpg",
     lastSeen: "2024-01-10",
     grade: "A",
   },
@@ -87,7 +98,7 @@ const mockStudents = [
     joined: "2024-11-15",
     status: "active",
     sessions: 8,
-    avatar: "/assets/img/avatar.png",
+    avatar: "/assets/img/profile.jpg",
     lastSeen: "2024-01-12",
     grade: "B+",
   },
@@ -99,7 +110,7 @@ const mockStudents = [
     joined: "2024-12-03",
     status: "inactive",
     sessions: 22,
-    avatar: "/assets/img/avatar.png",
+    avatar: "/assets/img/profile.jpg",
     lastSeen: "2024-01-05",
     grade: "A-",
   },
@@ -123,12 +134,14 @@ export default function StudentsPage() {
     setStudents(mockStudents);
   }, []);
 
-  const filtered = students.filter((s) => {
-    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-                         s.email.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = filterStatus === "all" || s.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const filtered = [...students]
+    .filter((s) =>
+      (s.name + s.email + s.subjects.join(", "))
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    )
+    .filter((s) => filterStatus === "all" || s.status === filterStatus)
+    .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
 
   const handleRemove = () => {
     setStudents((prev) => prev.filter((s) => s.id !== selected.id));
@@ -138,81 +151,41 @@ export default function StudentsPage() {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    // Here you would typically send the message to your backend
     alert(`Message sent to ${selected.name}: "${message}"`);
     setMessage("");
     setModal("");
   };
 
+  const closeModal = () => {
+    setModal("");
+    setSelected(null);
+    setMessage("");
+  };
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") closeModal();
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
   const getStatusBadge = (status) => (
-    <span className={`badge bg-${statusColors[status]} bg-opacity-10 text-${statusColors[status]} border border-${statusColors[status]} border-opacity-25`}>
+    <span
+      className={`badge bg-${statusColors[status]} bg-opacity-10 text-${statusColors[status]} border border-${statusColors[status]} border-opacity-25`}
+    >
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
 
   return (
     <TutorLayout>
-      {/* Header Section */}
       <div className="mb-4">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <div>
-            <h3 className="fw-bold mb-1">Students</h3>
-            <p className="text-muted mb-0">
-              Manage your students and track their progress
-            </p>
-          </div>
-        </div>
+        <h3 className="fw-bold mb-1">Students</h3>
+        <p className="text-muted mb-4">
+          Manage your students and track their progress
+        </p>
 
-        {/* Stats Cards */}
-        <div className="row g-3 mb-4">
-          <div className="col-6 col-md-3">
-            <div className="card border-0 bg-primary bg-opacity-10">
-              <div className="card-body p-3">
-                <div className="d-flex align-items-center">
-                  <Users className="text-primary me-2" size={20} />
-                  <div>
-                    <div className="fw-bold text-primary">
-                      {students.length}
-                    </div>
-                    <small className="text-muted">Total Students</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-6 col-md-3">
-            <div className="card border-0 bg-success bg-opacity-10">
-              <div className="card-body p-3">
-                <div className="d-flex align-items-center">
-                  <User className="text-success me-2" size={20} />
-                  <div>
-                    <div className="fw-bold text-success">
-                      {students.filter((s) => s.status === "active").length}
-                    </div>
-                    <small className="text-muted">Active</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-6 col-md-3">
-            <div className="card border-0 bg-warning bg-opacity-10">
-              <div className="card-body p-3">
-                <div className="d-flex align-items-center">
-                  <Clock className="text-warning me-2" size={20} />
-                  <div>
-                    <div className="fw-bold text-warning">
-                      {students.reduce((sum, s) => sum + s.sessions, 0)}
-                    </div>
-                    <small className="text-muted">Total Sessions</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filter */}
         <div className="row g-3 mb-4">
           <div className="col-md-8">
             <div className="position-relative">
@@ -223,7 +196,7 @@ export default function StudentsPage() {
               <input
                 type="text"
                 className="form-control ps-5"
-                placeholder="Search students by name or email..."
+                placeholder="Search by name, email, or subject..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -244,18 +217,18 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Table for Desktop */}
+      {/* Table View */}
       <div className="card border-0 shadow-sm d-none d-md-block">
         <div className="table-responsive">
           <table className="table table-hover mb-0">
             <thead className="table-light">
               <tr>
-                <th className="border-0 fw-semibold">Student</th>
-                <th className="border-0 fw-semibold">Subjects</th>
-                <th className="border-0 fw-semibold">Status</th>
-                <th className="border-0 fw-semibold">Sessions</th>
-                <th className="border-0 fw-semibold">Last Seen</th>
-                <th className="border-0 fw-semibold">Actions</th>
+                <th>Student</th>
+                <th>Subjects</th>
+                <th>Status</th>
+                <th>Sessions</th>
+                <th>Last Seen</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -263,6 +236,13 @@ export default function StudentsPage() {
                 <tr key={s.id}>
                   <td className="py-3">
                     <div className="d-flex align-items-center">
+                      <img
+                        src={s.avatar}
+                        className="rounded-circle me-2"
+                        width={36}
+                        height={36}
+                        alt={s.name}
+                      />
                       <div>
                         <div className="fw-semibold">{s.name}</div>
                         <small className="text-muted">{s.email}</small>
@@ -270,26 +250,19 @@ export default function StudentsPage() {
                     </div>
                   </td>
                   <td className="py-3">
-                    <div className="d-flex flex-wrap gap-1">
-                      {s.subjects.map((subject, idx) => (
-                        <span
-                          key={idx}
-                          className="badge bg-light text-dark border"
-                        >
-                          {subject}
-                        </span>
-                      ))}
-                    </div>
+                    {s.subjects.map((sub, i) => (
+                      <span
+                        key={i}
+                        className="badge bg-light text-dark border me-1"
+                      >
+                        {sub}
+                      </span>
+                    ))}
                   </td>
                   <td className="py-3">{getStatusBadge(s.status)}</td>
+                  <td className="py-3">{s.sessions}</td>
                   <td className="py-3">
-                    <span className="fw-semibold">{s.sessions}</span>
-                  </td>
-
-                  <td className="py-3">
-                    <small className="text-muted">
-                      {new Date(s.lastSeen).toLocaleDateString()}
-                    </small>
+                    <small>{new Date(s.lastSeen).toLocaleDateString()}</small>
                   </td>
                   <td className="py-3">
                     <StudentActionsDropdown
@@ -317,59 +290,43 @@ export default function StudentsPage() {
       {/* Mobile Cards */}
       <div className="d-md-none">
         {filtered.map((s) => (
-          <div key={s.id} className="card border-0 shadow-sm mb-3">
+          <div key={s.id} className="card mb-3">
             <div className="card-body">
-              <div className="d-flex align-items-start justify-content-between mb-3">
-                <div className="d-flex align-items-center">
-                  <div>
-                    <h6 className="mb-1 fw-semibold">{s.name}</h6>
-                    <small className="text-muted">{s.email}</small>
-                  </div>
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h6 className="mb-0 fw-semibold">{s.name}</h6>
+                  <small className="text-muted">{s.email}</small>
                 </div>
                 {getStatusBadge(s.status)}
               </div>
-
-              <div className="row g-3 mb-3">
-                <div className="col-6">
-                  <div className="d-flex align-items-center">
-                    <BookOpen size={16} className="text-primary me-2" />
-                    <div>
-                      <small className="text-muted d-block">Subjects</small>
-                      <small className="fw-semibold">{s.subjects.length}</small>
-                    </div>
-                  </div>
+              <div className="d-flex justify-content-between text-muted small">
+                <div>
+                  <BookOpen size={14} className="me-1" />
+                  {s.subjects.length} subjects
                 </div>
-                <div className="col-6">
-                  <div className="d-flex align-items-center">
-                    <Clock size={16} className="text-success me-2" />
-                    <div>
-                      <small className="text-muted d-block">Sessions</small>
-                      <small className="fw-semibold">{s.sessions}</small>
-                    </div>
-                  </div>
+                <div>
+                  <Clock size={14} className="me-1" />
+                  {s.sessions} sessions
                 </div>
               </div>
-
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 mt-3">
                 <button
-                  className="btn btn-sm btn-outline-primary flex-fill"
+                  className="btn btn-sm btn-outline-primary w-100"
                   onClick={() => {
                     setSelected(s);
                     setModal("view");
                   }}
                 >
-                  <Eye size={14} className="me-1" />
-                  View
+                  <Eye size={14} className="me-1" /> View
                 </button>
                 <button
-                  className="btn btn-sm btn-outline-secondary flex-fill"
+                  className="btn btn-sm btn-outline-secondary w-100"
                   onClick={() => {
                     setSelected(s);
                     setModal("message");
                   }}
                 >
-                  <MessageSquare size={14} className="me-1" />
-                  Message
+                  <MessageSquare size={14} className="me-1" /> Message
                 </button>
                 <button
                   className="btn btn-sm btn-outline-danger"
@@ -391,22 +348,22 @@ export default function StudentsPage() {
         <div className="text-center py-5">
           <Users size={48} className="text-muted mb-3" />
           <h5 className="text-muted">No students found</h5>
-          <p className="text-muted">
-            Try adjusting your search or filter criteria
-          </p>
+          <p className="text-muted">Try different filters or keywords.</p>
         </div>
       )}
 
-      {/* Modals */}
+      {/* Modal */}
       {modal && selected && (
         <div
           className="modal fade show d-block"
-          tabIndex="-1"
           style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={(e) => {
+            if (e.target.classList.contains("modal")) closeModal();
+          }}
         >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow">
-              <div className="modal-header border-0 pb-0">
+            <div className="modal-content border-0">
+              <div className="modal-header">
                 <h5 className="modal-title fw-bold">
                   {modal === "view" && "Student Details"}
                   {modal === "message" && "Send Message"}
@@ -415,116 +372,80 @@ export default function StudentsPage() {
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={() => {
-                    setModal("");
-                    setSelected(null);
-                    setMessage("");
-                  }}
+                  onClick={closeModal}
                 />
               </div>
-
               <div className="modal-body">
                 {modal === "view" && (
-                  <div>
-                    <div className="text-center mb-4">
-                      <h5 className="mb-1">{selected.name}</h5>
+                  <>
+                    <div className="text-center mb-3">
+                      <img
+                        src={selected.avatar}
+                        alt={selected.name}
+                        className="rounded-circle mb-2"
+                        width={60}
+                        height={60}
+                      />
+                      <h6 className="mb-0">{selected.name}</h6>
                       {getStatusBadge(selected.status)}
                     </div>
-
-                    <div className="row g-3">
-                      <div className="col-md-6">
-                        <div className="d-flex align-items-center p-3 bg-light rounded">
-                          <Mail className="text-primary me-3" size={20} />
-                          <div>
-                            <small className="text-muted d-block">Email</small>
-                            <div className="fw-semibold">{selected.email}</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-md-6">
-                        <div className="d-flex align-items-center p-3 bg-light rounded">
-                          <Calendar className="text-success me-3" size={20} />
-                          <div>
-                            <small className="text-muted d-block">Joined</small>
-                            <div className="fw-semibold">
-                              {new Date(selected.joined).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-md-6">
-                        <div className="d-flex align-items-center p-3 bg-light rounded">
-                          <BookOpen className="text-warning me-3" size={20} />
-                          <div>
-                            <small className="text-muted d-block">
-                              Subjects
-                            </small>
-                            <div className="fw-semibold">
-                              {selected.subjects.join(", ")}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    <p className="mb-2">
+                      <strong>Email:</strong> {selected.email}
+                    </p>
+                    <p className="mb-2">
+                      <strong>Subjects:</strong> {selected.subjects.join(", ")}
+                    </p>
+                    <p className="mb-2">
+                      <strong>Joined:</strong>{" "}
+                      {new Date(selected.joined).toLocaleDateString()}
+                    </p>
+                    <p className="mb-0">
+                      <strong>Sessions:</strong> {selected.sessions}
+                    </p>
+                  </>
                 )}
-
                 {modal === "message" && (
                   <form onSubmit={handleSendMessage}>
                     <div className="mb-3">
-                      <label className="form-label fw-semibold">
-                        Message to {selected.name}
-                      </label>
+                      <label className="form-label">Message</label>
                       <textarea
                         className="form-control"
-                        required
                         rows={4}
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
-                        placeholder={`Write your message to ${selected.name}...`}
+                        required
                       />
                     </div>
                     <div className="d-flex justify-content-end gap-2">
                       <button
                         type="button"
                         className="btn btn-outline-secondary"
-                        onClick={() => {
-                          setModal("");
-                          setMessage("");
-                        }}
+                        onClick={closeModal}
                       >
                         Cancel
                       </button>
                       <button type="submit" className="btn btn-primary">
-                        <Send size={16} className="me-2" />
-                        Send Message
+                        <Send size={14} className="me-1" /> Send
                       </button>
                     </div>
                   </form>
                 )}
-
                 {modal === "remove" && (
                   <div className="text-center">
-                    <div className="mb-3">
-                      <Trash2 size={48} className="text-danger" />
-                    </div>
-                    <h6 className="mb-3">Remove {selected.name}?</h6>
-                    <p className="text-muted mb-4">
-                      This action cannot be undone. The student will be
-                      permanently removed from your list.
+                    <Trash2 size={40} className="text-danger mb-3" />
+                    <p>
+                      Are you sure you want to remove{" "}
+                      <strong>{selected.name}</strong>?
                     </p>
                     <div className="d-flex justify-content-center gap-2">
                       <button
                         className="btn btn-outline-secondary"
-                        onClick={() => {
-                          setModal("");
-                          setSelected(null);
-                        }}
+                        onClick={closeModal}
                       >
                         Cancel
                       </button>
                       <button className="btn btn-danger" onClick={handleRemove}>
-                        Remove Student
+                        Remove
                       </button>
                     </div>
                   </div>
