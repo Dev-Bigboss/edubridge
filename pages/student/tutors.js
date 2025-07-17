@@ -39,6 +39,7 @@ export default function FindTutorsPage() {
   const [search, setSearch] = useState("");
   const [selectedTutor, setSelectedTutor] = useState(null);
   const [modal, setModal] = useState(""); // 'view' | 'book' | ''
+  const [walletBalance, setWalletBalance] = useState(8000); // mock balance
 
   const filteredTutors = tutors.filter((tutor) =>
     tutor.name.toLowerCase().includes(search.toLowerCase())
@@ -191,9 +192,23 @@ export default function FindTutorsPage() {
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      alert(
-                        `Booking sent to ${selectedTutor.name} (mock behavior)`
+
+                      if (walletBalance < selectedTutor.hourlyRate) {
+                        alert(
+                          "Insufficient wallet balance to book this session."
+                        );
+                        return;
+                      }
+
+                      // Deduct the amount (mock)
+                      setWalletBalance(
+                        (prev) => prev - selectedTutor.hourlyRate
                       );
+
+                      alert(
+                        `Booking sent to ${selectedTutor.name}.\n₦${selectedTutor.hourlyRate} has been deducted from your wallet.`
+                      );
+
                       setModal("");
                       setSelectedTutor(null);
                     }}
@@ -216,6 +231,10 @@ export default function FindTutorsPage() {
                         rows={3}
                       />
                     </div>
+                    <div className="mb-2 text-end text-muted small">
+                      Your wallet balance:{" "}
+                      <strong>₦{walletBalance.toLocaleString()}</strong>
+                    </div>
                     <div className="d-flex justify-content-end gap-2">
                       <button
                         type="button"
@@ -229,7 +248,7 @@ export default function FindTutorsPage() {
                       </button>
                       <button type="submit" className="btn btn-primary">
                         <Send size={16} className="me-2" />
-                        Send Booking
+                        Pay & Book
                       </button>
                     </div>
                   </form>

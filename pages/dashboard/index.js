@@ -61,6 +61,7 @@ export default function TutorDashboard() {
       completedSessions: 89,
       monthlyGrowth: 12.5,
       activeStudents: 18,
+      walletBalance: 45000
     });
 
     setClassesToday([
@@ -152,6 +153,11 @@ export default function TutorDashboard() {
           value={stats.completedSessions}
           color="info"
         />
+        <StatCard
+          icon={<DollarSign />}
+          label="Wallet Balance (₦)"
+          value={stats.walletBalance?.toLocaleString()}
+        />
       </div>
 
       {/* Schedule + Activity */}
@@ -177,7 +183,10 @@ export default function TutorDashboard() {
                           {c.time} • {c.duration} • {c.student}
                         </small>
                       </div>
-                      <a href={c.link} className="btn btn-sm btn-outline-primary">
+                      <a
+                        href={c.link}
+                        className="btn btn-sm btn-outline-primary"
+                      >
                         Join
                       </a>
                     </li>
@@ -224,13 +233,17 @@ export default function TutorDashboard() {
                 <div className="col-md-6" key={r.id}>
                   <div className="p-3 border rounded h-100">
                     <h6 className="fw-bold mb-1">{r.name}</h6>
-                    <small className="text-muted d-block mb-2">{r.subject}</small>
+                    <small className="text-muted d-block mb-2">
+                      {r.subject}
+                    </small>
                     <p className="small text-muted mb-2">{r.message}</p>
                     <div className="d-flex justify-content-between mb-3">
                       <small className="text-muted">
                         Rate: ₦{r.hourlyRate.toLocaleString()}
                       </small>
-                      <small className="text-muted">Prefers: {r.preferredTime}</small>
+                      <small className="text-muted">
+                        Prefers: {r.preferredTime}
+                      </small>
                     </div>
                     <div className="d-flex gap-2">
                       <button

@@ -22,7 +22,9 @@ export default function StudentDashboard() {
       tutors: 3,
       sessions: 12,
       subjects: ["Mathematics", "Physics", "English"],
+      wallet: 8000, // new
     });
+    
 
     setUpcoming([
       {
@@ -73,7 +75,7 @@ export default function StudentDashboard() {
 
       {/* Stats Cards */}
       <div className="row g-3 mb-5">
-        <div className="col-md-4">
+        <div className="col-md-3 col-sm-6">
           <div className="bg-primary bg-opacity-10 rounded p-3 h-100">
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -84,7 +86,7 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
-        <div className="col-md-4">
+        <div className="col-md-3 col-sm-6">
           <div className="bg-success bg-opacity-10 rounded p-3 h-100">
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -95,7 +97,7 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
-        <div className="col-md-4">
+        <div className="col-md-3 col-sm-6">
           <div className="bg-info bg-opacity-10 rounded p-3 h-100">
             <div className="d-flex align-items-center justify-content-between">
               <div>
@@ -105,6 +107,19 @@ export default function StudentDashboard() {
                 <small className="text-muted">Subjects</small>
               </div>
               <BookOpen className="text-info" size={24} />
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3 col-sm-6">
+          <div className="bg-warning bg-opacity-10 rounded p-3 h-100">
+            <div className="d-flex align-items-center justify-content-between">
+              <div>
+                <h5 className="fw-bold mb-0 text-warning">
+                  ₦{stats.wallet?.toLocaleString()}
+                </h5>
+                <small className="text-muted">Wallet Balance</small>
+              </div>
+              <Clock className="text-warning" size={24} />
             </div>
           </div>
         </div>

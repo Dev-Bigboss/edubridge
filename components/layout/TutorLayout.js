@@ -27,6 +27,11 @@ const navItems = [
     href: "/dashboard/earnings",
   },
   {
+    icon: <DollarSign size={18} />,
+    label: "Wallet",
+    href: "/dashboard/wallet",
+  },
+  {
     icon: <MessageCircle size={18} />,
     label: "Messages",
     href: "/dashboard/messages",

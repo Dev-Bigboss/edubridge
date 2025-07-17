@@ -1,15 +1,15 @@
 import { useState } from "react";
 import TutorLayout from "@/components/layout/TutorLayout";
 import {
-  User,
-  Mail,
   Upload,
+  Users,
   Calendar,
   BookOpen,
   MapPin,
   DollarSign,
   Video,
   Lock,
+  Clock,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -20,7 +20,11 @@ export default function ProfilePage() {
     email: "chinedu.okoro@example.com",
     location: "Lagos, Nigeria",
     subjects: ["Mathematics", "Physics"],
-    availability: ["Monday", "Wednesday", "Friday"],
+    availability: {
+      Monday: { active: true, from: "09:00", to: "12:00" },
+      Wednesday: { active: true, from: "14:00", to: "16:00" },
+      Friday: { active: true, from: "10:00", to: "13:00" },
+    },
     bio: "Experienced STEM tutor who loves to teach.",
     ratePerHour: 5000,
     introVideoUrl: "https://youtube.com/example",
@@ -46,9 +50,28 @@ export default function ProfilePage() {
   const toggleDay = (day) => {
     setProfile((prev) => ({
       ...prev,
-      availability: prev.availability.includes(day)
-        ? prev.availability.filter((d) => d !== day)
-        : [...prev.availability, day],
+      availability: {
+        ...prev.availability,
+        [day]: prev.availability?.[day]
+          ? {
+              ...prev.availability[day],
+              active: !prev.availability[day].active,
+            }
+          : { active: true, from: "08:00", to: "10:00" },
+      },
+    }));
+  };
+
+  const handleTimeChange = (day, type, value) => {
+    setProfile((prev) => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        [day]: {
+          ...prev.availability?.[day],
+          [type]: value,
+        },
+      },
     }));
   };
 
@@ -73,7 +96,7 @@ export default function ProfilePage() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Avatar + Summary */}
+        {/* Avatar & Basic Info */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-body d-flex align-items-center gap-4">
             <img
@@ -98,7 +121,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Personal Details */}
+        {/* Personal Info */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-body row g-3">
             <div className="col-md-6">
@@ -141,7 +164,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Subjects & Rate */}
+        {/* Subjects and Rate */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-body row g-3">
             <div className="col-md-8">
@@ -175,29 +198,64 @@ export default function ProfilePage() {
                 value={profile.introVideoUrl}
                 onChange={handleChange}
                 className="form-control"
-                placeholder="https://youtube.com/example"
               />
             </div>
           </div>
         </div>
 
-        {/* Availability */}
+        {/* Weekly Availability with Times */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-body">
             <label className="form-label fw-medium">Weekly Availability</label>
-            <div className="row g-2">
+            <div className="row g-3">
               {weekdays.map((day) => (
-                <div className="col-6 col-sm-4 col-md-3" key={day}>
-                  <div
-                    className={`p-2 border rounded text-center small ${
-                      profile.availability.includes(day)
-                        ? "bg-primary text-white"
-                        : "bg-light text-muted"
-                    }`}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => toggleDay(day)}
-                  >
-                    {day}
+                <div className="col-md-6" key={day}>
+                  <div className="border rounded p-3">
+                    <div className="d-flex align-items-center justify-content-between">
+                      <label
+                        className={`fw-semibold ${
+                          profile.availability?.[day]?.active
+                            ? "text-primary"
+                            : "text-muted"
+                        }`}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => toggleDay(day)}
+                      >
+                        {day}
+                      </label>
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={profile.availability?.[day]?.active || false}
+                        onChange={() => toggleDay(day)}
+                      />
+                    </div>
+                    {profile.availability?.[day]?.active && (
+                      <div className="d-flex gap-2 mt-2">
+                        <div className="flex-fill">
+                          <label className="form-label small mb-1">From</label>
+                          <input
+                            type="time"
+                            className="form-control"
+                            value={profile.availability[day].from}
+                            onChange={(e) =>
+                              handleTimeChange(day, "from", e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="flex-fill">
+                          <label className="form-label small mb-1">To</label>
+                          <input
+                            type="time"
+                            className="form-control"
+                            value={profile.availability[day].to}
+                            onChange={(e) =>
+                              handleTimeChange(day, "to", e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -219,7 +277,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Change Password */}
+        {/* Password */}
         <div className="card border-0 shadow-sm mb-4">
           <div className="card-body row g-3">
             <div className="col-md-6">
