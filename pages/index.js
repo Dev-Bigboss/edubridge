@@ -1,7 +1,6 @@
 import Layout from "@/components/layout/Layout"
 import About1 from "@/components/sections/About1"
 import Banner1 from "@/components/sections/Banner1"
-import Blog1 from "@/components/sections/Blog1"
 import Brand1 from "@/components/sections/Brand1"
 import Categories1 from "@/components/sections/Categories1"
 import FeaturedTutors from "@/components/sections/FeaturedTutors";
