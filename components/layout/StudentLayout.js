@@ -13,6 +13,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { useAuthStore } from "@/store/zustand";
 
 const navItems = [
   { icon: <Home size={18} />, label: "Dashboard", href: "/student/dashboard" },
@@ -38,9 +39,11 @@ const navItems = [
 export default function StudentLayout({ children }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const user = useAuthStore((state) => state.user);
+  console.log(user)
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
+
 
   return (
     <div className="d-flex min-vh-100 position-relative">
@@ -107,7 +110,7 @@ export default function StudentLayout({ children }) {
           <hr className="my-3" />
 
           <Link
-            href="/logout"
+            href="/login"
             className="nav-link d-flex align-items-center gap-2 px-3 py-2 rounded text-danger text-decoration-none"
             style={{ fontWeight: "500" }}
             onClick={closeSidebar}
@@ -155,7 +158,10 @@ export default function StudentLayout({ children }) {
               height={32}
               style={{ objectFit: "cover" }}
             />
-            <span className="fw-medium d-none d-sm-inline">Student Name</span>
+            <span className="fw-medium d-none d-sm-inline">
+              {" "}
+              {user?.firstName || "Student"}
+            </span>
           </div>
         </div>
 

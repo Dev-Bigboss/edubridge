@@ -1,0 +1,55 @@
+% Including a comprehensive preamble to ensure compatibility
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{booktabs}
+
+% Setting up header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fhead{Transaction Details}
+\rfoot{Page \thepage\ of \pageref{LastPage}}
+
+% Defining colors
+\definecolor{headerblue}{RGB}{0, 51, 102}
+
+% Customizing table
+\renewcommand{\arraystretch}{1.2}
+
+\begin{document}
+
+% Title section
+\begin{center}
+    \textbf{\Large Transaction Receipt} \\
+    \vspace{0.2cm}
+    \textbf{Issued to: Your Name} \\
+    \vspace{0.1cm}
+    \small \today
+\end{center}
+
+\vspace{0.5cm}
+
+% Transaction details table
+\begin{tabular}{ll}
+    \toprule
+    \rowcolor{headerblue!20}
+    \textbf{Field} & \textbf{Details} \\
+    \midrule
+    Transaction Number & Your Transaction Number \\
+    Date & Your Transaction Date \\
+    Description & Your Narration \\
+    Amount & Your Amount \\
+    Type & Your Type \\
+    Status & Your Status \\
+    \bottomrule
+\end{tabular}
+
+\end{document}

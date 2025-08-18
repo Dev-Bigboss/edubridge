@@ -1,4 +1,4 @@
-import StudentLayout from "@/components/layout/StudentLayout";
+import { useEffect, useState } from "react";
 import {
   Calendar,
   Clock,
@@ -8,69 +8,58 @@ import {
   Send,
   CheckCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-
-const mockSessions = [
-  {
-    id: 1,
-    subject: "Mathematics",
-    tutor: "Mr. Adewale",
-    date: "2025-07-10",
-    time: "10:00 AM",
-    duration: "1hr",
-    type: "Online",
-    status: "completed",
-    rated: false,
-    tutorAvatar: "/assets/img/profile.jpg",
-  },
-  {
-    id: 2,
-    subject: "Biology",
-    tutor: "Ms. Zainab",
-    date: "2025-07-12",
-    time: "3:00 PM",
-    duration: "1.5hrs",
-    type: "In-person",
-    status: "upcoming",
-    rated: false,
-    tutorAvatar: "/assets/img/profile.jpg",
-  },
-  {
-    id: 3,
-    subject: "English",
-    tutor: "Mrs. Obi",
-    date: "2025-07-05",
-    time: "12:00 PM",
-    duration: "1hr",
-    type: "Online",
-    status: "completed",
-    rated: true,
-    tutorAvatar: "/assets/img/profile.jpg",
-  },
-];
+import {
+  useGetStudentUpcomingSessions,
+  useGetAllTutors,
+} from "@/hooks/queries";
+import StudentLayout from "@/components/layout/StudentLayout";
+import SkeletonLoader from "@/components/skeletons/sessions";
 
 export default function StudentSessionsPage() {
   const [sessions, setSessions] = useState([]);
-  const [ratingModal, setRatingModal] = useState(null); // session to rate
+  const [ratingModal, setRatingModal] = useState(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
 
-  useEffect(() => {
-    setSessions(mockSessions);
+  const { data: upcomingSessions, isLoading: loadingUpcoming } =
+    useGetStudentUpcomingSessions();
+  const { data: tutorsData, isLoading: loadingTutors } = useGetAllTutors();
 
-    // Automatically find any completed session that hasn’t been rated
-    const unratedCompleted = mockSessions.find(
-      (s) => s.status === "completed" && !s.rated
-    );
-    if (unratedCompleted) setRatingModal(unratedCompleted);
-  }, []);
+  const tutors = tutorsData?.data?.data || [];
+
+  useEffect(() => {
+    if (upcomingSessions?.data?.data) {
+      const mappedSessions = upcomingSessions.data.data.map((session) => {
+        const tutor = tutors.find((t) => t.id === session.mentorId);
+        return {
+          id: session.id,
+          subject: session.subject,
+          tutor: tutor
+            ? `${tutor.user.firstName} ${tutor.user.lastName}`
+            : "Unknown Tutor",
+          tutorAvatar: tutor?.profilePictureUrl || "/assets/img/profile.jpg",
+          date: session.preferDate,
+          time: session.preferTime,
+          duration: `${session.duration} min`,
+          type: session.type || "Online", // Assuming type is provided or default to Online
+          status: session.status || "upcoming",
+          rated: session.rated || false,
+        };
+      });
+      setSessions(mappedSessions);
+
+      const unratedCompleted = mappedSessions.find(
+        (s) => s.status === "completed" && !s.rated
+      );
+      if (unratedCompleted) setRatingModal(unratedCompleted);
+    }
+  }, [upcomingSessions, tutors]);
 
   const handleSubmitRating = () => {
+    // Placeholder for actual rating submission API call
     alert(`Rated ${ratingModal.tutor} with ${rating} stars: ${comment}`);
     setSessions((prev) =>
-      prev.map((s) =>
-        s.id === ratingModal.id ? { ...s, rated: true } : s
-      )
+      prev.map((s) => (s.id === ratingModal.id ? { ...s, rated: true } : s))
     );
     setRatingModal(null);
     setRating(0);
@@ -84,71 +73,77 @@ export default function StudentSessionsPage() {
         <p className="text-muted">View your upcoming and completed sessions.</p>
       </div>
 
-      <div className="row g-4">
-        {sessions.map((s) => (
-          <div key={s.id} className="col-md-6">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body d-flex flex-column justify-content-between">
-                <div className="d-flex align-items-center mb-3">
-                  <img
-                    src={s.tutorAvatar}
-                    alt={s.tutor}
-                    className="rounded-circle me-3"
-                    width={50}
-                    height={50}
-                  />
-                  <div>
-                    <h6 className="fw-bold mb-0">{s.subject}</h6>
-                    <small className="text-muted">{s.tutor}</small>
+      {loadingUpcoming || loadingTutors ? (
+        <SkeletonLoader count={2} />
+      ) : sessions.length === 0 ? (
+        <div className="text-muted">No sessions available.</div>
+      ) : (
+        <div className="row g-4">
+          {sessions.map((s) => (
+            <div key={s.id} className="col-md-6">
+              <div className="card border-0 shadow-sm h-100">
+                <div className="card-body d-flex flex-column justify-content-between">
+                  <div className="d-flex align-items-center mb-3">
+                    <img
+                      src={s.tutorAvatar}
+                      alt={s.tutor}
+                      className="rounded-circle me-3"
+                      width={50}
+                      height={50}
+                    />
+                    <div>
+                      <h6 className="fw-bold mb-0">{s.subject}</h6>
+                      <small className="text-muted">{s.tutor}</small>
+                    </div>
                   </div>
-                </div>
 
-                <div className="row text-muted small mb-3">
-                  <div className="col-6">
-                    <Calendar size={14} className="me-1" />
-                    {new Date(s.date).toLocaleDateString()}
+                  <div className="row text-muted small mb-3">
+                    <div className="col-6">
+                      <Calendar size={14} className="me-1" />
+                      {new Date(s.date).toLocaleDateString()}
+                    </div>
+                    <div className="col-6">
+                      <Clock size={14} className="me-1" />
+                      {s.time} • {s.duration}
+                    </div>
                   </div>
-                  <div className="col-6">
-                    <Clock size={14} className="me-1" />
-                    {s.time} • {s.duration}
-                  </div>
-                </div>
 
-                <div className="d-flex justify-content-between align-items-center mt-auto">
-                  <span
-                    className={`badge text-bg-${
-                      s.status === "completed" ? "success" : "primary"
-                    }`}
-                  >
-                    {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
-                  </span>
-
-                  {s.status === "upcoming" ? (
-                    <button className="btn btn-sm btn-outline-primary">
-                      <Video size={14} className="me-1" />
-                      Join Class
-                    </button>
-                  ) : s.rated ? (
-                    <span className="text-success d-flex align-items-center gap-1">
-                      <CheckCircle size={16} /> Rated
-                    </span>
-                  ) : (
-                    <button
-                      className="btn btn-sm btn-warning"
-                      onClick={() => setRatingModal(s)}
+                  <div className="d-flex justify-content-between align-items-center mt-auto">
+                    <span
+                      className={`badge text-bg-${
+                        s.status === "completed" ? "success" : "primary"
+                      }`}
                     >
-                      <Star size={14} className="me-1" />
-                      Rate Tutor
-                    </button>
-                  )}
+                      {s.status.charAt(0).toUpperCase() + s.status.slice(1)}
+                    </span>
+
+                    {s.status === "upcoming" ? (
+                      <button className="btn btn-sm btn-outline-primary">
+                        <Video size={14} className="me-1" />
+                        Join Class
+                      </button>
+                    ) : s.rated ? (
+                      <span className="text-success d-flex align-items-center gap-1">
+                        <CheckCircle size={16} /> Rated
+                      </span>
+                    ) : (
+                      <button
+                        className="btn btn-sm btn-warning"
+                        onClick={() => setRatingModal(s)}
+                      >
+                        <Star size={14} className="me-1" />
+                        Rate Tutor
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Mandatory Rating Modal */}
+      {/* Rating Modal */}
       {ratingModal && (
         <div
           className="modal fade show d-block"

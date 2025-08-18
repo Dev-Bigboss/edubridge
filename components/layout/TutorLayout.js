@@ -12,6 +12,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { useAuthStore } from "@/store/zustand";
 
 const navItems = [
   { icon: <BarChart size={18} />, label: "Dashboard", href: "/dashboard" },
@@ -21,11 +22,11 @@ const navItems = [
     label: "Sessions",
     href: "/dashboard/sessions",
   },
-  {
-    icon: <DollarSign size={18} />,
-    label: "Earnings",
-    href: "/dashboard/earnings",
-  },
+  // {
+  //   icon: <DollarSign size={18} />,
+  //   label: "Earnings",
+  //   href: "/dashboard/earnings",
+  // },
   {
     icon: <DollarSign size={18} />,
     label: "Wallet",
@@ -54,6 +55,7 @@ export default function TutorLayout({ children }) {
   const closeSidebar = () => {
     setSidebarOpen(false);
   };
+  const user = useAuthStore((state) => state.user);
 
   return (
     <div className="d-flex min-vh-100 position-relative">
@@ -120,7 +122,7 @@ export default function TutorLayout({ children }) {
           <hr className="my-3" />
 
           <Link
-            href="/logout"
+            href="/login"
             className="nav-link d-flex align-items-center gap-2 px-3 py-2 rounded text-danger text-decoration-none"
             style={{ fontWeight: "500" }}
             onClick={closeSidebar}
@@ -168,7 +170,9 @@ export default function TutorLayout({ children }) {
               height={32}
               style={{ objectFit: "cover" }}
             />
-            <span className="fw-medium d-none d-sm-inline">Tutor Name</span>
+            <span className="fw-medium d-none d-sm-inline">
+              {user.firstName || "tutor"}
+            </span>
           </div>
         </div>
 

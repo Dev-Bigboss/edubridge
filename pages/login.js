@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Mail, Lock, BookOpen, Eye, EyeOff } from "lucide-react";
-import { useRouter } from "next/router";
+import { usePostLogin } from "@/hooks/mutations";
 
 export default function Login() {
-  const router = useRouter()
+  const loginMutation = usePostLogin();
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -21,13 +22,11 @@ export default function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Login attempt:", formData);
-    // TODO: Send to backend
+    loginMutation.mutate({
+      email: formData.email,
+      password: formData.password,
+    });
   };
-
-  const hanldeSignIn = () => {
-    router. push("/dashboard")
-  }
 
   const handleGoogleLogin = () => {
     console.log("Google login clicked");
@@ -77,13 +76,14 @@ export default function Login() {
             borderRadius: "16px",
           }}
         >
-          <div className="card-body border-bottom">
-            <button
+          {/* <div className="card-body border-bottom">
+             <button
               type="button"
               onClick={handleGoogleLogin}
               className="btn btn-outline-secondary w-100 py-3 d-flex align-items-center justify-content-center"
               style={{ borderRadius: "8px" }}
             >
+              {/* Google SVG 
               <svg width="20" height="20" viewBox="0 0 24 24" className="me-3">
                 <path
                   fill="#4285F4"
@@ -103,14 +103,14 @@ export default function Login() {
                 />
               </svg>
               Continue with Google
-            </button>
+            </button> 
 
             <div className="d-flex align-items-center my-4">
               <hr className="flex-grow-1" />
               <span className="px-3 text-muted small">or</span>
               <hr className="flex-grow-1" />
             </div>
-          </div>
+          </div> */}
 
           {/* Login Form */}
           <form className="card-body" onSubmit={handleSubmit}>
@@ -210,9 +210,9 @@ export default function Login() {
                 border: "none",
                 boxShadow: "0 4px 15px rgba(33, 150, 243, 0.3)",
               }}
-              onClick={hanldeSignIn}
+              disabled={loginMutation.isPending}
             >
-              Sign In
+              {loginMutation.isPending ? "Signing In..." : "Sign In"}
             </button>
           </form>
         </div>
@@ -236,22 +236,6 @@ export default function Login() {
             <a href="/signup?type=tutor" className="text-decoration-none">
               Become a Tutor
             </a>
-          </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div
-          className="mt-4 p-3 rounded-3"
-          style={{ backgroundColor: "#e3f2fd" }}
-        >
-          <h6 className="fw-semibold text-primary mb-2">Demo Credentials</h6>
-          <div className="small text-primary">
-            <p className="mb-1">
-              <strong>Student:</strong> student@edubridge.com / password123
-            </p>
-            <p className="mb-0">
-              <strong>Tutor:</strong> tutor@edubridge.com / password123
-            </p>
           </div>
         </div>
       </div>

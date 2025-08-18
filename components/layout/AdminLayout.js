@@ -100,7 +100,7 @@ export default function AdminLayout({ children }) {
           <hr className="my-3" />
 
           <Link
-            href="/logout"
+            href="/login"
             className="nav-link d-flex align-items-center gap-2 px-3 py-2 rounded text-danger text-decoration-none"
             style={{ fontWeight: 500 }}
             onClick={closeSidebar}

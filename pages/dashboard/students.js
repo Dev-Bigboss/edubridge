@@ -1,4 +1,4 @@
-import TutorLayout from "@/components/layout/TutorLayout";
+import { useState, useRef, useEffect } from "react";
 import {
   User,
   MessageSquare,
@@ -13,7 +13,11 @@ import {
   Clock,
   MoreVertical,
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
+import TutorLayout from "@/components/layout/TutorLayout";
+import { useGetTutorStudents } from "@/hooks/queries";
+import Spinner from "@/components/Spinner";
 
 function StudentActionsDropdown({ onView, onMessage, onRemove }) {
   const [open, setOpen] = useState(false);
@@ -77,45 +81,6 @@ function StudentActionsDropdown({ onView, onMessage, onRemove }) {
   );
 }
 
-const mockStudents = [
-  {
-    id: 1,
-    name: "Ada Obi",
-    email: "ada@example.com",
-    subjects: ["Mathematics", "Physics"],
-    joined: "2024-10-01",
-    status: "active",
-    sessions: 15,
-    avatar: "/assets/img/profile.jpg",
-    lastSeen: "2024-01-10",
-    grade: "A",
-  },
-  {
-    id: 2,
-    name: "John Doe",
-    email: "john@example.com",
-    subjects: ["English", "Literature"],
-    joined: "2024-11-15",
-    status: "active",
-    sessions: 8,
-    avatar: "/assets/img/profile.jpg",
-    lastSeen: "2024-01-12",
-    grade: "B+",
-  },
-  {
-    id: 3,
-    name: "Zainab Musa",
-    email: "zainab@example.com",
-    subjects: ["Biology", "Chemistry"],
-    joined: "2024-12-03",
-    status: "inactive",
-    sessions: 22,
-    avatar: "/assets/img/profile.jpg",
-    lastSeen: "2024-01-05",
-    grade: "A-",
-  },
-];
-
 const statusColors = {
   active: "success",
   inactive: "secondary",
@@ -123,6 +88,11 @@ const statusColors = {
 };
 
 export default function StudentsPage() {
+  const {
+    data: studentsData,
+    isLoading: studentsLoading,
+    error: studentsError,
+  } = useGetTutorStudents();
   const [students, setStudents] = useState([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -130,9 +100,37 @@ export default function StudentsPage() {
   const [modal, setModal] = useState("");
   const [message, setMessage] = useState("");
 
+  // Placeholder mutation for sending messages (replace with actual endpoint)
+  const sendMessageMutation = console.log("Sending message:", message);
+
+  // Placeholder mutation for removing students (replace with actual endpoint)
+  const removeStudentMutation = console.log("Removing student:", selected);
+
   useEffect(() => {
-    setStudents(mockStudents);
-  }, []);
+    if (studentsData?.data) {
+      console.log("Students Data:", studentsData.data); // Debug log
+      setStudents(
+        studentsData.data.map((s) => ({
+          id: s.id,
+          name: `${s.user.firstName || ""} ${s.user.middleName || ""} ${
+            s.user.lastName || ""
+          }`.trim(),
+          email: s.user.email,
+          subjects: s.preferredSubjects || [],
+          joined: s.createdAt,
+          status: s.user.isVerified ? "active" : "pending",
+          sessions: 0, // Placeholder; update if API provides
+          avatar: s.profilePictureUrl || "/assets/img/profile.jpg",
+          lastSeen: s.user.updatedAt,
+          level: s.level,
+        }))
+      );
+    }
+    if (studentsError) {
+      console.error("Students Error:", studentsError);
+      toast.error(studentsError.message || "Failed to load students");
+    }
+  }, [studentsData, studentsError]);
 
   const filtered = [...students]
     .filter((s) =>
@@ -144,16 +142,30 @@ export default function StudentsPage() {
     .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
 
   const handleRemove = () => {
-    setStudents((prev) => prev.filter((s) => s.id !== selected.id));
-    setModal("");
-    setSelected(null);
+    if (selected) {
+      removeStudentMutation.mutate(selected.id, {
+        onSuccess: () => {
+          setModal("");
+          setSelected(null);
+        },
+      });
+    }
   };
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    alert(`Message sent to ${selected.name}: "${message}"`);
-    setMessage("");
-    setModal("");
+    if (selected) {
+      sendMessageMutation.mutate(
+        { studentId: selected.id, message },
+        {
+          onSuccess: () => {
+            setMessage("");
+            setModal("");
+            setSelected(null);
+          },
+        }
+      );
+    }
   };
 
   const closeModal = () => {
@@ -210,146 +222,163 @@ export default function StudentsPage() {
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
               <option value="pending">Pending</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Table View */}
-      <div className="card border-0 shadow-sm d-none d-md-block">
-        <div className="table-responsive">
-          <table className="table table-hover mb-0">
-            <thead className="table-light">
-              <tr>
-                <th>Student</th>
-                <th>Subjects</th>
-                <th>Status</th>
-                <th>Sessions</th>
-                <th>Last Seen</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s) => (
-                <tr key={s.id}>
-                  <td className="py-3">
-                    <div className="d-flex align-items-center">
-                      <img
-                        src={s.avatar}
-                        className="rounded-circle me-2"
-                        width={36}
-                        height={36}
-                        alt={s.name}
-                      />
-                      <div>
-                        <div className="fw-semibold">{s.name}</div>
-                        <small className="text-muted">{s.email}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3">
-                    {s.subjects.map((sub, i) => (
-                      <span
-                        key={i}
-                        className="badge bg-light text-dark border me-1"
-                      >
-                        {sub}
-                      </span>
-                    ))}
-                  </td>
-                  <td className="py-3">{getStatusBadge(s.status)}</td>
-                  <td className="py-3">{s.sessions}</td>
-                  <td className="py-3">
-                    <small>{new Date(s.lastSeen).toLocaleDateString()}</small>
-                  </td>
-                  <td className="py-3">
-                    <StudentActionsDropdown
-                      onView={() => {
-                        setSelected(s);
-                        setModal("view");
-                      }}
-                      onMessage={() => {
-                        setSelected(s);
-                        setModal("message");
-                      }}
-                      onRemove={() => {
-                        setSelected(s);
-                        setModal("remove");
-                      }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Loading and Error States */}
+      {studentsLoading ? (
+        <div className="text-center">
+          <Spinner />
         </div>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="d-md-none">
-        {filtered.map((s) => (
-          <div key={s.id} className="card mb-3">
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-start mb-2">
-                <div>
-                  <h6 className="mb-0 fw-semibold">{s.name}</h6>
-                  <small className="text-muted">{s.email}</small>
-                </div>
-                {getStatusBadge(s.status)}
-              </div>
-              <div className="d-flex justify-content-between text-muted small">
-                <div>
-                  <BookOpen size={14} className="me-1" />
-                  {s.subjects.length} subjects
-                </div>
-                <div>
-                  <Clock size={14} className="me-1" />
-                  {s.sessions} sessions
-                </div>
-              </div>
-              <div className="d-flex gap-2 mt-3">
-                <button
-                  className="btn btn-sm btn-outline-primary w-100"
-                  onClick={() => {
-                    setSelected(s);
-                    setModal("view");
-                  }}
-                >
-                  <Eye size={14} className="me-1" /> View
-                </button>
-                <button
-                  className="btn btn-sm btn-outline-secondary w-100"
-                  onClick={() => {
-                    setSelected(s);
-                    setModal("message");
-                  }}
-                >
-                  <MessageSquare size={14} className="me-1" /> Message
-                </button>
-                <button
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={() => {
-                    setSelected(s);
-                    setModal("remove");
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filtered.length === 0 && (
+      ) : studentsError ? (
+        <div className="alert alert-danger">
+          Failed to load students: {studentsError.message || "Unknown error"}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-5">
           <Users size={48} className="text-muted mb-3" />
           <h5 className="text-muted">No students found</h5>
           <p className="text-muted">Try different filters or keywords.</p>
         </div>
+      ) : (
+        <>
+          {/* Table View */}
+          <div className="card border-0 shadow-sm d-none d-md-block">
+            <div className="table-responsive">
+              <table className="table table-hover mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>Student</th>
+                    <th>Subjects</th>
+                    <th>Status</th>
+                    <th>Sessions</th>
+                    <th>Last Seen</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((s) => (
+                    <tr key={s.id}>
+                      <td className="py-3">
+                        <div className="d-flex align-items-center">
+                          <img
+                            src={s.avatar}
+                            className="rounded-circle me-2"
+                            width={36}
+                            height={36}
+                            alt={s.name}
+                          />
+                          <div>
+                            <div className="fw-semibold">{s.name}</div>
+                            <small className="text-muted">{s.email}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        {s.subjects.length > 0 ? (
+                          s.subjects.map((sub, i) => (
+                            <span
+                              key={i}
+                              className="badge bg-light text-dark border me-1"
+                            >
+                              {sub}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-muted">None</span>
+                        )}
+                      </td>
+                      <td className="py-3">{getStatusBadge(s.status)}</td>
+                      <td className="py-3">{s.sessions}</td>
+                      <td className="py-3">
+                        <small>
+                          {s.lastSeen
+                            ? format(parseISO(s.lastSeen), "MMM d, yyyy")
+                            : "N/A"}
+                        </small>
+                      </td>
+                      <td className="py-3">
+                        <StudentActionsDropdown
+                          onView={() => {
+                            setSelected(s);
+                            setModal("view");
+                          }}
+                          onMessage={() => {
+                            setSelected(s);
+                            setModal("message");
+                          }}
+                          onRemove={() => {
+                            setSelected(s);
+                            setModal("remove");
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="d-md-none">
+            {filtered.map((s) => (
+              <div key={s.id} className="card mb-3">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h6 className="mb-0 fw-semibold">{s.name}</h6>
+                      <small className="text-muted">{s.email}</small>
+                    </div>
+                    {getStatusBadge(s.status)}
+                  </div>
+                  <div className="d-flex justify-content-between text-muted small">
+                    <div>
+                      <BookOpen size={14} className="me-1" />
+                      {s.subjects.length} subjects
+                    </div>
+                    <div>
+                      <Clock size={14} className="me-1" />
+                      {s.sessions} sessions
+                    </div>
+                  </div>
+                  <div className="d-flex gap-2 mt-3">
+                    <button
+                      className="btn btn-sm btn-outline-primary w-100"
+                      onClick={() => {
+                        setSelected(s);
+                        setModal("view");
+                      }}
+                    >
+                      <Eye size={14} className="me-1" /> View
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-secondary w-100"
+                      onClick={() => {
+                        setSelected(s);
+                        setModal("message");
+                      }}
+                    >
+                      <MessageSquare size={14} className="me-1" /> Message
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => {
+                        setSelected(s);
+                        setModal("remove");
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Modal */}
@@ -393,11 +422,17 @@ export default function StudentsPage() {
                       <strong>Email:</strong> {selected.email}
                     </p>
                     <p className="mb-2">
-                      <strong>Subjects:</strong> {selected.subjects.join(", ")}
+                      <strong>Subjects:</strong>{" "}
+                      {selected.subjects.length > 0
+                        ? selected.subjects.join(", ")
+                        : "None"}
+                    </p>
+                    <p className="mb-2">
+                      <strong>Level:</strong> {selected.level || "N/A"}
                     </p>
                     <p className="mb-2">
                       <strong>Joined:</strong>{" "}
-                      {new Date(selected.joined).toLocaleDateString()}
+                      {format(parseISO(selected.joined), "MMM d, yyyy")}
                     </p>
                     <p className="mb-0">
                       <strong>Sessions:</strong> {selected.sessions}
@@ -421,11 +456,27 @@ export default function StudentsPage() {
                         type="button"
                         className="btn btn-outline-secondary"
                         onClick={closeModal}
+                        // disabled={sendMessageMutation.isLoading}
                       >
                         Cancel
                       </button>
-                      <button type="submit" className="btn btn-primary">
-                        <Send size={14} className="me-1" /> Send
+                      <button
+                        type="submit"
+                        className="btn btn-primary d-flex align-items-center"
+                        // disabled={sendMessageMutation.isLoading}
+                      >
+                        {/* {sendMessageMutation.isLoading ? (
+                          <>
+                            <Spinner size="sm" className="me-1" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send size={14} className="me-1" />
+                            Send
+                          </>
+                        )} */}
+                        send
                       </button>
                     </div>
                   </form>
@@ -441,10 +492,23 @@ export default function StudentsPage() {
                       <button
                         className="btn btn-outline-secondary"
                         onClick={closeModal}
+                        // disabled={removeStudentMutation.isLoading}
                       >
                         Cancel
                       </button>
-                      <button className="btn btn-danger" onClick={handleRemove}>
+                      <button
+                        className="btn btn-danger d-flex align-items-center"
+                        onClick={handleRemove}
+                        // disabled={removeStudentMutation.isLoading}
+                      >
+                        {/* {removeStudentMutation.isLoading ? (
+                          <>
+                            <Spinner size="sm" className="me-1" />
+                            Removing...
+                          </>
+                        ) : (
+                          "Remove"
+                        )} */}
                         Remove
                       </button>
                     </div>

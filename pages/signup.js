@@ -14,7 +14,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { usePostMenteeSignup, usePostMentorSignup } from "@/hooks/mutations";
-// import { useGetUserProfile } from "@/hooks/queries";
+import { useGetSubjects } from "@/hooks/queries";
 
 const levels = ["PRIMARY", "SECONDARY", "UNDERGRADUATE", "POSTGRADUATE"];
 
@@ -31,10 +31,14 @@ const schema = yup.object().shape({
     is: "student",
     then: (schema) => schema.required("Academic level is required"),
   }),
-  preferredSubjects: yup.string(),
+  preferredSubjects: yup.array().of(yup.string()),
   subject: yup.string().when("type", {
     is: "tutor",
     then: (schema) => schema.required("Subject is required"),
+  }),
+  availability: yup.string().when("type", {
+    is: "tutor",
+    then: (schema) => schema.required("Availability is required"),
   }),
   ratePerHour: yup.string(),
   introVideoUrl: yup.string().url("Must be a valid URL").nullable(),
@@ -42,12 +46,13 @@ const schema = yup.object().shape({
 });
 
 export default function Signup() {
+  const router = useRouter();
   const [type, setType] = useState("student");
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
-  // const { data: userProfile } = useGetUserProfile()
 
-  // console.log(userProfile)
+  const { data: subjectsRes, isLoading: subjectsLoading } = useGetSubjects();
+  const subjects = subjectsRes?.data?.data || [];
+
   const menteeSignup = usePostMenteeSignup();
   const mentorSignup = usePostMentorSignup();
 
@@ -56,10 +61,21 @@ export default function Signup() {
     handleSubmit,
     reset,
     formState: { errors },
+    setValue,
   } = useForm({
     resolver: yupResolver(schema),
   });
 
+  // Get type from URL query
+  useEffect(() => {
+    if (router.query.type === "tutor") {
+      setType("tutor");
+    } else {
+      setType("student");
+    }
+  }, [router.query.type]);
+
+  // Reset form when type changes
   useEffect(() => {
     reset();
   }, [type]);
@@ -68,16 +84,17 @@ export default function Signup() {
     const payload = {
       ...data,
       type,
+      preferredSubjects: Array.isArray(data.preferredSubjects)
+        ? data.preferredSubjects
+        : data.preferredSubjects
+        ? [data.preferredSubjects]
+        : [],
     };
 
     if (type === "student") {
-      menteeSignup.mutate(payload, {
-        onSuccess: () => router.push("/student/dashboard"),
-      });
+      menteeSignup.mutate(payload);
     } else {
-      mentorSignup.mutate(payload, {
-        onSuccess: () => router.push("/dashboard"),
-      });
+      mentorSignup.mutate(payload);
     }
   };
 
@@ -163,14 +180,6 @@ export default function Signup() {
             }}
           >
             <div className="card-body">
-              {/* Password visibility toggle logic */}
-              {/* Google Signup - commented out */}
-              {/* 
-              <button type="button" className="btn btn-outline-secondary w-100 py-3 mb-3">
-                Continue with Google
-              </button>
-              */}
-
               <div className="row g-3">
                 {/* First Name */}
                 <div className="col-md-6 position-relative">
@@ -243,7 +252,7 @@ export default function Signup() {
                   )}
                 </div>
 
-                {/* Password with toggle */}
+                {/* Password */}
                 <div className="col-md-6 position-relative">
                   <Lock
                     className="position-absolute text-muted"
@@ -278,8 +287,8 @@ export default function Signup() {
                 <div className="col-md-6">
                   <select {...register("gender")} className="form-select py-3">
                     <option value="">Select Gender</option>
-                    <option>Male</option>
-                    <option>Female</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
                   </select>
                   {errors.gender && (
                     <small className="text-danger">
@@ -340,13 +349,7 @@ export default function Signup() {
                       </small>
                     )}
                   </div>
-                  <div className="col-md-6">
-                    <input
-                      {...register("preferredSubjects")}
-                      className="form-control py-3"
-                      placeholder="Preferred Subjects (e.g. Math, English)"
-                    />
-                  </div>
+                  
                 </div>
               )}
 
@@ -354,14 +357,35 @@ export default function Signup() {
               {type === "tutor" && (
                 <div className="row g-3 mt-3">
                   <div className="col-md-6">
-                    <input
+                    <select
                       {...register("subject")}
-                      className="form-control py-3"
-                      placeholder="Subject Expertise"
-                    />
+                      className="form-select py-3"
+                    >
+                      <option value="">Select Subject</option>
+                      {subjects.map((subj) => (
+                        <option key={subj.id} value={subj.id}>
+                          {subj.id}
+                        </option>
+                      ))}
+                    </select>
                     {errors.subject && (
                       <small className="text-danger">
                         {errors.subject.message}
+                      </small>
+                    )}
+                  </div>
+                  <div className="col-md-6">
+                    <select
+                      {...register("availability")}
+                      className="form-select py-3"
+                    >
+                      <option value="">Select Availability</option>
+                      <option value="AVAILABLE">Available</option>
+                      <option value="ADVANCE">Advance Booking</option>
+                    </select>
+                    {errors.availability && (
+                      <small className="text-danger">
+                        {errors.availability.message}
                       </small>
                     )}
                   </div>
