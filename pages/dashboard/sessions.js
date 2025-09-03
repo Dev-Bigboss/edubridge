@@ -30,7 +30,7 @@ const useGetTutorPastSessions = (tutorId) => {
           ...data,
           data: {
             ...data.data,
-            data: data.data.data.filter((s) =>
+            data: data?.data?.data.filter((s) =>
               isPast(parseISO(s.session_date))
             ),
           },

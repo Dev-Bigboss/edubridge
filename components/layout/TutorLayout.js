@@ -171,7 +171,7 @@ export default function TutorLayout({ children }) {
               style={{ objectFit: "cover" }}
             />
             <span className="fw-medium d-none d-sm-inline">
-              {user.firstName || "tutor"}
+              {user?.firstName || "tutor"}
             </span>
           </div>
         </div>
