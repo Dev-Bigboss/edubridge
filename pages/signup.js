@@ -21,26 +21,22 @@ const levels = ["PRIMARY", "SECONDARY", "UNDERGRADUATE", "POSTGRADUATE"];
 const schema = yup.object().shape({
   firstName: yup.string().required("First name is required"),
   lastName: yup.string().required("Last name is required"),
-  middleName: yup.string(),
   email: yup.string().email("Invalid email").required("Email is required"),
   password: yup.string().min(6, "Password must be at least 6 characters"),
-  gender: yup.string().required("Gender is required"),
-  location: yup.string().required("Location is required"),
+  gender: yup.string().optional(),
+  location: yup.string().optional(),
   profilePictureUrl: yup.string().url("Must be a valid URL").nullable(),
   level: yup.string().when("type", {
     is: "student",
     then: (schema) => schema.required("Academic level is required"),
   }),
-  preferredSubjects: yup.array().of(yup.string()),
-  subject: yup.string().when("type", {
-    is: "tutor",
-    then: (schema) => schema.required("Subject is required"),
-  }),
-  availability: yup.string().when("type", {
-    is: "tutor",
-    then: (schema) => schema.required("Availability is required"),
-  }),
-  ratePerHour: yup.string(),
+  // preferredSubjects: yup.array().of(yup.string()),
+ 
+  // availability: yup.string().when("type", {
+  //   is: "tutor",
+  //   then: (schema) => schema.required("Availability is required"),
+  // }),
+  // ratePerHour: yup.string(),
   introVideoUrl: yup.string().url("Must be a valid URL").nullable(),
   bio: yup.string(),
 });
@@ -84,6 +80,9 @@ export default function Signup() {
     const payload = {
       ...data,
       type,
+      subject: "",
+      availability: "AVAILABLE",
+      
       preferredSubjects: Array.isArray(data.preferredSubjects)
         ? data.preferredSubjects
         : data.preferredSubjects
@@ -131,43 +130,45 @@ export default function Signup() {
           </p>
         </div>
 
-        {/* Type Toggle */}
-        <div
-          className="card mb-4"
-          style={{ border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}
-        >
-          <div className="card-body p-3 row g-2">
-            {["student", "tutor"].map((role) => (
-              <div className="col-6" key={role}>
-                <button
-                  type="button"
-                  onClick={() => setType(role)}
-                  className="btn w-100 py-3 fw-semibold"
-                  style={{
-                    borderRadius: "12px",
-                    background:
-                      type === role
-                        ? "linear-gradient(135deg, #2196f3 0%, #3f51b5 100%)"
-                        : "#f8f9fa",
-                    color: type === role ? "white" : "#6c757d",
-                    border: type === role ? "none" : "1px solid #e9ecef",
-                    boxShadow:
-                      type === role
-                        ? "0 4px 15px rgba(33, 150, 243, 0.3)"
-                        : "none",
-                  }}
-                >
-                  {role === "student" ? (
-                    <User size={18} className="me-2" />
-                  ) : (
-                    <Star size={18} className="me-2" />
-                  )}
-                  {role.charAt(0).toUpperCase() + role.slice(1)}
-                </button>
-              </div>
-            ))}
+        {/* Type Toggle - only show if no ?type is provided */}
+        {!router.query.type && (
+          <div
+            className="card mb-4"
+            style={{ border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}
+          >
+            <div className="card-body p-3 row g-2">
+              {["student", "tutor"].map((role) => (
+                <div className="col-6" key={role}>
+                  <button
+                    type="button"
+                    onClick={() => setType(role)}
+                    className="btn w-100 py-3 fw-semibold"
+                    style={{
+                      borderRadius: "12px",
+                      background:
+                        type === role
+                          ? "linear-gradient(135deg, #2196f3 0%, #3f51b5 100%)"
+                          : "#f8f9fa",
+                      color: type === role ? "white" : "#6c757d",
+                      border: type === role ? "none" : "1px solid #e9ecef",
+                      boxShadow:
+                        type === role
+                          ? "0 4px 15px rgba(33, 150, 243, 0.3)"
+                          : "none",
+                    }}
+                  >
+                    {role === "student" ? (
+                      <User size={18} className="me-2" />
+                    ) : (
+                      <Star size={18} className="me-2" />
+                    )}
+                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -219,19 +220,6 @@ export default function Signup() {
                   )}
                 </div>
 
-                {/* Middle Name */}
-                <div className="col-md-6 position-relative">
-                  <User
-                    className="position-absolute text-muted"
-                    style={{ top: "12px", left: "16px" }}
-                  />
-                  <input
-                    {...register("middleName")}
-                    className="form-control py-3"
-                    placeholder="Middle Name (Optional)"
-                    style={{ paddingLeft: "40px" }}
-                  />
-                </div>
 
                 {/* Email */}
                 <div className="col-md-6 position-relative">
@@ -284,7 +272,7 @@ export default function Signup() {
                 </div>
 
                 {/* Gender */}
-                <div className="col-md-6">
+                {/* <div className="col-md-6">
                   <select {...register("gender")} className="form-select py-3">
                     <option value="">Select Gender</option>
                     <option value="male">Male</option>
@@ -295,9 +283,9 @@ export default function Signup() {
                       {errors.gender.message}
                     </small>
                   )}
-                </div>
+                </div> */}
 
-                {/* Location */}
+                {/* Location
                 <div className="col-md-6 position-relative">
                   <MapPin
                     className="position-absolute text-muted"
@@ -314,10 +302,10 @@ export default function Signup() {
                       {errors.location.message}
                     </small>
                   )}
-                </div>
+                </div> */}
 
                 {/* Profile Picture URL */}
-                <div className="col-md-6">
+                {/* <div className="col-md-6">
                   <input
                     {...register("profilePictureUrl")}
                     className="form-control py-3"
@@ -329,7 +317,7 @@ export default function Signup() {
                     </small>
                   )}
                 </div>
-              </div>
+              </div> */}
 
               {/* Student Fields */}
               {type === "student" && (
@@ -349,14 +337,13 @@ export default function Signup() {
                       </small>
                     )}
                   </div>
-                  
                 </div>
               )}
 
               {/* Tutor Fields */}
               {type === "tutor" && (
                 <div className="row g-3 mt-3">
-                  <div className="col-md-6">
+                  {/* <div className="col-md-6">
                     <select
                       {...register("subject")}
                       className="form-select py-3"
@@ -373,8 +360,8 @@ export default function Signup() {
                         {errors.subject.message}
                       </small>
                     )}
-                  </div>
-                  <div className="col-md-6">
+                  </div> */}
+                  {/* <div className="col-md-6">
                     <select
                       {...register("availability")}
                       className="form-select py-3"
@@ -388,15 +375,15 @@ export default function Signup() {
                         {errors.availability.message}
                       </small>
                     )}
-                  </div>
-                  <div className="col-md-6">
+                  </div> */}
+                  {/* <div className="col-md-6">
                     <input
                       {...register("ratePerHour")}
                       className="form-control py-3"
                       placeholder="Rate Per Hour (₦)"
                       type="number"
                     />
-                  </div>
+                  </div> */}
                   <div className="col-md-6">
                     <input
                       {...register("introVideoUrl")}
@@ -437,7 +424,8 @@ export default function Signup() {
                 </button>
               </div>
             </div>
-          </div>
+            </div>
+            </div>
         </form>
 
         <div className="text-center mt-4">

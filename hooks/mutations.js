@@ -257,3 +257,20 @@ export const useFundWallet = () => {
   });
 }
 
+export const usePostMessage = () => {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await axiosInstance.post("/messages/send", payload);
+      return data;
+    },
+    onSuccess: (response) => {
+      toast.success(response.message || "Message sent successfully");
+      queryClient.invalidateQueries(["conversations"]);
+      queryClient.invalidateQueries(["chatMessages", payload.conversationId]);
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Failed to send message");
+    },
+  });
+}
+

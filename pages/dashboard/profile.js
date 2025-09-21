@@ -26,20 +26,21 @@ export default function ProfilePage() {
   const fileUploadMutation = useFileUpload(setUploadProgress);
 const [initialProfile, setInitialProfile] = useState(null);
 
-  const [profile, setProfile] = useState({
-    profilePictureUrl: "/assets/img/profile.jpg",
-    firstName: "",
-    lastName: "",
-    email: "",
-    location: "",
-    subject: "",
-    availability: {},
-    bio: "",
-    ratePerHour: 0,
-    introVideoUrl: "",
-    password: "",
-    confirmPassword: "",
-  });
+const [profile, setProfile] = useState({
+  profilePictureUrl: "/assets/img/profile.jpg",
+  firstName: "",
+  lastName: "",
+  email: "",
+  location: "",
+  competencySubjects: [],
+  availability: {},
+  bio: "",
+  ratePerHour: 0,
+  introVideoUrl: "",
+  password: "",
+  confirmPassword: "",
+});
+
 
   const [uploadStatus, setUploadStatus] = useState({
     profilePictureUrl: null,
@@ -71,20 +72,24 @@ useEffect(() => {
       return acc;
     }, {});
 
-    const formattedProfile = {
-      profilePictureUrl: data.profilePictureUrl || "/assets/img/profile.jpg",
-      firstName: data.user.firstName || "",
-      lastName: data.user.lastName || "",
-      email: data.user.email || "",
-      location: data.location || "",
-      subject: data.subject || "",
-      availability,
-      bio: data.bio || "",
-      ratePerHour: Number(data.ratePerHour) || 0,
-      introVideoUrl: data.introVideoUrl || "",
-      password: "",
-      confirmPassword: "",
-    };
+const formattedProfile = {
+  profilePictureUrl: data.profilePictureUrl || "/assets/img/profile.jpg",
+  firstName: data.user.firstName || "",
+  lastName: data.user.lastName || "",
+  email: data.user.email || "",
+  location: data.location || "",
+  competencySubjects:
+    data.competencySubjects?.map((cs) => ({
+      subjectId: cs.subjectId,
+    })) || [],
+  availability,
+  bio: data.bio || "",
+  ratePerHour: Number(data.ratePerHour) || 0,
+  introVideoUrl: data.introVideoUrl || "",
+  password: "",
+  confirmPassword: "",
+};
+
 
     setProfile(formattedProfile);
     setInitialProfile(formattedProfile); // keep a baseline for comparison
@@ -328,22 +333,37 @@ const handleSubmit = (e) => {
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body row g-3">
               <div className="col-md-8">
-                <label className="form-label">Subject</label>
+                <label className="form-label">Subjects</label>
                 <select
-                  name="subject"
-                  value={profile.subject}
-                  onChange={handleChange}
+                  multiple
+                  name="competencySubjects"
+                  value={profile.competencySubjects.map((s) => s.subjectId)}
+                  onChange={(e) => {
+                    const selectedOptions = Array.from(
+                      e.target.selectedOptions,
+                      (opt) => ({
+                        subjectId: opt.value,
+                      })
+                    );
+                    setProfile((prev) => ({
+                      ...prev,
+                      competencySubjects: selectedOptions,
+                    }));
+                  }}
                   className="form-select"
                   disabled={uploadStatus.video === "uploading"}
                 >
-                  <option value="">Select Subject</option>
                   {subjectsData?.data?.data?.map((subject) => (
                     <option key={subject.id} value={subject.id}>
                       {subject.id}
                     </option>
                   ))}
                 </select>
+                <small className="text-muted">
+                  Hold Ctrl (Windows) or Cmd (Mac) to select multiple
+                </small>
               </div>
+
               <div className="col-md-4">
                 <label className="form-label">Rate Per Hour (₦)</label>
                 <input

@@ -1,18 +1,16 @@
 import { useState, useEffect } from "react";
 import {
-  PlusCircle,
   CreditCard,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Download,
+  Shield,
+  Trash2,
+  Edit3,
 } from "lucide-react";
 import {
-  useGetWalletBalanceWithAccountNumber,
-  useGetWalletTransactions,
+ 
+  useGetStoredCard,
 } from "@/hooks/queries";
-import { useFundWallet } from "@/hooks/mutations";
+import {  useStoreCard, useDeleteCard } from "@/hooks/mutations";
 import { useAuthStore } from "@/store/zustand";
-import { v4 as uuidv4 } from "uuid";
 import StudentLayout from "@/components/layout/StudentLayout";
 import SkeletonLoader from "@/components/skeletons/dashboard";
 import queryClient from "@/lib/queryClient";
@@ -20,216 +18,204 @@ import Spinner from "@/components/Spinner";
 
 export default function StudentWallet() {
   const user = useAuthStore((state) => state.user);
-  const { data: walletData, isLoading: loadingWallet } =
-    useGetWalletBalanceWithAccountNumber(user?.accountNo);
-  const { data: transactionsData, isLoading: loadingTransactions } =
-    useGetWalletTransactions(user?.accountNo);
-  const fundWallet = useFundWallet();
+  // // const { data: walletData, isLoading: loadingWallet } =
+  //   useGetWalletBalanceWithAccountNumber(user?.accountNo);
+  // const { data: transactionsData, isLoading: loadingTransactions } =
+  //   useGetWalletTransactions(user?.accountNo);
+  // const { data: storedCardData, isLoading: loadingCard } = useGetStoredCard(
+  //   user?.id
+  // );
+
+  const storeCard = {
+    cardNumber: "1234 5678 9012 3456",
+    expiryMonth: "12",
+    expiryYear: "25",
+  };
+
+  const loadingWallet = false;
+  const loadingCard = false;
+  const storedCardData = storeCard;
+  
+
+ 
+
   const [wallet, setWallet] = useState({ balance: 0, transactions: [] });
-  const [showFundModal, setShowFundModal] = useState(false);
+  const [storedCard, setStoredCard] = useState(null);
+  const [showCardModal, setShowCardModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [amount, setAmount] = useState("");
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: "",
+    cardholderName: "",
+  });
 
   useEffect(() => {
-    if (walletData) {
-      setWallet((prev) => ({
-        ...prev,
-        balance: parseFloat(walletData.balance) || 0,
-      }));
-    }
-    if (transactionsData?.transactions) {
-      setWallet((prev) => ({
-        ...prev,
-        transactions: transactionsData.transactions.map((tx) => ({
-          id: tx.id,
-          type: tx.isCredit ? "credit" : "debit",
-          amount: parseFloat(tx.amount),
-          description: tx.narration,
-          date: tx.transDate,
-          transNo: tx.transNo,
-          status: tx.status,
-        })),
-      }));
-    }
-  }, [walletData, transactionsData]);
 
-  const handleFundWallet = (e) => {
+    if (storedCardData) {
+      setStoredCard(storedCardData);
+    }
+  }, [ storedCardData]);
+
+  const handleCardSubmit = (e) => {
     e.preventDefault();
     const payload = {
-      accountNo: user?.accountNo,
-      amount: parseInt(amount),
-      paymentMethod: "card",
-      reference: `PAY${uuidv4().replace(/-/g, "").slice(0, 10)}`,
+      userId: user?.id,
+      cardNumber: cardDetails.cardNumber.replace(/\s/g, ""),
+      expiryMonth: cardDetails.expiryMonth,
+      expiryYear: cardDetails.expiryYear,
+      cvv: cardDetails.cvv,
+      cardholderName: cardDetails.cardholderName,
     };
-    fundWallet.mutate(payload, {
+
+    storeCard.mutate(payload, {
       onSuccess: () => {
-        queryClient.invalidateQueries(["walletBalance", user?.accountNo]);
-        queryClient.invalidateQueries(["walletTransactions", user?.accountNo]);
-        setAmount("");
-        setShowFundModal(false);
+        queryClient.invalidateQueries(["storedCard", user?.id]);
+        setCardDetails({
+          cardNumber: "",
+          expiryMonth: "",
+          expiryYear: "",
+          cvv: "",
+          cardholderName: "",
+        });
+        setShowCardModal(false);
+        alert("Card saved successfully!");
       },
       onError: (error) => {
-        alert(`Failed to fund wallet: ${error.message}`);
+        alert(`Failed to save card: ${error.message}`);
       },
     });
   };
 
-  const handleDownloadPDF = (tx) => {
-    const latexContent = `
-% Including a comprehensive preamble to ensure compatibility
-\\documentclass[a4paper,12pt]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[T1]{fontenc}
-\\usepackage{lmodern}
-\\usepackage{geometry}
-\\geometry{margin=1in}
-\\usepackage{fancyhdr}
-\\usepackage{lastpage}
-\\usepackage{enumitem}
-\\usepackage{xcolor}
-\\usepackage{colortbl}
-\\usepackage{booktabs}
 
-% Setting up header and footer
-\\pagestyle{fancy}
-\\fancyhf{}
-\\fhead{Transaction Details}
-\\rfoot{Page \\thepage\\ of \\pageref{LastPage}}
 
-% Defining colors
-\\definecolor{headerblue}{RGB}{0, 51, 102}
 
-% Customizing table
-\\renewcommand{\\arraystretch}{1.2}
+  const formatCardNumber = (value) => {
+    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
+    const matches = v.match(/\d{4,16}/g);
+    const match = (matches && matches[0]) || "";
+    const parts = [];
+    for (let i = 0, len = match.length; i < len; i += 4) {
+      parts.push(match.substring(i, i + 4));
+    }
+    if (parts.length) {
+      return parts.join(" ");
+    } else {
+      return v;
+    }
+  };
 
-\\begin{document}
+  const handleCardInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "cardNumber") {
+      setCardDetails((prev) => ({
+        ...prev,
+        [name]: formatCardNumber(value),
+      }));
+    } else {
+      setCardDetails((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
 
-% Title section
-\\begin{center}
-    \\textbf{\\Large Transaction Receipt} \\
-    \\vspace{0.2cm}
-    \\textbf{Issued to: ${user?.firstName || "User"} ${user?.lastName || ""}} \\
-    \\vspace{0.1cm}
-    \\small \\today
-\\end{center}
 
-\\vspace{0.5cm}
-
-% Transaction details table
-\\begin{tabular}{ll}
-    \\toprule
-    \\rowcolor{headerblue!20}
-    \\textbf{Field} & \\textbf{Details} \\
-    \\midrule
-    Transaction Number & ${tx.transNo} \\
-    Date & ${new Date(tx.date).toLocaleString()} \\
-    Description & ${tx.description} \\
-    Amount & ₦${tx.amount.toLocaleString()} \\
-    Type & ${tx.type.charAt(0).toUpperCase() + tx.type.slice(1)} \\
-    Status & ${tx.status.charAt(0).toUpperCase() + tx.status.slice(1)} \\
-    \\bottomrule
-\\end{tabular}
-
-\\end{document}
-`;
-    console.log("Generating PDF with LaTeX content:", latexContent);
-    alert("PDF download initiated for transaction " + tx.transNo);
+  const maskCardNumber = (cardNumber) => {
+    if (!cardNumber) return "";
+    const cleaned = cardNumber.replace(/\s/g, "");
+    return "**** **** **** " + cleaned.slice(-4);
   };
 
   return (
     <StudentLayout>
       <div className="mb-4">
         <h3 className="fw-bold">My Wallet</h3>
-        <p className="text-muted">Manage and monitor your wallet activity</p>
+        <p className="text-muted">
+          Add your debit card to ease process of booking sessions
+        </p>
       </div>
 
-      {/* Balance Card and Transactions */}
-      {loadingWallet || loadingTransactions ? (
+      {/* Balance Card and Stored Card Info */}
+      {loadingWallet || loadingCard ? (
         <SkeletonLoader type="wallet" count={3} />
       ) : (
         <>
-          <div className="card border-0 shadow-sm mb-4">
-            <div className="card-body d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted mb-1">Current Balance</h6>
-                <h3 className="fw-bold text-success">
-                  ₦{wallet.balance.toLocaleString()}
-                </h3>
+          <div className="row mb-4">
+         
+
+            <div className="col-md-4">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <h6 className="text-muted mb-0">Payment Method</h6>
+                    {storedCard && (
+                      <div className="dropdown">
+                        <button
+                          className="btn btn-sm btn-outline-secondary dropdown-toggle"
+                          data-bs-toggle="dropdown"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <ul className="dropdown-menu">
+                          <li>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => setShowCardModal(true)}
+                            >
+                              <Edit3 size={14} className="me-2" />
+                              Update Card
+                            </button>
+                          </li>
+                          <li>
+                            <button
+                              className="dropdown-item text-danger"
+                              // disabled={deleteCard.isPending}
+                            >
+                              <Trash2 size={14} className="me-2" />
+                              Remove Card
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {storedCard ? (
+                    <div className="d-flex align-items-center">
+                      <CreditCard className="text-primary me-2" size={20} />
+                      <div>
+                        <div className="fw-bold small">
+                          {maskCardNumber(storedCard.cardNumber)}
+                        </div>
+                        <div className="text-muted small">
+                          Expires {storedCard.expiryMonth}/
+                          {storedCard.expiryYear}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn btn-outline-primary btn-sm w-100"
+                      onClick={() => setShowCardModal(true)}
+                    >
+                      <CreditCard className="me-2" size={16} />
+                      Add Debit Card
+                    </button>
+                  )}
+                </div>
               </div>
-              <button
-                className="btn btn-outline-primary d-flex align-items-center"
-                onClick={() => setShowFundModal(true)}
-                disabled={fundWallet.isLoading}
-              >
-                {fundWallet.isPending ? (
-                  <>
-                    <Spinner size="sm" className="me-2" />
-                    Funding...
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="me-2" size={16} />
-                    Fund Wallet
-                  </>
-                )}
-              </button>
             </div>
           </div>
 
-          <div className="card border-0 shadow-sm">
-            <div className="card-header bg-transparent border-bottom fw-semibold">
-              Transaction History
-            </div>
-            <div className="card-body p-0">
-              <ul className="list-group list-group-flush">
-                {wallet.transactions.length === 0 ? (
-                  <li className="list-group-item text-center text-muted">
-                    No transactions found
-                  </li>
-                ) : (
-                  wallet.transactions.map((tx) => (
-                    <li
-                      key={tx.id}
-                      className="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => setSelectedTransaction(tx)}
-                    >
-                      <div>
-                        <h6 className="mb-1">{tx.description}</h6>
-                        <small className="text-muted">
-                          {new Date(tx.date).toLocaleDateString()}
-                        </small>
-                      </div>
-                      <div
-                        className={`fw-bold ${
-                          tx.type === "credit" ? "text-success" : "text-danger"
-                        }`}
-                      >
-                        {tx.type === "credit" ? "+" : "-"}₦
-                        {tx.amount.toLocaleString()}
-                        {tx.type === "credit" ? (
-                          <ArrowDownCircle
-                            size={16}
-                            className="ms-2 text-success"
-                          />
-                        ) : (
-                          <ArrowUpCircle
-                            size={16}
-                            className="ms-2 text-danger"
-                          />
-                        )}
-                      </div>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
-          </div>
+       
         </>
       )}
 
-      {/* Fund Modal */}
-      {showFundModal && (
+      {/* Add/Update Card Modal */}
+      {showCardModal && (
         <div
           className="modal fade show d-block"
           style={{ background: "rgba(0,0,0,0.5)" }}
@@ -237,52 +223,138 @@ export default function StudentWallet() {
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content border-0 shadow">
               <div className="modal-header border-0">
-                <h5 className="modal-title fw-bold">Fund Wallet</h5>
+                <h5 className="modal-title fw-bold">
+                  <Shield className="me-2" size={20} />
+                  {storedCard ? "Update" : "Add"} Debit Card
+                </h5>
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={() => setShowFundModal(false)}
+                  onClick={() => setShowCardModal(false)}
                 />
               </div>
-              <form onSubmit={handleFundWallet}>
+              <form onSubmit={handleCardSubmit}>
                 <div className="modal-body">
+                  <div className="alert alert-info small">
+                    <Shield size={16} className="me-2" />
+                    Your card details are encrypted and stored securely.
+                  </div>
+
                   <div className="mb-3">
-                    <label className="form-label fw-semibold">Amount (₦)</label>
+                    <label className="form-label fw-semibold">
+                      Cardholder Name
+                    </label>
                     <input
-                      type="number"
+                      type="text"
                       className="form-control"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      name="cardholderName"
+                      value={cardDetails.cardholderName}
+                      onChange={handleCardInputChange}
                       required
-                      min={100}
-                      placeholder="Enter amount"
-                      disabled={fundWallet.isLoading}
+                      placeholder="Enter name on card"
+                      disabled={storeCard.isPending}
                     />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">
+                      Card Number
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      name="cardNumber"
+                      value={cardDetails.cardNumber}
+                      onChange={handleCardInputChange}
+                      required
+                      maxLength="19"
+                      placeholder="1234 5678 9012 3456"
+                      disabled={storeCard.isPending}
+                    />
+                  </div>
+
+                  <div className="row mb-3">
+                    <div className="col-4">
+                      <label className="form-label fw-semibold">Month</label>
+                      <select
+                        className="form-control"
+                        name="expiryMonth"
+                        value={cardDetails.expiryMonth}
+                        onChange={handleCardInputChange}
+                        required
+                        disabled={storeCard.isPending}
+                      >
+                        <option value="">MM</option>
+                        {[...Array(12)].map((_, i) => (
+                          <option
+                            key={i + 1}
+                            value={String(i + 1).padStart(2, "0")}
+                          >
+                            {String(i + 1).padStart(2, "0")}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-4">
+                      <label className="form-label fw-semibold">Year</label>
+                      <select
+                        className="form-control"
+                        name="expiryYear"
+                        value={cardDetails.expiryYear}
+                        onChange={handleCardInputChange}
+                        required
+                        disabled={storeCard.isPending}
+                      >
+                        <option value="">YY</option>
+                        {Array.from({ length: 10 }, (_, i) => {
+                          const year = new Date().getFullYear() + i;
+                          return (
+                            <option key={year} value={String(year).slice(-2)}>
+                              {String(year).slice(-2)}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <div className="col-4">
+                      <label className="form-label fw-semibold">CVV</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="cvv"
+                        value={cardDetails.cvv}
+                        onChange={handleCardInputChange}
+                        required
+                        maxLength="4"
+                        placeholder="123"
+                        disabled={storeCard.isPending}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="modal-footer border-0">
                   <button
                     type="button"
                     className="btn btn-outline-secondary"
-                    onClick={() => setShowFundModal(false)}
-                    disabled={fundWallet.isLoading}
+                    onClick={() => setShowCardModal(false)}
+                    disabled={storeCard.isPending}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className="btn btn-primary d-flex align-items-center"
-                    disabled={fundWallet.isLoading}
+                    disabled={storeCard.isPending}
                   >
-                    {fundWallet.isPending ? (
+                    {storeCard.isPending ? (
                       <>
                         <Spinner size="sm" className="me-2" />
-                        Funding...
+                        Saving...
                       </>
                     ) : (
                       <>
-                        <CreditCard className="me-2" size={16} />
-                        Fund Now
+                        <Shield className="me-2" size={16} />
+                        Save Card
                       </>
                     )}
                   </button>
@@ -293,71 +365,9 @@ export default function StudentWallet() {
         </div>
       )}
 
-      {/* Transaction Details Modal */}
-      {selectedTransaction && (
-        <div
-          className="modal fade show d-block"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content border-0 shadow">
-              <div className="modal-header border-0">
-                <h5 className="modal-title fw-bold">Transaction Details</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setSelectedTransaction(null)}
-                />
-              </div>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <strong>Transaction Number:</strong>{" "}
-                  {selectedTransaction.transNo}
-                </div>
-                <div className="mb-3">
-                  <strong>Date:</strong>{" "}
-                  {new Date(selectedTransaction.date).toLocaleString()}
-                </div>
-                <div className="mb-3">
-                  <strong>Description:</strong>{" "}
-                  {selectedTransaction.description}
-                </div>
-                <div className="mb-3">
-                  <strong>Amount:</strong> ₦
-                  {selectedTransaction.amount.toLocaleString()}
-                </div>
-                <div className="mb-3">
-                  <strong>Type:</strong>{" "}
-                  {selectedTransaction.type.charAt(0).toUpperCase() +
-                    selectedTransaction.type.slice(1)}
-                </div>
-                <div className="mb-3">
-                  <strong>Status:</strong>{" "}
-                  {selectedTransaction.status.charAt(0).toUpperCase() +
-                    selectedTransaction.status.slice(1)}
-                </div>
-              </div>
-              <div className="modal-footer border-0">
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={() => setSelectedTransaction(null)}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  onClick={() => handleDownloadPDF(selectedTransaction)}
-                >
-                  <Download className="me-2" size={16} />
-                  Download PDF
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+ 
+
+      
     </StudentLayout>
   );
 }

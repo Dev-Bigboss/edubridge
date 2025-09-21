@@ -11,7 +11,6 @@ import {
   useGetStudentSummary,
   useGetStudentUpcomingSessions,
   useGetAllTutors,
-  useGetWalletBalanceWithAccountNumber,
 } from "@/hooks/queries";
 import StudentLayout from "@/components/layout/StudentLayout";
 import BookTutorModal from "@/components/modals/bookSessionModal";
@@ -24,8 +23,6 @@ export default function StudentDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
 
-  const { data: walletData, isLoading: loadingWallet } =
-    useGetWalletBalanceWithAccountNumber(user?.accountNo);
 
   const { data: studentSummary, isLoading: loadingSummary } =
     useGetStudentSummary();
@@ -45,14 +42,11 @@ export default function StudentDashboard() {
   }, []);
 
   useEffect(() => {
-    if (studentSummary?.data || walletData) {
+    if (studentSummary?.data) {
       setStats({
         tutors: studentSummary?.data?.activeTutor || 0,
         sessions: studentSummary?.data?.sessionBooked || 0,
         subjects: studentSummary?.data?.subjects || 0,
-        wallet:
-          walletData.data.currentBalance ||
-          parseFloat(walletData?.data.balance), // Fallback to mock if wallet not in API
       });
     }
 
@@ -124,19 +118,7 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
-          <div className="col-md-3 col-sm-6">
-            <div className="bg-warning bg-opacity-10 rounded p-3 h-100">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <h5 className="fw-bold mb-0 text-warning">
-                    ₦{stats.wallet?.toLocaleString()}
-                  </h5>
-                  <small className="text-muted">Wallet Balance</small>
-                </div>
-                <Clock className="text-warning" size={24} />
-              </div>
-            </div>
-          </div>
+         
         </div>
       )}
 

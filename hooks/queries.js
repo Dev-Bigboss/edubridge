@@ -11,6 +11,17 @@ export const useGetStudentProfile = () => {
   });
 };
 
+export const useGetUserMessages = () => {
+  return useQuery({
+    queryKey: ["userMessages"],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get("/messages/user-message/");
+      return data.data || []; 
+    },
+  });
+};
+
+
 
 export const useGetStudentSummary = () => {
   return useQuery({
@@ -82,6 +93,17 @@ export const useGetWalletBalanceWithAccountNumber = (accountNumber) => {
       return data;
     },
     enabled: !!accountNumber, // Only run if accountNumber is provided
+  });
+}
+
+export const useGetStoredCards = (userId) => {
+  return useQuery({
+    queryKey: ["storedCards", userId],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/wallet/cards/${userId}/`);
+      return data;
+    },
+    enabled: !!userId, // Only run if userId is provided
   });
 }
 

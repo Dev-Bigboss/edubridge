@@ -62,7 +62,7 @@ export default function Banner1() {
                       data-svg-icon="assets/img/icons/btn-arrow.svg"
                     />
                   </Link>
-                  <Link href="/signup?type=student" className="btn tg-svg ms-3">
+                  <Link href="/signup?type=tutor" className="btn tg-svg ms-3">
                     <span className="text">Become a Tutor</span>
                     <span
                       className="svg-icon"
