@@ -550,20 +550,7 @@ export default function BookTutorModal({
 
               <div className="modal-footer">
                 <div className="d-flex justify-content-between w-100 align-items-center">
-                  <div>
-                    {walletDataLoading ? (
-                      <Spinner size="sm" />
-                    ) : walletError ? (
-                      <span className="text-danger small">
-                        Error loading wallet balance
-                      </span>
-                    ) : (
-                      <span className="small text-muted">
-                        Wallet Balance: ₦
-                        {parseFloat(walletData?.balance || 0).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
+                 
 
                   <div>
                     <button
