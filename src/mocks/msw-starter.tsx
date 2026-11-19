@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { releaseMockGate } from "@/lib/api/client";
 import { worker } from "./browser";
 
 /**
@@ -13,7 +14,11 @@ export default function MswStarter({ onReady }: { onReady: () => void }) {
     worker
       .start({ onUnhandledFrame: "bypass", quiet: true })
       .catch((err) => console.error("[mocks] failed to start", err))
-      .finally(() => !cancelled && onReady());
+      .finally(() => {
+        // Release even if start failed: requests then fail visibly instead of hanging.
+        releaseMockGate();
+        if (!cancelled) onReady();
+      });
     return () => {
       cancelled = true;
     };

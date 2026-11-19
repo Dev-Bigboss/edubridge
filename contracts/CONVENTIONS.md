@@ -65,3 +65,13 @@ Every non-2xx response has this body:
 | User statuses | `PENDING_VERIFICATION, ACTIVE, SUSPENDED` | `enums.ts` |
 | Onboarding progress | `User.onboarding_status`: `NOT_STARTED, IN_PROGRESS, COMPLETED` (ONB-6) | `schemas/auth.ts` |
 | Cancellation policy | Separate learner and instructor policies (who cancels changes the refund); values still to come | plan §8 Q3 |
+| Password policy | 10–128 characters, no composition rules, breached-password check on the backend (NIST 800-63B) | `schemas/auth.ts` |
+| Email verification | Required before sign-in (403 `EMAIL_NOT_VERIFIED`); link valid 24 h, single use; verifying signs the user in | `auth.yaml` |
+| Consent records | Versions live in `src/lib/legal/versions.ts`; `User.consent_required` forces re-acceptance after a change | `auth.yaml` |
+| Google sign-up | Account created `ACTIVE` with `consent_required: true`; consent page before anything else | `auth.yaml` |
+| Learner onboarding | Sent there once after sign-up; "finish later" allowed (dashboard offers to resume) | `routes.ts` |
+| Instructor onboarding | Must be finished before `/teach`; submitting sets `approval_status: PENDING` | `routes.ts`, `onboarding.yaml` |
+| Education levels | `SECONDARY, UNDERGRADUATE, POSTGRADUATE, PROFESSIONAL, OTHER` | `enums.ts` |
+| Payout details | Stripe Connect Express; status `NOT_STARTED, PENDING, COMPLETE` from Stripe webhooks; no bank data stored | `onboarding.yaml` |
+| Uploads | Signed direct-to-storage PUT, virus scan (`SCANNING, CLEAN, INFECTED`), limits per purpose | `uploads.yaml` |
+| Availability | Weekly slots in the instructor's own zone, ISO weekday 1 = Monday, no overlaps per day | `onboarding.yaml` |

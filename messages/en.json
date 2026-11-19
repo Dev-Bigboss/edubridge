@@ -82,14 +82,14 @@
       "subtitle": "Sign in to your EduBridge account",
       "email": "Email address",
       "password": "Password",
-      "showPassword": "Show password",
-      "hidePassword": "Hide password",
       "forgot": "Forgot password?",
       "submit": "Sign in",
       "submitting": "Signing in",
       "noAccount": "New to EduBridge?",
       "createAccount": "Create an account",
-      "success": "Signed in. Welcome back, {name}."
+      "success": "Signed in. Welcome back, {name}.",
+      "googleFailed": "Google sign-in didn't finish. Try again, or use your email and password.",
+      "resendVerification": "Send the confirmation link again"
     },
     "mfa": {
       "title": "Check your authenticator app",
@@ -99,7 +99,88 @@
       "submitting": "Verifying",
       "back": "Use a different account"
     },
-    "mockHint": "Demo accounts (mock API): learner@example.com, instructor@example.com or admin@example.com with password Password123!. Code for instructor and admin: 123456."
+    "mockHint": "Demo accounts (mock API): learner@example.com, instructor@example.com or admin@example.com with password Password123!. Code for instructor and admin: 123456.",
+    "password": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "google": "Continue with Google",
+    "or": "or",
+    "register": {
+      "title": "Create your account",
+      "subtitle": "Join live cohort classes or book one-on-one sessions with vetted instructors.",
+      "roleLegend": "I want to",
+      "roleLearner": "Learn",
+      "roleLearnerHint": "Join cohorts and book sessions",
+      "roleInstructor": "Teach",
+      "roleInstructorHint": "Run cohorts and take 1:1 bookings",
+      "name": "Full name",
+      "email": "Email address",
+      "password": "Password",
+      "passwordHint": "At least 10 characters. A short phrase is easier to remember.",
+      "consent": "I agree to the <terms>Terms of service</terms> and <privacy>Privacy policy</privacy>.",
+      "timezone": "We'll show session times in {zone}. You can change this later.",
+      "submit": "Create account",
+      "submitting": "Creating account",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "googleConsent": "By continuing with Google you'll be asked to accept our terms before you start."
+    },
+    "verify": {
+      "checkTitle": "Check your email",
+      "checkSubtitle": "We sent a confirmation link to {email}. Open it to activate your account.",
+      "checkSubtitleNoEmail": "Open the confirmation link we emailed you to activate your account.",
+      "checkTips": "The link works for 24 hours. If you can't find it, check spam or promotions.",
+      "resend": "Send the link again",
+      "resending": "Sending",
+      "resent": "Done. If that address is waiting for confirmation, a new link is on its way.",
+      "emailLabel": "Email address",
+      "verifyingTitle": "Confirming your email",
+      "verifyingSubtitle": "One moment while we activate your account.",
+      "failedTitle": "This link didn't work",
+      "success": "Email confirmed. Welcome to EduBridge, {name}.",
+      "backToSignIn": "Back to sign in"
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "subtitle": "Enter the email you signed up with and we'll send you a link to choose a new password.",
+      "email": "Email address",
+      "submit": "Send reset link",
+      "submitting": "Sending",
+      "sent": "If {email} has an EduBridge account, a reset link is on its way. It works for 1 hour.",
+      "tryAnother": "Use a different email",
+      "remembered": "Remembered it?",
+      "signIn": "Sign in"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "subtitle": "You'll use it to sign in from now on. Other devices will be signed out.",
+      "password": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Save new password",
+      "submitting": "Saving",
+      "success": "Password changed. Sign in with your new password.",
+      "missingToken": "This page needs the link from your reset email. Request a new one below.",
+      "requestNew": "Request a new link"
+    },
+    "consent": {
+      "title": "Before you continue",
+      "subtitle": "Please review and accept how EduBridge works and how we handle your data.",
+      "updatedSubtitle": "We've updated our terms. Please review and accept them to keep using EduBridge.",
+      "terms": "Terms of service",
+      "privacy": "Privacy policy",
+      "version": "Version of {date}",
+      "checkbox": "I've read and agree to the Terms of service and Privacy policy.",
+      "checkboxError": "Tick the box to continue.",
+      "submit": "Agree and continue",
+      "submitting": "Saving",
+      "decline": "Sign out instead",
+      "success": "Thanks. You're all set."
+    },
+    "googleCallback": {
+      "title": "Signing you in with Google",
+      "subtitle": "One moment."
+    }
   },
   "shell": {
     "learner": "Learner",
@@ -157,6 +238,149 @@
       "emptyTitle": "Nothing to report yet",
       "emptyBody": "Start by creating the catalogue: categories, then trainings and their pricing rules. Metrics appear as soon as learners enrol.",
       "emptyCta": "Create a training"
+    },
+    "notices": {
+      "finishTitle": "Finish setting up your profile",
+      "finishBody": "Tell us your goals and background so instructors can prepare and we can suggest the right trainings.",
+      "finishCta": "Continue setup",
+      "pendingTitle": "Your profile is being reviewed",
+      "pendingBody": "We check every instructor's ID and qualifications, usually within two working days. We'll email you when you're approved and your profile goes live.",
+      "rejectedTitle": "We couldn't approve your profile yet",
+      "rejectedBody": "Check your email for what's missing. Reply to that email and we'll take another look."
     }
+  },
+  "onboarding": {
+    "progress": "Onboarding progress",
+    "stepOf": "Step {current} of {total}",
+    "stepDone": "done",
+    "stepTodo": "not done yet",
+    "back": "Back",
+    "saving": "Saving",
+    "saveAndContinue": "Save and continue",
+    "finishLater": "Finish later",
+    "laterToast": "Saved. You can finish your profile any time from your dashboard.",
+    "laterFailed": "We couldn't save that. Check your connection and try again.",
+    "learner": {
+      "title": "Set up your learning profile",
+      "intro": "Three short steps so instructors know who they're teaching and we can suggest the right trainings. You can change any of this later.",
+      "steps": {
+        "profile": "About you",
+        "goals": "Your goals",
+        "background": "Your background"
+      },
+      "finish": "Finish setup",
+      "doneToast": "You're all set. Let's find your first training."
+    },
+    "instructor": {
+      "title": "Set up your teaching profile",
+      "intro": "Tell learners who you are and get verified. Our team reviews every instructor before their profile goes live, usually within two working days.",
+      "steps": {
+        "profile": "Profile",
+        "expertise": "Expertise",
+        "verification": "Verification",
+        "payout": "Payouts",
+        "availability": "Availability",
+        "review": "Review and submit"
+      }
+    },
+    "profile": {
+      "name": "Full name",
+      "headline": "Headline",
+      "headlineHint": "One line learners see under your name, e.g. \"Chartered accountant, 8 years teaching ICAN\".",
+      "bio": "Bio",
+      "bioHint": "Your experience, how you teach and who you help most. {count} of at least 80 characters.",
+      "country": "Country",
+      "choose": "Choose one",
+      "timezone": "Time zone",
+      "timezoneHint": "Session times are shown in this zone."
+    },
+    "goals": {
+      "goals": "What do you want to achieve?",
+      "goalsHint": "For example: \"Pass ICAN Skills level by May\" or \"Get comfortable with calculus before my first semester\".",
+      "interests": "Areas you're interested in",
+      "interestsHint": "Pick all that apply.",
+      "topics": "Subjects or topics (optional)",
+      "topicsHint": "Press Enter after each one. Up to 10.",
+      "topicsPlaceholder": "e.g. Financial reporting"
+    },
+    "background": {
+      "level": "Highest level of education",
+      "choose": "Choose one",
+      "levels": {
+        "SECONDARY": "Secondary school",
+        "UNDERGRADUATE": "Undergraduate",
+        "POSTGRADUATE": "Postgraduate",
+        "PROFESSIONAL": "Professional qualification",
+        "OTHER": "Other"
+      },
+      "examDate": "Exam date (optional)",
+      "examDateHint": "If you're preparing for an exam, we'll keep your sessions on track for it."
+    },
+    "expertise": {
+      "categories": "What do you teach?",
+      "subjects": "Subjects",
+      "subjectsHint": "Press Enter after each one. Learners search by these. Up to 15.",
+      "subjectsPlaceholder": "e.g. Corporate finance",
+      "qualifications": "Qualifications",
+      "qualificationsHint": "Degrees, professional certifications or other credentials. You'll upload proof in the next step.",
+      "qualTitle": "Qualification",
+      "qualTitlePlaceholder": "e.g. ACCA",
+      "qualInstitution": "Awarded by",
+      "qualYear": "Year",
+      "addQualification": "Add a qualification",
+      "removeQualification": "Remove qualification {n}"
+    },
+    "verification": {
+      "privacy": "These documents are only seen by the EduBridge review team and are never shown on your profile.",
+      "idLabel": "Photo ID",
+      "idDescription": "Passport, driver's licence or national ID card. Make sure your name and photo are clear.",
+      "idRequired": "Upload a government-issued photo ID.",
+      "credLabel": "Certificates (optional)",
+      "credDescription": "Proof of the qualifications you listed. Up to 5 files."
+    },
+    "payout": {
+      "intro": "We pay your earnings through Stripe. You'll enter your bank details on Stripe's secure pages, so EduBridge never sees or stores them.",
+      "notStarted": "Connect a payout account to get paid for your sessions.",
+      "pending": "Stripe is still checking your details. You can continue where you left off.",
+      "complete": "Your payout account is connected.",
+      "connect": "Connect with Stripe",
+      "continueSetup": "Continue on Stripe",
+      "opening": "Opening Stripe",
+      "returned": "Welcome back. Your payout details are saved.",
+      "next": "Continue",
+      "back": "Back"
+    },
+    "availability": {
+      "intro": "Set the times you usually teach each week. Learners see these converted to their own time zone, and you'll confirm each request before it's booked.",
+      "timezone": "Your time zone"
+    },
+    "review": {
+      "intro": "Check everything is complete, then submit your profile for review. We'll email you when it's approved.",
+      "missing": "A few steps still need finishing before you can submit.",
+      "edit": "Edit",
+      "finish": "Finish",
+      "submit": "Submit for review"
+    },
+    "submitted": {
+      "title": "Thanks, we're reviewing your profile",
+      "body": "Our team checks every instructor's ID and qualifications, usually within two working days. We'll email you as soon as you're approved. Meanwhile you can look around your dashboard.",
+      "cta": "Go to dashboard"
+    }
+  },
+  "availability": {
+    "days": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "7": "Sunday"
+    },
+    "unavailable": "Not available",
+    "from": "{day} start time",
+    "to": "{day} end time",
+    "remove": "Remove this {day} time",
+    "add": "Add time"
   }
 }

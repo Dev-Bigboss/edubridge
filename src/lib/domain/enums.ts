@@ -73,3 +73,15 @@ export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
 /** SRS §5 User.status, ADM-2 suspend */
 export const USER_STATUSES = ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED"] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
+
+/** PLAN (ONB-2 "education level"): SRS names the field, not the values. */
+export const EDUCATION_LEVELS = ["SECONDARY", "UNDERGRADUATE", "POSTGRADUATE", "PROFESSIONAL", "OTHER"] as const;
+export type EducationLevel = (typeof EDUCATION_LEVELS)[number];
+
+/** PLAN (ONB-3 payout details): state of the instructor's Stripe Connect account. */
+export const PAYOUT_SETUP_STATUSES = ["NOT_STARTED", "PENDING", "COMPLETE"] as const;
+export type PayoutSetupStatus = (typeof PAYOUT_SETUP_STATUSES)[number];
+
+/** RES-4: uploads are virus-scanned before anyone can open them. */
+export const FILE_SCAN_STATUSES = ["SCANNING", "CLEAN", "INFECTED"] as const;
+export type FileScanStatus = (typeof FILE_SCAN_STATUSES)[number];

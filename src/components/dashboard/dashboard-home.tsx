@@ -1,11 +1,13 @@
 "use client";
 
-import { BookOpen, CalendarClock, LayoutDashboard, type LucideIcon } from "lucide-react";
+import { BookOpen, CalendarClock, CircleAlert, Hourglass, LayoutDashboard, UserRoundPen, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { User } from "@/lib/api/schemas/auth";
 import { useSession } from "@/lib/auth/session";
+import { cn } from "@/lib/cn";
 
 type Area = "learner" | "instructor" | "admin";
 
@@ -28,6 +30,7 @@ export function DashboardHome({ area }: { area: Area }) {
     <div className="mx-auto max-w-5xl">
       <h1 className="mb-1 text-[28px]">{t("greeting", { name: user?.name.split(" ")[0] ?? "" })}</h1>
       <p className="mb-8 leading-relaxed">{t(`${area}.intro`)}</p>
+      {user && <AccountNotice user={user} />}
       <EmptyState
         icon={icon}
         title={t(`${area}.emptyTitle`)}
@@ -38,6 +41,43 @@ export function DashboardHome({ area }: { area: Area }) {
           </Button>
         }
       />
+    </div>
+  );
+}
+
+/** One account-level prompt at most: unfinished onboarding (ONB-6) or instructor approval (ONB-3). */
+function AccountNotice({ user }: { user: User }) {
+  const t = useTranslations("dashboard.notices");
+  let notice: { icon: LucideIcon; tone: "info" | "warn"; title: string; body: string; href?: string; cta?: string } | null = null;
+
+  if (user.role === "LEARNER" && user.onboarding_status !== "COMPLETED") {
+    notice = { icon: UserRoundPen, tone: "info", title: t("finishTitle"), body: t("finishBody"), href: "/onboarding/learner", cta: t("finishCta") };
+  } else if (user.role === "INSTRUCTOR" && user.approval_status === "PENDING") {
+    notice = { icon: Hourglass, tone: "info", title: t("pendingTitle"), body: t("pendingBody") };
+  } else if (user.role === "INSTRUCTOR" && user.approval_status === "REJECTED") {
+    notice = { icon: CircleAlert, tone: "warn", title: t("rejectedTitle"), body: t("rejectedBody") };
+  }
+  if (!notice) return null;
+  const Icon = notice.icon;
+
+  return (
+    <div
+      role="status"
+      className={cn(
+        "mb-8 flex flex-col gap-4 rounded-md border p-5 sm:flex-row sm:items-center",
+        notice.tone === "info" ? "border-primary/25 bg-surface-2" : "border-danger/30 bg-danger-soft",
+      )}
+    >
+      <Icon aria-hidden="true" className={cn("size-6 shrink-0", notice.tone === "info" ? "text-primary" : "text-danger")} />
+      <div className="flex-1">
+        <p className="font-heading font-medium text-heading">{notice.title}</p>
+        <p className="leading-relaxed">{notice.body}</p>
+      </div>
+      {notice.href && (
+        <Button asChild variant="outline">
+          <Link href={notice.href}>{notice.cta}</Link>
+        </Button>
+      )}
     </div>
   );
 }

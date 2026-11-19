@@ -206,7 +206,10 @@ Original scope:
 - CI: lint, typecheck, unit, Playwright, axe, Lighthouse budget.
 - Write API conventions doc (§3) and agree it with backend.
 
-### Phase 1: MVP (L) — SRS phase 1
+### Phase 1: MVP (L) — SRS phase 1 (in progress)
+**Built so far (19 Nov 2026):** registration (learner or instructor), email verification, password reset, Google sign-in entry point, consent with versioned legal pages (draft text, needs legal review), learner and instructor onboarding wizards with resume, uploads (photo, ID, certificates), Stripe Connect payout step, weekly availability, dashboard prompts for unfinished onboarding and pending approval. Contracts: `auth.yaml` (extended), `onboarding.yaml`, `uploads.yaml`.
+**Next:** admin catalogue (categories, modalities, trainings), pricing rules, public catalogue, cohorts, cohort checkout, payments history, notifications, admin users with instructor approval, audit log.
+
 Auth (email/password, Google, verify, reset, consent), learner + instructor onboarding with resume, admin catalogue (categories, modalities, trainings, metadata fields), pricing rules + overrides + versions + preview, public catalogue and training detail, cohorts admin, cohort enrolment checkout with breakdown, payment return/history/receipts, basic in-app + email notification centre, admin user management and instructor approval, audit log viewer.
 *Req:* ONB-1..4/6, TRN-1..7, PRC-1..5/7, COH-1..3, PAY-1/2/6, NTF-1, ADM-2/3/5.
 

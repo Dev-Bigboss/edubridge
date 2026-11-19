@@ -50,7 +50,8 @@
     "msw": "^3.0.7",
     "tailwindcss": "4.3.3",
     "typescript": "^5",
-    "vitest": "^5.1.1"
+    "vitest": "^5.1.1",
+    "yaml": "2.8.1"
   },
   "packageManager": "pnpm@10.28.0",
   "msw": {

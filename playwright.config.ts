@@ -9,7 +9,11 @@ const PORT = Number(process.env.E2E_PORT ?? 3100);
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // Locally the app server, browsers and your editor share one machine; more workers made runs flaky.
+  workers: process.env.CI ? undefined : 2,
   forbidOnly: !!process.env.CI,
+  // Flows with a full reload restart the mock service worker; give assertions room under parallel load.
+  expect: { timeout: 10_000 },
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {

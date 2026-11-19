@@ -4,9 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, api } from "@/lib/api/client";
 import {
   LoginResponse,
+  RegisterResponse,
   SessionResponse,
+  type LegalVersions,
   type LoginRequest,
   type MfaVerifyRequest,
+  type RegisterRequest,
   type User,
 } from "@/lib/api/schemas/auth";
 import { useApiReady } from "@/components/providers";
@@ -61,5 +64,53 @@ export function useLogout() {
       qc.clear();
       qc.setQueryData(sessionKey, null);
     },
+  });
+}
+
+export function useRegister() {
+  return useMutation({
+    mutationFn: (body: RegisterRequest) => api("/auth/register", { method: "POST", body, schema: RegisterResponse }),
+  });
+}
+
+/** Redeems the emailed link. The backend signs the person in, so the session cache is set. */
+export function useVerifyEmail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => api("/auth/email/verify", { method: "POST", body: { token }, schema: SessionResponse }),
+    onSuccess: (res) => qc.setQueryData(sessionKey, res.user),
+  });
+}
+
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: (email: string) => api("/auth/email/resend", { method: "POST", body: { email } }),
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email: string) => api("/auth/password/forgot", { method: "POST", body: { email } }),
+  });
+}
+
+export function useResetPassword() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { token: string; password: string }) =>
+      api("/auth/password/reset", { method: "POST", body }),
+    // A reset ends every session on the backend, so forget any cached one here too.
+    onSuccess: () => {
+      qc.clear();
+      qc.setQueryData(sessionKey, null);
+    },
+  });
+}
+
+export function useAcceptConsent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: LegalVersions) => api("/auth/consent", { method: "POST", body, schema: SessionResponse }),
+    onSuccess: (res) => qc.setQueryData(sessionKey, res.user),
   });
 }

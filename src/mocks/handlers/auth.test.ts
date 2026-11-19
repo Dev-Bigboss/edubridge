@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { api, ApiError } from "@/lib/api/client";
-import { LoginResponse, SessionResponse } from "@/lib/api/schemas/auth";
-import { mockSession } from "../db";
+import { LoginResponse, RegisterResponse, SessionResponse } from "@/lib/api/schemas/auth";
+import { LEGAL_VERSIONS, db, mockSession } from "../db";
 
 /** Awaits a call that must fail and returns its ApiError. */
 const failure = (p: Promise<unknown>) =>
@@ -63,5 +63,78 @@ describe("auth mock follows contracts/openapi/auth.yaml", () => {
     await api("/auth/login", { method: "POST", body: { email: "learner@example.com", password: "Password123!" } });
     await api("/auth/logout", { method: "POST" });
     await expect(api("/auth/me")).rejects.toMatchObject({ status: 401 });
+  });
+
+  const registration = (over: Record<string, unknown> = {}) => ({
+    role: "LEARNER",
+    name: "New Person",
+    email: "new.person@example.com",
+    password: "a long passphrase",
+    timezone: "Europe/Berlin",
+    accept_terms: true,
+    terms_version: LEGAL_VERSIONS.terms,
+    privacy_version: LEGAL_VERSIONS.privacy,
+    ...over,
+  });
+  const linkToken = (path: string) => new URL(db.outbox.find((m) => m.link.includes(path))!.link).searchParams.get("token")!;
+
+  it("registers, blocks sign-in until verified, then verifies and signs in", async () => {
+    const res = await api("/auth/register", { method: "POST", body: registration(), schema: RegisterResponse });
+    expect(res.email).toBe("new.person@example.com");
+
+    const blocked = await failure(api("/auth/login", { method: "POST", body: { email: res.email, password: "a long passphrase" } }));
+    expect(blocked.code).toBe("EMAIL_NOT_VERIFIED");
+
+    const token = linkToken("/verify-email");
+    const verified = await api("/auth/email/verify", { method: "POST", body: { token }, schema: SessionResponse });
+    expect(verified.user).toMatchObject({ status: "ACTIVE", onboarding_status: "NOT_STARTED", timezone: "Europe/Berlin" });
+
+    // Single use.
+    const again = await failure(api("/auth/email/verify", { method: "POST", body: { token } }));
+    expect(again.code).toBe("TOKEN_INVALID");
+  });
+
+  it("does not reveal that an email is already registered", async () => {
+    const res = await api("/auth/register", {
+      method: "POST",
+      body: registration({ email: "learner@example.com" }),
+      schema: RegisterResponse,
+    });
+    expect(res.email).toBe("learner@example.com");
+  });
+
+  it("rejects registration without consent or with stale document versions", async () => {
+    const noConsent = await failure(api("/auth/register", { method: "POST", body: registration({ accept_terms: false }) }));
+    expect(noConsent.fieldErrors.accept_terms).toBeDefined();
+    const stale = await failure(api("/auth/register", { method: "POST", body: registration({ terms_version: "2020-01-01" }) }));
+    expect(stale.code).toBe("LEGAL_VERSION_OUTDATED");
+  });
+
+  it("resets a password with the emailed link", async () => {
+    await api("/auth/password/forgot", { method: "POST", body: { email: "learner@example.com" } });
+    const token = linkToken("/reset-password");
+    await api("/auth/password/reset", { method: "POST", body: { token, password: "brand new passphrase" } });
+    const res = await api("/auth/login", {
+      method: "POST",
+      body: { email: "learner@example.com", password: "brand new passphrase" },
+      schema: LoginResponse,
+    });
+    expect(res.mfa_required).toBe(false);
+  });
+
+  it("answers forgot-password the same way for unknown emails", async () => {
+    await expect(api("/auth/password/forgot", { method: "POST", body: { email: "nobody@example.com" } })).resolves.toBeUndefined();
+    expect(db.outbox).toHaveLength(0);
+  });
+
+  it("records consent for a Google sign-up", async () => {
+    const g = await api("/__mock/google", { method: "POST", body: { role: "LEARNER" }, schema: SessionResponse });
+    expect(g.user.consent_required).toBe(true);
+    const res = await api("/auth/consent", {
+      method: "POST",
+      body: { terms_version: LEGAL_VERSIONS.terms, privacy_version: LEGAL_VERSIONS.privacy },
+      schema: SessionResponse,
+    });
+    expect(res.user.consent_required).toBe(false);
   });
 });

@@ -1,18 +1,22 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { AuthCard, AuthFooterLink, FormError } from "@/components/auth/auth-card";
+import { GoogleButton, OrDivider } from "@/components/auth/google-button";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { ApiError } from "@/lib/api/client";
 import { applyApiError } from "@/lib/api/form-errors";
 import { LoginRequest, MfaVerifyRequest, type User } from "@/lib/api/schemas/auth";
-import { postLoginPath } from "@/lib/auth/routes";
+import { afterSignInPath } from "@/lib/auth/routes";
 import { useLogin, useSession, useVerifyMfa } from "@/lib/auth/session";
 
 const MOCKING = process.env.NEXT_PUBLIC_API_MOCKING === "on";
@@ -20,72 +24,83 @@ const MOCKING = process.env.NEXT_PUBLIC_API_MOCKING === "on";
 export function LoginForm() {
   const t = useTranslations("auth");
   const router = useRouter();
-  const next = useSearchParams().get("next");
+  const params = useSearchParams();
+  const next = params.get("next");
+  const googleError = params.get("error");
   const { data: currentUser } = useSession();
   const [challengeId, setChallengeId] = useState<string | null>(null);
 
   // Already signed in (e.g. pressed Back after signing in): skip the form.
   useEffect(() => {
-    if (currentUser) router.replace(postLoginPath(currentUser.role, next));
+    if (currentUser) router.replace(afterSignInPath(currentUser, next));
   }, [currentUser, next, router]);
 
   const finish = (user: User) => {
     toast.success(t("login.success", { name: user.name.split(" ")[0] }));
-    router.replace(postLoginPath(user.role, next));
+    router.replace(afterSignInPath(user, next));
   };
 
   return (
-    <div className="w-full max-w-[450px]">
-      <div className="mb-8 text-center">
-        <span className="mb-4 inline-flex size-16 items-center justify-center rounded-full bg-surface-2 text-primary">
-          <LockKeyhole aria-hidden="true" className="size-7" />
-        </span>
-        <h1 className="mb-2 text-[28px]">{challengeId ? t("mfa.title") : t("login.title")}</h1>
-        <p className="leading-relaxed">{challengeId ? t("mfa.subtitle") : t("login.subtitle")}</p>
-      </div>
-
-      <div className="rounded-md border border-border bg-white p-6 shadow-[0_10px_30px_rgba(8,42,94,0.06)] md:p-8">
-        {challengeId ? (
-          <MfaStep challengeId={challengeId} onDone={finish} onBack={() => setChallengeId(null)} />
-        ) : (
-          <PasswordStep onMfa={setChallengeId} onDone={finish} />
-        )}
-      </div>
-
-      {!challengeId && (
-        <p className="mt-6 text-center">
-          {t("login.noAccount")}{" "}
-          <Link href="/register" className="font-medium text-primary underline-offset-4 hover:underline">
-            {t("login.createAccount")}
-          </Link>
-        </p>
+    <AuthCard
+      icon={LockKeyhole}
+      title={challengeId ? t("mfa.title") : t("login.title")}
+      subtitle={challengeId ? t("mfa.subtitle") : t("login.subtitle")}
+      footer={
+        <>
+          {!challengeId && (
+            <AuthFooterLink prompt={t("login.noAccount")} href="/register" label={t("login.createAccount")} />
+          )}
+          {MOCKING && (
+            <p className="mt-6 rounded-sm border border-dashed border-border bg-white p-4 text-sm leading-relaxed">
+              {t("mockHint")}
+            </p>
+          )}
+        </>
+      }
+    >
+      {challengeId ? (
+        <MfaStep challengeId={challengeId} onDone={finish} onBack={() => setChallengeId(null)} />
+      ) : (
+        <>
+          <GoogleButton role="LEARNER" next={next} />
+          <OrDivider />
+          <PasswordStep
+            onMfa={setChallengeId}
+            onDone={finish}
+            initialError={googleError ? t("login.googleFailed") : null}
+          />
+        </>
       )}
-
-      {MOCKING && (
-        <p className="mt-6 rounded-sm border border-dashed border-border bg-white p-4 text-sm leading-relaxed">
-          {t("mockHint")}
-        </p>
-      )}
-    </div>
+    </AuthCard>
   );
 }
 
-function PasswordStep({ onMfa, onDone }: { onMfa: (id: string) => void; onDone: (u: User) => void }) {
+function PasswordStep({
+  onMfa,
+  onDone,
+  initialError,
+}: {
+  onMfa: (id: string) => void;
+  onDone: (u: User) => void;
+  initialError: string | null;
+}) {
   const t = useTranslations("auth.login");
   const login = useLogin();
-  const [showPassword, setShowPassword] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(initialError);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const form = useForm<LoginRequest>({ resolver: zodResolver(LoginRequest), mode: "onTouched" });
   const { errors } = form.formState;
 
   const onSubmit = form.handleSubmit(async (values) => {
     setFormError(null);
+    setUnverifiedEmail(null);
     try {
       const res = await login.mutateAsync(values);
       if (res.mfa_required) onMfa(res.mfa_challenge_id);
       else onDone(res.user);
     } catch (err) {
       // Keep what they typed; show the reason next to the form.
+      if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") setUnverifiedEmail(values.email);
       setFormError(applyApiError(err, form.setError));
     }
   });
@@ -93,6 +108,14 @@ function PasswordStep({ onMfa, onDone }: { onMfa: (id: string) => void; onDone: 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
       <FormError message={formError} />
+      {unverifiedEmail && (
+        <Link
+          href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+          className="block font-medium text-primary underline underline-offset-4"
+        >
+          {t("resendVerification")}
+        </Link>
+      )}
       <Field label={t("email")} error={errors.email?.message}>
         {(a) => <Input {...a} type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} {...form.register("email")} />}
       </Field>
@@ -105,20 +128,7 @@ function PasswordStep({ onMfa, onDone }: { onMfa: (id: string) => void; onDone: 
           </Link>
         }
       >
-        {(a) => (
-          <div className="relative">
-            <Input {...a} type={showPassword ? "text" : "password"} autoComplete="current-password" className="pr-12" {...form.register("password")} />
-            <button
-              type="button"
-              onClick={() => setShowPassword((s) => !s)}
-              aria-label={showPassword ? t("hidePassword") : t("showPassword")}
-              aria-pressed={showPassword}
-              className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-sm text-body hover:text-heading"
-            >
-              {showPassword ? <EyeOff aria-hidden="true" className="size-5" /> : <Eye aria-hidden="true" className="size-5" />}
-            </button>
-          </div>
-        )}
+        {(a) => <PasswordInput {...a} autoComplete="current-password" {...form.register("password")} />}
       </Field>
       <Button type="submit" className="h-12 w-full" loading={login.isPending}>
         {login.isPending ? t("submitting") : t("submit")}
@@ -174,14 +184,5 @@ function MfaStep({ challengeId, onDone, onBack }: { challengeId: string; onDone:
         {t("back")}
       </Button>
     </form>
-  );
-}
-
-function FormError({ message }: { message: string | null }) {
-  if (!message) return null;
-  return (
-    <div role="alert" className="rounded-sm border border-danger/30 bg-danger-soft px-4 py-3 text-[15px] leading-relaxed text-danger">
-      {message}
-    </div>
   );
 }

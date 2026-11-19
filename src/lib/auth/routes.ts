@@ -33,3 +33,31 @@ export function postLoginPath(role: Role, next: string | null | undefined): stri
   }
   return ROLE_HOME[role];
 }
+
+/** ONB-2/3 wizards. Admins have no onboarding. */
+export const ONBOARDING_PATH: Partial<Record<Role, string>> = {
+  LEARNER: "/onboarding/learner",
+  INSTRUCTOR: "/onboarding/instructor",
+};
+
+type GateUser = { role: Role; consent_required: boolean; onboarding_status: string };
+
+/**
+ * The one place that decides where a signed-in person goes next. Order matters:
+ * 1. consent to the current terms (ONB-4), 2. onboarding, 3. `next` or home.
+ * Each gate carries `next` along so nobody loses the page they were heading to.
+ *
+ * Onboarding: instructors must finish it (admin approval needs it, ONB-3). Learners are sent there
+ * once; if they choose "finish later" it becomes IN_PROGRESS and the dashboard offers to resume (ONB-6).
+ */
+export function afterSignInPath(user: GateUser, next: string | null | undefined): string {
+  const target = postLoginPath(user.role, next);
+  if (user.consent_required) return `/consent?next=${encodeURIComponent(target)}`;
+  const onboarding = ONBOARDING_PATH[user.role];
+  const mustOnboard =
+    user.role === "INSTRUCTOR" ? user.onboarding_status !== "COMPLETED" : user.onboarding_status === "NOT_STARTED";
+  if (onboarding && mustOnboard) {
+    return `${onboarding}?next=${encodeURIComponent(target)}`;
+  }
+  return target;
+}
