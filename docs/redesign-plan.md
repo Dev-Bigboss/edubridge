@@ -29,7 +29,7 @@ Every screen, component and API call in this plan traces back to an SRS requirem
 | # | Decision | Agreed approach | Why |
 |---|---|---|---|
 | D1 | Rebuild vs refactor | Rebuild on branch `redesign/lmp` in this repo, keep old app on `main` until cutover. Keep the current visual design | Domain model and stack both change; PO approves the existing look |
-| D2 | Stack | Next.js 15 (App Router) + TypeScript, Tailwind v4 + shadcn/ui (Radix primitives), TanStack Query v5, react-hook-form + zod, `next-intl`, `date-fns` + `@date-fns/tz`, MSW, Vitest + Testing Library, Playwright + axe | Radix gives accessible dialogs/menus for WCAG 2.2 AA; TS + zod lets API types be shared with backend; MSW lets us build before the backend exists |
+| D2 | Stack | Next.js 16 (App Router, Turbopack, Cache Components) + React 19 + TypeScript on Node 22 LTS, Tailwind v4 + shadcn/ui (Radix primitives), TanStack Query v5, react-hook-form + zod, `next-intl`, `date-fns` + `@date-fns/tz`, MSW, Vitest + Testing Library, Playwright + axe | Radix gives accessible dialogs/menus for WCAG 2.2 AA; TS + zod lets API types be shared with backend; MSW lets us build before the backend exists |
 | D3 | Wallet | Remove. Replace with gateway checkout, learner payment history + receipts, and instructor earnings ledger | SRS PAY-1/2/4 require gateway capture; a wallet adds a stored-value liability not in scope. Confirm with Product Owner |
 | D4 | Auth tokens | Backend sets httpOnly, Secure, SameSite cookies (access + refresh); frontend never touches the token | NFR Security, OWASP |
 | D5 | Role names | Use SRS names in UI and API: `LEARNER`, `INSTRUCTOR`, `ADMIN` (drop `teacher`/`student`/`mentor`/`mentee`) | One vocabulary across FE, BE, QA |
@@ -74,6 +74,8 @@ Because the frontend is built first, the frontend **owns the first draft of the 
 - Pagination: cursor-based `{ items, next_cursor }`; list filters as query params.
 - Mutations that move money or state send an `Idempotency-Key` header.
 - Every state-changing response returns the full updated resource so the UI can update without refetch guesswork.
+- Prices are resolved by the backend and returned as a quote with its breakdown; the frontend never computes tax or discounts (PRC-4, PRC-7).
+- Full detail: `contracts/CONVENTIONS.md`.
 
 ---
 
@@ -120,11 +122,13 @@ Because the frontend is built first, the frontend **owns the first draft of the 
 | `/teach/earnings` | Ledger: commission, pending vs available, payout requests, history | PAY-7 |
 
 ### Shared (all signed-in roles)
+Mounted inside each role area (`/learn/messages`, `/teach/messages`, `/admin/...`) so every page keeps its role's sidebar and guard; the page components are shared.
+
 | Route | Purpose | Req |
 |---|---|---|
-| `/messages`, `/messages/[conversationId]` | 1:1 and cohort channels, unread counts, read receipts, attachments, report/block | MSG-1..6 |
-| `/notifications` | In-app notification centre | NTF-1 |
-| `/settings/*` | Profile, time zone, notification preferences per channel/event, security (password, MFA), privacy (data export, delete account) | NTF-2, NFR Security/Privacy |
+| `<area>/messages`, `<area>/messages/[conversationId]` | 1:1 and cohort channels, unread counts, read receipts, attachments, report/block | MSG-1..6 |
+| `<area>/notifications` | In-app notification centre | NTF-1 |
+| `<area>/settings/*` | Profile, time zone, notification preferences per channel/event, security (password, MFA), privacy (data export, delete account) | NTF-2, NFR Security/Privacy |
 
 ### Admin (`/admin`)
 | Route | Purpose | Req |
@@ -188,8 +192,14 @@ Rules on top of the existing look (from the product quality standard):
 
 Each phase ends with: screens on mocks, contract reviewed with backend, Playwright happy paths + axe passing, and a demo.
 
-### Phase 0: Foundation (S–M)
-- New Next 15 + TS app on `redesign/lmp`; keep the old pages in git history for visual reference only.
+### Phase 0: Foundation (S–M) — built 19 Nov 2026
+
+**Status:** done on `redesign/lmp`. Landing page ported in the original look; sign-in with MFA; role shells for `/learn`, `/teach`, `/admin` with guards; SRS enums and state machines; money/time-zone utilities; API client + error shape; MSW mocks; auth contract (`contracts/openapi/auth.yaml`, `contracts/CONVENTIONS.md`); CI. 53 unit tests (97% coverage on core logic) and 15 Playwright flows × desktop + mobile, including axe WCAG 2.2 AA scans.
+Not carried over from the old landing page: brand logo strip and testimonials (template placeholders, not real) and featured tutors (returns in Phase 1 from the catalogue API).
+Links to Phase 1 pages (`/trainings`, `/register`, `/forgot-password`, `/legal/*`) show the 404 page until Phase 1 lands. Sidebar items appear automatically as each phase ships (`SHIPPED_PHASE` in `nav-config.ts`).
+
+Original scope:
+- New Next 16 + TS app on `redesign/lmp`; keep the old pages in git history for visual reference only.
 - Port the current design into Tailwind tokens (§5), base components, public header/footer, layouts per role, route guards by role.
 - API client, error mapping to forms, MSW setup, `next-intl` scaffold, time-zone and money formatting utilities with unit tests.
 - Shared enums and state machines (`booking`, `cohort`, `training`, `payment`) as typed constants with transition tests.

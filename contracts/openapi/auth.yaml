@@ -1,0 +1,142 @@
+openapi: 3.1.0
+info:
+  title: EduBridge LMP API: Auth
+  version: 0.1.0
+  description: |
+    Sign-in, MFA, session and sign-out. SRS refs: ONB-1, ONB-6, NFR Security.
+    Conventions: contracts/CONVENTIONS.md. Mock implementation: src/mocks/handlers/auth.ts.
+    Registration, email verification, password reset, Google sign-in and consent (ONB-1, ONB-4)
+    are added to this file in Phase 1.
+servers:
+  - url: /api/v1
+paths:
+  /auth/me:
+    get:
+      summary: Current signed-in user
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /auth/login:
+    post:
+      summary: Sign in with email and password
+      description: |
+        Admins and instructors get an MFA challenge instead of a session.
+        Unknown email and wrong password return the same 401 body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Signed in (Set-Cookie session) or MFA required (no cookie yet)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [mfa_required, user]
+                    properties:
+                      mfa_required: { const: false }
+                      user: { $ref: "#/components/schemas/User" }
+                  - type: object
+                    required: [mfa_required, mfa_challenge_id]
+                    properties:
+                      mfa_required: { const: true }
+                      mfa_challenge_id: { type: string }
+                discriminator: { propertyName: mfa_required }
+        "401":
+          description: INVALID_CREDENTIALS
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: ACCOUNT_SUSPENDED or EMAIL_NOT_VERIFIED
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: RATE_LIMITED (NFR Security, rate limiting)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/mfa/verify:
+    post:
+      summary: Complete sign-in with a TOTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfa_challenge_id, code]
+              properties:
+                mfa_challenge_id: { type: string }
+                code: { type: string, pattern: "^\\d{6}$" }
+      responses:
+        "200":
+          description: Signed in (Set-Cookie session)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "400":
+          description: INVALID_MFA_CODE (field_errors.code) or MFA_CHALLENGE_EXPIRED
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/logout:
+    post:
+      summary: Sign out and clear session cookies
+      responses:
+        "204": { description: Signed out }
+components:
+  responses:
+    Unauthenticated:
+      description: UNAUTHENTICATED
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        field_errors:
+          type: object
+          additionalProperties: { type: array, items: { type: string } }
+    User:
+      type: object
+      required: [id, role, email, name, timezone, status, avatar_url, onboarding_status, approval_status, mfa_enabled]
+      properties:
+        id: { type: string }
+        role: { type: string, enum: [LEARNER, INSTRUCTOR, ADMIN] }
+        email: { type: string, format: email }
+        name: { type: string }
+        timezone: { type: string, description: IANA zone, e.g. Africa/Lagos }
+        status: { type: string, enum: [PENDING_VERIFICATION, ACTIVE, SUSPENDED] }
+        avatar_url: { type: [string, "null"] }
+        onboarding_status: { type: string, enum: [NOT_STARTED, IN_PROGRESS, COMPLETED] }
+        approval_status:
+          type: [string, "null"]
+          enum: [PENDING, APPROVED, REJECTED, null]
+          description: Instructors only (ONB-3)
+        mfa_enabled: { type: boolean }

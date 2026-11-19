@@ -1,0 +1,75 @@
+/**
+ * Domain enums, spelled exactly as in the LMP SRS v0.1 so frontend, backend and QA share one vocabulary.
+ * Where the SRS is silent and we had to choose, the value is marked "PLAN" and listed in
+ * contracts/CONVENTIONS.md for backend review.
+ */
+
+/** SRS §1.4. Guest is "not signed in", so it is not a stored role. */
+export const ROLES = ["LEARNER", "INSTRUCTOR", "ADMIN"] as const;
+export type Role = (typeof ROLES)[number];
+
+/**
+ * SRS TRN-2: modalities live in a table so more can be added without a deploy.
+ * These two codes are the seeded ones the UI has behaviour for; unknown codes must still render.
+ */
+export const MODALITY = { COHORT: "COHORT", ONE_ON_ONE: "ONE_ON_ONE" } as const;
+export type KnownModalityCode = (typeof MODALITY)[keyof typeof MODALITY];
+export type ModalityCode = KnownModalityCode | (string & {});
+
+/** SRS TRN-1 */
+export const TRAINING_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
+export type TrainingStatus = (typeof TRAINING_STATUSES)[number];
+
+/** SRS COH-3 (Full/Closed split into two values) */
+export const COHORT_STATUSES = [
+  "DRAFT",
+  "OPEN",
+  "FULL",
+  "CLOSED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+export type CohortStatus = (typeof COHORT_STATUSES)[number];
+
+/** SRS §4.3 "1:1 booking state machine" */
+export const BOOKING_STATUSES = [
+  "DRAFT",
+  "PENDING_INSTRUCTOR",
+  "COUNTER_PROPOSED",
+  "ACCEPTED",
+  "DECLINED",
+  "EXPIRED",
+  "RESCHEDULE_REQUESTED",
+  "COMPLETED",
+  "CANCELLED",
+  "NO_SHOW",
+] as const;
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+
+/** SRS PRC-2 */
+export const PRICING_UNITS = ["PER_SEAT", "PER_SESSION", "PER_HOUR"] as const;
+export type PricingUnit = (typeof PRICING_UNITS)[number];
+
+/**
+ * PLAN: SRS §5 gives Payment a `status` but no values. Proposed set, matching Stripe's
+ * manual-capture lifecycle (PAY-2, PAY-4, PAY-5).
+ */
+export const PAYMENT_STATUSES = [
+  "PENDING",
+  "AUTHORISED",
+  "CAPTURED",
+  "VOIDED",
+  "FAILED",
+  "PARTIALLY_REFUNDED",
+  "REFUNDED",
+] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+/** SRS ONB-3: instructor needs admin approval before being published. */
+export const APPROVAL_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
+
+/** SRS §5 User.status, ADM-2 suspend */
+export const USER_STATUSES = ["PENDING_VERIFICATION", "ACTIVE", "SUSPENDED"] as const;
+export type UserStatus = (typeof USER_STATUSES)[number];

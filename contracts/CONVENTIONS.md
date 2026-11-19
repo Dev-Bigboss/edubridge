@@ -1,0 +1,67 @@
+# API conventions (frontend ↔ backend)
+
+The frontend is built first against mocks, so it drafts the API contract and the backend implements it.
+Each module has an OpenAPI 3.1 file in `contracts/openapi/`. The zod schemas in `src/lib/api/schemas/`
+and the MSW mocks in `src/mocks/handlers/` mirror those files. Change the YAML first, then both sides.
+
+## Transport
+- REST + JSON, base path `/api/v1`.
+- Field names are `snake_case`, matching SRS §5 (`start_utc`, `join_url`).
+- Enum values are UPPER_SNAKE exactly as in the SRS (`ONE_ON_ONE`, `PENDING_INSTRUCTOR`, `PER_HOUR`).
+  The full list the frontend relies on is in `src/lib/domain/enums.ts`.
+
+## Auth and sessions
+- The backend sets the session in **httpOnly, Secure, SameSite=Lax** cookies. The frontend never reads or stores a token.
+- Requests use `credentials: "include"`. Host the API on the same site as the app (e.g. `app.example.com` and
+  `api.example.com`) so the cookies are first-party, and allow the app origin in CORS with credentials.
+- `GET /auth/me` returns `401` when signed out. The frontend treats that as "signed out", not an error.
+- Admin and Instructor sign-ins need a second factor (SRS NFR Security): `POST /auth/login` returns
+  `{ mfa_required: true, mfa_challenge_id }`, then `POST /auth/mfa/verify` completes sign-in.
+- Unknown email and wrong password return the **same** error, so accounts can't be enumerated.
+
+## Errors
+Every non-2xx response has this body:
+
+```json
+{ "code": "INVALID_CREDENTIALS", "message": "Readable sentence for the user.", "field_errors": { "email": ["..."] } }
+```
+
+- `code` is stable and machine-readable; `message` is shown to people.
+- `field_errors` keys match request field names so the form shows them inline.
+- `401` signed out, `403` signed in but not allowed, `404` not found or not visible to this user,
+  `409` state conflict (e.g. booking already accepted), `422` validation.
+
+## Time
+- All timestamps are ISO 8601 UTC with `Z` (`2026-03-03T13:00:00Z`) and named `*_utc` where the SRS does.
+- The user's IANA time zone is `User.timezone`. The frontend converts for display; the backend never sends local times.
+- Instructor availability (OTO-1) is the one place times are local: weekly slots are stored as local wall-clock
+  times plus the instructor's zone, because "Mondays 09:00" must survive DST.
+
+## Money
+- `{ "amount": 4000, "currency": "USD" }`: integer minor units (cents) plus ISO 4217 code. Never floats.
+- Launch currency is USD, gateway is Stripe (plan D8).
+- Prices are resolved by the backend (PRC-4). Before checkout the frontend asks for a **quote** and shows its
+  breakdown as-is (PRC-7); it never computes tax or discounts itself.
+- The price paid is stored on the enrolment/booking and never recomputed (PRC-5, BR-4).
+
+## Lists
+- Cursor pagination: `{ "items": [...], "next_cursor": "opaque" | null }`, query `?cursor=&limit=`.
+- Filters and sort are query params named after fields (`?category=…&modality=ONE_ON_ONE&sort=price_asc`).
+
+## Writes
+- Mutations return the full updated resource.
+- Anything that moves money or changes a booking/enrolment state accepts an `Idempotency-Key` header (UUID) and
+  returns the original result on a retry with the same key (PAY-8).
+- State changes are actions, not raw status writes: `POST /bookings/{id}/accept`, not `PATCH {status}`. The
+  backend enforces the state machine; the frontend mirrors it in `src/lib/domain/booking-machine.ts`.
+
+## Decisions the plan made where the SRS is silent (please review)
+| Topic | Proposal | Where |
+|---|---|---|
+| Payment statuses | `PENDING, AUTHORISED, CAPTURED, VOIDED, FAILED, PARTIALLY_REFUNDED, REFUNDED` | `enums.ts` |
+| Counter-proposal deadline | Learner has 48 h, then `EXPIRED` and the authorisation is voided (Stripe holds ~7 days) | `booking-machine.ts` |
+| After `RESCHEDULE_REQUESTED` | Other party accepts → `ACCEPTED` at new time; declines → `ACCEPTED` at old time; either can `CANCEL` | `booking-machine.ts` |
+| Cohort cancellation | Allowed from any state before `COMPLETED`; `FULL → OPEN` when a seat frees up | `cohort-machine.ts` |
+| User statuses | `PENDING_VERIFICATION, ACTIVE, SUSPENDED` | `enums.ts` |
+| Onboarding progress | `User.onboarding_status`: `NOT_STARTED, IN_PROGRESS, COMPLETED` (ONB-6) | `schemas/auth.ts` |
+| Cancellation policy | Separate learner and instructor policies (who cancels changes the refund); values still to come | plan §8 Q3 |

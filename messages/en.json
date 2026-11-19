@@ -1,0 +1,162 @@
+{
+  "common": {
+    "brand": "EduBridge",
+    "skipToContent": "Skip to main content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "signOut": "Sign out",
+    "loading": "Loading"
+  },
+  "nav": {
+    "home": "Home",
+    "trainings": "Browse trainings",
+    "teach": "Teach on EduBridge",
+    "primary": "Main"
+  },
+  "footer": {
+    "about": "EduBridge connects learners with vetted instructors for live cohort classes and one-on-one sessions, from professional exams to university courses.",
+    "explore": "Explore",
+    "legal": "Legal",
+    "terms": "Terms of service",
+    "privacy": "Privacy policy",
+    "teachTitle": "Teach on EduBridge",
+    "teachBody": "Run cohorts or one-on-one sessions, set your hourly rate and get paid through the platform.",
+    "teachCta": "Apply to teach",
+    "rights": "© {year} EduBridge. All rights reserved."
+  },
+  "landing": {
+    "hero": {
+      "eyebrow": "Learn. Connect. Grow.",
+      "titleBefore": "Learn live with",
+      "titleHighlight": "top instructors",
+      "titleAfter": "in a cohort or one-on-one",
+      "body": "Prepare for professional exams, keep up with university courses or master a specific topic. Join a scheduled cohort or book a private session at a time that suits you.",
+      "primaryCta": "Browse trainings",
+      "secondaryCta": "Teach on EduBridge",
+      "factCohortLabel": "Cohorts",
+      "factCohortValue": "Learn together",
+      "factOneLabel": "One-on-one",
+      "factOneValue": "Book by the hour"
+    },
+    "how": {
+      "eyebrow": "How EduBridge works",
+      "titleBefore": "Two ways to learn,",
+      "titleHighlight": "one place",
+      "body": "Every training on EduBridge is delivered live by a vetted instructor. Pick the format that fits how you learn best.",
+      "cohortTitle": "Cohort classes",
+      "cohortBody": "Join a group on a fixed schedule with a set price per seat. Enrol before the deadline while seats last.",
+      "oneTitle": "One-on-one sessions",
+      "oneBody": "Pick an instructor and a time that works for you. You are only charged once the instructor accepts.",
+      "recordingsTitle": "Recordings and resources",
+      "recordingsBody": "Rewatch sessions and download the materials your instructor shares.",
+      "feedbackTitle": "Feedback after every session",
+      "feedbackBody": "Get clear notes on strengths, areas to improve and next steps.",
+      "cta": "See all trainings"
+    },
+    "categories": {
+      "eyebrow": "What you can learn",
+      "titleBefore": "Browse by",
+      "titleHighlight": "category",
+      "body": "Whether you're sitting a professional exam, keeping up with a university module or picking up a new skill, start with the category that fits.",
+      "cta": "All trainings",
+      "professionalExam": "Professional exams",
+      "professionalExamHint": "ACCA, ICAN and more",
+      "universityCourse": "University courses",
+      "universityCourseHint": "Module and semester support",
+      "specificTopic": "Specific topics",
+      "specificTopicHint": "Focused skills, from Python to public speaking"
+    },
+    "cta": {
+      "titleBefore": "Ready to",
+      "titleHighlight": "teach",
+      "titleAfter": "and earn?",
+      "body": "Run cohorts or one-on-one sessions, set your own hourly rate and get paid through EduBridge.",
+      "button": "Apply to teach"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your EduBridge account",
+      "email": "Email address",
+      "password": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "forgot": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in",
+      "noAccount": "New to EduBridge?",
+      "createAccount": "Create an account",
+      "success": "Signed in. Welcome back, {name}."
+    },
+    "mfa": {
+      "title": "Check your authenticator app",
+      "subtitle": "Enter the 6-digit code to finish signing in. This extra step protects instructor and admin accounts.",
+      "code": "Verification code",
+      "submit": "Verify and sign in",
+      "submitting": "Verifying",
+      "back": "Use a different account"
+    },
+    "mockHint": "Demo accounts (mock API): learner@example.com, instructor@example.com or admin@example.com with password Password123!. Code for instructor and admin: 123456."
+  },
+  "shell": {
+    "learner": "Learner",
+    "instructor": "Instructor",
+    "admin": "Admin",
+    "account": "Account menu",
+    "goToDashboard": "Go to dashboard",
+    "areaNav": "{area} navigation",
+    "signedOut": "You've been signed out."
+  },
+  "notFound": {
+    "title": "We couldn't find that page",
+    "body": "The link may be broken or the page may have moved.",
+    "home": "Go to the homepage"
+  },
+  "appNav": {
+    "auditLog": "Audit log",
+    "availability": "Availability",
+    "categoriesAndModalities": "Categories & modalities",
+    "cohorts": "Cohorts",
+    "dashboard": "Dashboard",
+    "earnings": "Earnings",
+    "messages": "Messages",
+    "moderation": "Moderation",
+    "myTrainings": "My trainings",
+    "notifications": "Notifications",
+    "oneOnOneBookings": "One-on-one bookings",
+    "payments": "Payments",
+    "paymentsAndRefunds": "Payments & refunds",
+    "platformSettings": "Platform settings",
+    "pricing": "Pricing",
+    "reports": "Reports",
+    "requests": "Requests",
+    "schedule": "Schedule",
+    "settings": "Settings",
+    "trainings": "Trainings",
+    "users": "Users"
+  },
+  "dashboard": {
+    "greeting": "Welcome back, {name}",
+    "learner": {
+      "intro": "Your trainings, upcoming sessions and bookings will show here.",
+      "emptyTitle": "You haven't enrolled in anything yet",
+      "emptyBody": "Browse cohorts that start soon or book a one-on-one session with an instructor at a time that suits you.",
+      "emptyCta": "Browse trainings"
+    },
+    "instructor": {
+      "intro": "Booking requests, today's sessions and your earnings will show here.",
+      "emptyTitle": "No booking requests yet",
+      "emptyBody": "Once learners can book you, new requests appear here with the time left to respond. Set your weekly availability so learners can find open slots.",
+      "emptyCta": "Set your availability"
+    },
+    "admin": {
+      "intro": "Users, enrolments, revenue, active cohorts and pending one-on-one requests will show here.",
+      "emptyTitle": "Nothing to report yet",
+      "emptyBody": "Start by creating the catalogue: categories, then trainings and their pricing rules. Metrics appear as soon as learners enrol.",
+      "emptyCta": "Create a training"
+    }
+  }
+}
