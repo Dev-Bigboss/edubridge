@@ -5,9 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Dialog, DropdownMenu } from "radix-ui";
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/spinner";
 import type { User } from "@/lib/api/schemas/auth";
 import { useLogout } from "@/lib/auth/session";
 import { cn } from "@/lib/cn";
@@ -26,8 +27,16 @@ const AREA_KEY: Record<Role, "learner" | "instructor" | "admin"> = {
  * Signed-in layout for /learn, /teach and /admin. Same look as the original dashboards
  * (white 240 px sidebar, blue active item, light top bar), built once for all three roles.
  */
+/**
+ * Signed-in areas read the URL (guard redirects, active nav item). On dynamic routes that is
+ * request data, so Next 16 needs it behind Suspense. The area renders after sign-in anyway.
+ */
 export function AppShell({ role, children }: { role: Role; children: ReactNode }) {
-  return <RequireRole role={role}>{(user) => <Shell user={user}>{children}</Shell>}</RequireRole>;
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <RequireRole role={role}>{(user) => <Shell user={user}>{children}</Shell>}</RequireRole>
+    </Suspense>
+  );
 }
 
 function Shell({ user, children }: { user: User; children: ReactNode }) {

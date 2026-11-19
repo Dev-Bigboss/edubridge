@@ -60,3 +60,12 @@ export function StatusBadge({ status, className }: { status: AnyStatus | (string
     </span>
   );
 }
+
+/** Plain badge for states that aren't API statuses (e.g. Active / Disabled). */
+export function Badge({ tone = "neutral", children }: { tone?: Tone; children: React.ReactNode }) {
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[13px] leading-6 font-medium", TONE[tone])}>
+      {children}
+    </span>
+  );
+}

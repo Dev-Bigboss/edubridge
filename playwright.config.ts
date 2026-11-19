@@ -14,6 +14,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   // Flows with a full reload restart the mock service worker; give assertions room under parallel load.
   expect: { timeout: 10_000 },
+  // Admin flows sign in with MFA and walk several screens; axe scans are CPU-heavy.
+  timeout: 60_000,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {

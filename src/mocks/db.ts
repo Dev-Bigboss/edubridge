@@ -1,5 +1,6 @@
 import type { User } from "@/lib/api/schemas/auth";
-import type { Category, Modality } from "@/lib/api/schemas/catalog";
+import type { Category, Modality, Training } from "@/lib/api/schemas/catalog";
+import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
 
 /**
@@ -15,7 +16,19 @@ export const MOCK_MFA_CODE = "123456";
 
 export { LEGAL_VERSIONS } from "@/lib/legal/versions";
 
-export type MockUser = User & { password: string | null };
+export type MockUser = User & { password: string | null; headline?: string | null };
+
+/** ADM-5: admin actions and price/policy changes. */
+export type AuditEntry = {
+  id: string;
+  actor_id: string;
+  actor_name: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  summary: string;
+  created_at: string;
+};
 
 /** What the backend would have emailed. The mock shows these in a dev-only inbox note. */
 export type MockEmail = { to: string; subject: string; link: string; sent_at: string };
@@ -26,6 +39,9 @@ type State = {
   users: MockUser[];
   categories: Category[];
   onboarding: Record<string, Pick<OnboardingState, "completed_steps" | "sections">>;
+  trainings: Training[];
+  pricingRules: PricingRuleDto[];
+  audit: AuditEntry[];
   modalities: Modality[];
   tokens: Record<string, Token>;
   outbox: MockEmail[];
@@ -57,6 +73,21 @@ function seed(): State {
         timezone: "Europe/London",
       }),
       seedUser({ id: "usr_admin_1", role: "ADMIN", email: "admin@example.com", name: "Test Admin" }),
+      seedUser({
+        id: "usr_instructor_2",
+        role: "INSTRUCTOR",
+        email: "instructor.two@example.com",
+        name: "Demo Instructor Two",
+        headline: "Mathematics lecturer, 10 years with first-year students",
+      }),
+      seedUser({
+        id: "usr_instructor_3",
+        role: "INSTRUCTOR",
+        email: "instructor.three@example.com",
+        name: "Demo Instructor Three",
+        timezone: "Europe/London",
+        headline: "Data analyst teaching Python and SQL",
+      }),
     ],
     categories: [
       {
@@ -96,6 +127,9 @@ function seed(): State {
       { id: "mod_1on1", code: "ONE_ON_ONE", name: "One-on-one", active: true, pricing_units: ["PER_HOUR", "PER_SESSION"] },
     ],
     onboarding: {},
+    trainings: seedTrainings(),
+    pricingRules: seedRules(),
+    audit: [],
     tokens: {},
     outbox: [],
     session: null,
@@ -104,7 +138,102 @@ function seed(): State {
 }
 
 /** Bump when the seed shape changes so old demo data in a browser is discarded, not half-merged. */
-const STORE_KEY = "edubridge.mock.db.v3";
+/** Demo prices only (USD, plan D8). Real amounts are the PO's call, set in /admin/pricing. */
+function seedRules(): PricingRuleDto[] {
+  const from = "2026-11-01T00:00:00.000Z";
+  const r = (id: string, modality_id: string, category_id: string, unit: PricingRuleDto["unit"], amount: number): PricingRuleDto => ({
+    id, modality_id, category_id, unit, amount, currency: "USD", effective_from: from, effective_to: null,
+    created_by: "usr_admin_1", created_at: from,
+  });
+  return [
+    r("rule_c_exam", "mod_cohort", "cat_prof_exam", "PER_SEAT", 45000),
+    r("rule_c_uni", "mod_cohort", "cat_uni_course", "PER_SEAT", 25000),
+    r("rule_c_topic", "mod_cohort", "cat_topic", "PER_SEAT", 15000),
+    r("rule_o_exam", "mod_1on1", "cat_prof_exam", "PER_HOUR", 6000),
+    r("rule_o_uni", "mod_1on1", "cat_uni_course", "PER_HOUR", 4500),
+    r("rule_o_topic", "mod_1on1", "cat_topic", "PER_HOUR", 4000),
+  ];
+}
+
+function seedTrainings(): Training[] {
+  const at = "2026-11-02T09:00:00.000Z";
+  const inst = (id: string, name: string, headline: string | null, custom_rate: Training["price_override"] = null) => ({
+    instructor_id: id, name, avatar_url: null, headline, custom_rate,
+  });
+  const base = { thumbnail: null, price_override: null, created_at: at, updated_at: at, published_at: at, duration_hours: null };
+  return [
+    {
+      ...base,
+      id: "trn_ican_sfr",
+      slug: "ican-skills-financial-reporting",
+      title: "ICAN Skills: Financial Reporting",
+      summary: "Twelve live evening classes that walk through the full Financial Reporting syllabus with past questions.",
+      description:
+        "Work through every part of the ICAN Skills level Financial Reporting syllabus in a small live group: IFRS standards, group accounts, analysis and interpretation. Each class ends with a timed past question you mark together, so you build exam technique as well as knowledge.",
+      category_id: "cat_prof_exam",
+      modality_id: "mod_cohort",
+      level: "INTERMEDIATE",
+      language: "en",
+      duration_hours: 24,
+      status: "PUBLISHED",
+      metadata: { exam_body: "ICAN", exam_code: "SFR" },
+      instructors: [inst("usr_instructor_1", "Test Instructor", "Chartered accountant teaching ICAN")],
+    },
+    {
+      ...base,
+      id: "trn_acca_sbr",
+      slug: "acca-strategic-business-reporting-one-on-one",
+      title: "ACCA Strategic Business Reporting, one-on-one",
+      summary: "Book focused sessions on the SBR topics you find hardest, at times that suit you.",
+      description:
+        "Private sessions for ACCA Strategic Business Reporting candidates. Bring the areas you struggle with, from group accounting to ethics scenarios, and your instructor builds each session around them with exam-standard questions and feedback.",
+      category_id: "cat_prof_exam",
+      modality_id: "mod_1on1",
+      level: "ADVANCED",
+      language: "en",
+      status: "PUBLISHED",
+      metadata: { exam_body: "ACCA", exam_code: "SBR" },
+      instructors: [
+        inst("usr_instructor_1", "Test Instructor", "Chartered accountant teaching ICAN", { amount: 7500, currency: "USD", unit: "PER_HOUR" }),
+      ],
+    },
+    {
+      ...base,
+      id: "trn_mth101",
+      slug: "mth-101-elementary-mathematics-i",
+      title: "MTH 101: Elementary Mathematics I",
+      summary: "A first-semester companion course: sets, functions, limits and the basics of calculus.",
+      description:
+        "Keep up with MTH 101 from week one. Weekly live classes follow the university's course outline, with worked examples, practice sets and a revision class before each test, taught by a lecturer who knows where first-year students get stuck.",
+      category_id: "cat_uni_course",
+      modality_id: "mod_cohort",
+      level: "BEGINNER",
+      language: "en",
+      duration_hours: 30,
+      status: "PUBLISHED",
+      metadata: { institution: "University of Lagos", course_code: "MTH 101", semester: "First" },
+      instructors: [inst("usr_instructor_2", "Demo Instructor Two", "Mathematics lecturer, 10 years with first-year students")],
+    },
+    {
+      ...base,
+      id: "trn_python_da",
+      slug: "python-for-data-analysis",
+      title: "Python for Data Analysis",
+      summary: "One-on-one help with pandas, cleaning messy data and charts, at your pace.",
+      description: "",
+      category_id: "cat_topic",
+      modality_id: "mod_1on1",
+      level: "BEGINNER",
+      language: "en",
+      status: "DRAFT",
+      published_at: null,
+      metadata: { topic_tags: ["Python", "pandas", "Data cleaning"] },
+      instructors: [],
+    },
+  ];
+}
+
+const STORE_KEY = "edubridge.mock.db.v4";
 
 function load(): State {
   try {
@@ -142,6 +271,7 @@ export function resetDb() {
 export function toUser(mock: MockUser): User {
   const user: Partial<MockUser> = { ...mock };
   delete user.password;
+  delete user.headline;
   return user as User;
 }
 
@@ -149,6 +279,19 @@ export const findUserByEmail = (email: string | undefined) =>
   db.users.find((u) => u.email.toLowerCase() === email?.trim().toLowerCase());
 
 export const findUser = (id: string | null | undefined) => db.users.find((u) => u.id === id);
+
+export function audit(actor: MockUser, action: string, target_type: string, target_id: string, summary: string) {
+  db.audit.unshift({
+    id: newId("aud"),
+    actor_id: actor.id,
+    actor_name: actor.name,
+    action,
+    target_type,
+    target_id,
+    summary,
+    created_at: new Date().toISOString(),
+  });
+}
 
 export function newId(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;

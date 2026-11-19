@@ -1,4 +1,5 @@
 import { HttpResponse } from "msw/http";
+import type { z } from "zod";
 import { API_BASE_URL } from "@/lib/api/client";
 import { findUser, mockSession, type MockUser } from "../db";
 
@@ -15,4 +16,11 @@ export function requireUser(...roles: MockUser["role"][]): MockUser | Response {
     return apiError(403, "FORBIDDEN", "You don't have access to this.");
   }
   return user;
+}
+
+/** Turns zod issues into the agreed `field_errors` shape (dot paths), like the backend's 422. */
+export function validationError(error: z.ZodError) {
+  const field_errors: Record<string, string[]> = {};
+  for (const issue of error.issues) (field_errors[issue.path.join(".")] ??= []).push(issue.message);
+  return apiError(422, "VALIDATION_FAILED", "Some answers need another look.", field_errors);
 }

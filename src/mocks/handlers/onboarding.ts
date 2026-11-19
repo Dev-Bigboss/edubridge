@@ -12,10 +12,9 @@ import {
   VerificationInput,
   type OnboardingState,
 } from "@/lib/api/schemas/onboarding";
-import type { z } from "zod";
 import { db, save, toUser, type MockUser } from "../db";
 import { getUploadedFile } from "./uploads";
-import { apiError, requireUser, url } from "./util";
+import { apiError, requireUser, url, validationError } from "./util";
 
 function record(user: MockUser) {
   db.onboarding[user.id] ??= {
@@ -34,12 +33,6 @@ const state = (user: MockUser): OnboardingState => ({
   ...record(user),
 });
 
-/** Turns zod issues into the agreed `field_errors` shape (dot paths), like the backend's 422. */
-function validationError(error: z.ZodError) {
-  const field_errors: Record<string, string[]> = {};
-  for (const issue of error.issues) (field_errors[issue.path.join(".")] ??= []).push(issue.message);
-  return apiError(422, "VALIDATION_FAILED", "Some answers need another look.", field_errors);
-}
 
 function markDone(user: MockUser, step: string) {
   const rec = record(user);

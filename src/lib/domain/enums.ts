@@ -85,3 +85,7 @@ export type PayoutSetupStatus = (typeof PAYOUT_SETUP_STATUSES)[number];
 /** RES-4: uploads are virus-scanned before anyone can open them. */
 export const FILE_SCAN_STATUSES = ["SCANNING", "CLEAN", "INFECTED"] as const;
 export type FileScanStatus = (typeof FILE_SCAN_STATUSES)[number];
+
+/** PLAN (TRN-1 "level"): SRS names the field, not the values. */
+export const TRAINING_LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED", "ALL_LEVELS"] as const;
+export type TrainingLevel = (typeof TRAINING_LEVELS)[number];

@@ -30,6 +30,8 @@ export type NavItem = {
   /** Delivery phase from docs/redesign-plan.md §6. Items show once their phase has shipped. */
   phase: 0 | 1 | 2 | 3;
   req: string;
+  /** Shown before its whole phase ships, because this page is done. */
+  ready?: true;
 };
 
 /** Route map from plan §4. Shared pages (messages, settings) are mounted inside each area. */
@@ -55,10 +57,10 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
   ADMIN: [
     { href: "/admin", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "ADM-1" },
-    { href: "/admin/trainings", labelKey: "trainings", icon: BookOpen, phase: 1, req: "TRN-1..7" },
+    { href: "/admin/trainings", labelKey: "trainings", icon: BookOpen, phase: 1, req: "TRN-1..7", ready: true },
     { href: "/admin/cohorts", labelKey: "cohorts", icon: Layers, phase: 1, req: "COH-1..5" },
-    { href: "/admin/catalog", labelKey: "categoriesAndModalities", icon: Tags, phase: 1, req: "TRN-2..4" },
-    { href: "/admin/pricing", labelKey: "pricing", icon: BadgeDollarSign, phase: 1, req: "PRC-1..5" },
+    { href: "/admin/catalog", labelKey: "categoriesAndModalities", icon: Tags, phase: 1, req: "TRN-2..4", ready: true },
+    { href: "/admin/pricing", labelKey: "pricing", icon: BadgeDollarSign, phase: 1, req: "PRC-1..5", ready: true },
     { href: "/admin/users", labelKey: "users", icon: Users, phase: 1, req: "ADM-2, ONB-3" },
     { href: "/admin/payments", labelKey: "paymentsAndRefunds", icon: CreditCard, phase: 1, req: "PAY-5, PAY-8" },
     { href: "/admin/moderation", labelKey: "moderation", icon: ShieldCheck, phase: 3, req: "FDB-4, MSG-6" },
@@ -72,5 +74,5 @@ export const NAV: Record<Role, NavItem[]> = {
 export const SHIPPED_PHASE = 0;
 
 export function navFor(role: Role): NavItem[] {
-  return NAV[role].filter((i) => i.phase <= SHIPPED_PHASE);
+  return NAV[role].filter((i) => i.phase <= SHIPPED_PHASE || i.ready);
 }

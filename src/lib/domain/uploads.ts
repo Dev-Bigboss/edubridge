@@ -2,7 +2,7 @@
  * Upload rules by purpose. The backend enforces the same limits; checking here first saves people
  * a slow upload that would be rejected. RES-4 sets 100 MB as the default ceiling for resources.
  */
-export const UPLOAD_PURPOSES = ["AVATAR", "ID_DOCUMENT", "CREDENTIAL"] as const;
+export const UPLOAD_PURPOSES = ["AVATAR", "ID_DOCUMENT", "CREDENTIAL", "THUMBNAIL"] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
 const MB = 1024 * 1024;
@@ -16,6 +16,7 @@ export const UPLOAD_RULES: Record<UploadPurpose, { types: string[]; maxBytes: nu
     accept: [...IMAGES, "application/pdf"].join(","),
     label: "PDF, JPG or PNG, up to 10 MB",
   },
+  THUMBNAIL: { types: IMAGES, maxBytes: 5 * MB, accept: IMAGES.join(","), label: "JPG, PNG or WebP, up to 5 MB, ideally 1200 × 675" },
   CREDENTIAL: {
     types: [...IMAGES, "application/pdf"],
     maxBytes: 10 * MB,

@@ -1,0 +1,110 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Pricing"
+  version: 0.1.0
+  description: |
+    Pricing rules (PRC-1, PRC-2, PRC-5) and price quotes (PRC-4, PRC-7).
+    Zod mirror: src/lib/api/schemas/pricing.ts. Logic mirror with tests: src/lib/domain/pricing.ts.
+    Mock: src/mocks/handlers/pricing.ts.
+
+    Versioning (PRC-5, BR-4): rules are never edited or deleted. POST adds a version for a
+    Modality × Category pair; it must start now or later and after the pair's latest version, and
+    the latest version's effective_to is set to the new effective_from. Purchases store the price
+    they were charged, so later versions never change them. Each POST writes an audit entry (ADM-5).
+
+    Resolution (PRC-4): training price_override → the instructor's custom_rate on that training →
+    the rule in force at the quote time. No match → 409 NO_PRICE.
+servers:
+  - url: /api/v1
+paths:
+  /admin/pricing/rules:
+    get:
+      summary: Every version of every rule (admin)
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/PricingRule" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+    post:
+      summary: Add a rule version (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [modality_id, category_id, unit, amount, currency, effective_from]
+              properties:
+                modality_id: { type: string }
+                category_id: { type: string }
+                unit: { $ref: "./catalog.yaml#/components/schemas/PricingUnit" }
+                amount: { type: integer, minimum: 1 }
+                currency: { type: string }
+                effective_from: { type: string, format: date-time }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { type: object, required: [rule], properties: { rule: { $ref: "#/components/schemas/PricingRule" } } }
+        "422":
+          description: VALIDATION_FAILED (field_errors.effective_from, amount or unit)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  /pricing/quote:
+    get:
+      summary: The unit price a learner would pay, and where it comes from
+      description: |
+        Public for PUBLISHED trainings. Admins can quote any status and pass `at` to preview a
+        scheduled price. Checkout uses a separate quote with subtotal, discount, tax and total (PRC-7).
+      parameters:
+        - { name: training_id, in: query, required: true, schema: { type: string } }
+        - { name: instructor_id, in: query, schema: { type: string } }
+        - { name: at, in: query, schema: { type: string, format: date-time }, description: Admin only }
+      responses:
+        "200":
+          description: Quote
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [training_id, instructor_id, amount, currency, unit, source, rule_id, at]
+                properties:
+                  training_id: { type: string }
+                  instructor_id: { type: [string, "null"] }
+                  amount: { type: integer }
+                  currency: { type: string }
+                  unit: { $ref: "./catalog.yaml#/components/schemas/PricingUnit" }
+                  source: { type: string, enum: [TRAINING_OVERRIDE, INSTRUCTOR_RATE, RULE] }
+                  rule_id: { type: [string, "null"] }
+                  at: { type: string, format: date-time }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        field_errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    PricingRule:
+      type: object
+      required: [id, modality_id, category_id, unit, amount, currency, effective_from, effective_to, created_by, created_at]
+      properties:
+        id: { type: string }
+        modality_id: { type: string }
+        category_id: { type: string }
+        unit: { $ref: "./catalog.yaml#/components/schemas/PricingUnit" }
+        amount: { type: integer }
+        currency: { type: string }
+        effective_from: { type: string, format: date-time }
+        effective_to: { type: [string, "null"], format: date-time }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }

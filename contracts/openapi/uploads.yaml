@@ -13,6 +13,7 @@ info:
     | AVATAR      | jpeg, png, webp           | 5 MB  | anyone (public profile photo)  |
     | ID_DOCUMENT | jpeg, png, webp, pdf      | 10 MB | owner and admins only          |
     | CREDENTIAL  | jpeg, png, webp, pdf      | 10 MB | owner and admins only          |
+    | THUMBNAIL   | jpeg, png, webp           | 5 MB  | anyone (training card image)   |
 servers:
   - url: /api/v1
 paths:
@@ -91,7 +92,7 @@ components:
         field_errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
     UploadPurpose:
       type: string
-      enum: [AVATAR, ID_DOCUMENT, CREDENTIAL]
+      enum: [AVATAR, ID_DOCUMENT, CREDENTIAL, THUMBNAIL]
     StoredFile:
       type: object
       required: [id, purpose, name, content_type, size_bytes, scan_status, url]

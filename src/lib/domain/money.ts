@@ -56,3 +56,23 @@ export function formatDuration(minutes: number): string {
   if (m === 0) return h === 1 ? "1 hour" : `${h} hours`;
   return `${h} h ${m} min`;
 }
+
+/**
+ * Parses what an admin types ("450", "1,250.50", "$75") into minor units. Returns null for
+ * anything that isn't a clean non-negative amount with at most the currency's decimals.
+ */
+export function parseMoneyInput(text: string, currency: string): number | null {
+  const cleaned = text.trim().replace(/[\s,]/g, "").replace(/^[^\d.-]+/, "");
+  const digits = minorDigits(currency);
+  const pattern = digits === 0 ? /^\d+$/ : new RegExp(`^\\d+(\\.\\d{1,${digits}})?$`);
+  if (!pattern.test(cleaned)) return null;
+  const [whole, frac = ""] = cleaned.split(".");
+  return Number(whole) * 10 ** digits + Number(frac.padEnd(digits, "0") || 0);
+}
+
+/** Minor units back to the plain number an input shows ("450", "1250.5" → "1250.50"). */
+export function moneyInputValue(amount: number, currency: string): string {
+  const digits = minorDigits(currency);
+  const value = amount / 10 ** digits;
+  return amount % 10 ** digits === 0 ? String(value) : value.toFixed(digits);
+}

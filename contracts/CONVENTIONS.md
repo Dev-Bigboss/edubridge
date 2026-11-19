@@ -75,3 +75,10 @@ Every non-2xx response has this body:
 | Payout details | Stripe Connect Express; status `NOT_STARTED, PENDING, COMPLETE` from Stripe webhooks; no bank data stored | `onboarding.yaml` |
 | Uploads | Signed direct-to-storage PUT, virus scan (`SCANNING, CLEAN, INFECTED`), limits per purpose | `uploads.yaml` |
 | Availability | Weekly slots in the instructor's own zone, ISO weekday 1 = Monday, no overlaps per day | `onboarding.yaml` |
+| Training levels | `BEGINNER, INTERMEDIATE, ADVANCED, ALL_LEVELS` | `enums.ts` |
+| Training languages | Starting list `en, fr, ar, es, pt, de, yo, ig, ha, sw` until plan §8 Q9 is answered | `domain/training.ts` |
+| Publish checklist | Description ≥ 80 chars, active category, required details, ≥ 1 instructor, a price applies | `catalog.yaml` |
+| Modality lock | Can't change after a training leaves DRAFT; archive and recreate instead | `catalog.yaml` |
+| Slugs | From the title while DRAFT, frozen once published | `catalog.yaml` |
+| Instructor rate | Stored per training assignment (`TrainingInstructor.custom_rate`, SRS §5), with its own unit | `catalog.yaml` |
+| Price versions | Added, never edited; start now or later and after the latest version; dated changes start at the admin's local midnight | `pricing.yaml` |

@@ -35,6 +35,8 @@ export const buttonVariants = cva(
       },
       pill: { true: "rounded-full" },
     },
+    // Text links sit flush with the text around them, whatever size is set.
+    compoundVariants: [{ variant: "link", class: "h-auto min-w-0 px-0" }],
     defaultVariants: { variant: "primary", size: "md" },
   },
 );
