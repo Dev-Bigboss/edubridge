@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     Instructor availability (OTO-1), free slots (OTO-2), booking requests with a card hold (OTO-3/5/7, PAY-4).
-    Accept/decline/propose and counter-proposals (OTO-4/6/8) are below; reschedule and cancel extend this file next.
+    Accept/decline/propose, counter-proposals (OTO-4/6/8), reschedule and cancel (OTO-9, PAY-5) are below.
     Zod mirror: src/lib/api/schemas/bookings.ts. Mock: src/mocks/handlers/bookings.ts.
     Rules mirrored in src/lib/domain/slots.ts, checkout.ts (sessionBreakdown), booking-machine.ts.
 
@@ -147,11 +147,20 @@ paths:
           slot is released and the proposed one held. Authorisation stays in place. Notifies the learner.
         - accept-proposal (LEARNER, COUNTER_PROPOSED → ACCEPTED): re-checks the time (409 SLOT_TAKEN), moves the booking to it, then as accept.
         - decline-proposal (LEARNER → DECLINED): body { note? }; cancel the authorisation, notify the instructor.
+        - reschedule (either party, ACCEPTED → RESCHEDULE_REQUESTED): body { start_utc, note? }; must be one of the instructor's free
+          slots for the same length, ignoring this booking (409 SLOT_TAKEN); refused once the session started (409 SESSION_STARTED).
+          expires_at = the earlier of now + 48 h and the original start. Notifies the other party.
+        - accept-reschedule / decline-reschedule (the OTHER party only; the requester gets 409): accept re-checks the time and moves the
+          session (update the meeting, re-send the .ics with a higher SEQUENCE); decline keeps the original time. Both → ACCEPTED.
+        - cancel (either party, ACCEPTED or RESCHEDULE_REQUESTED → CANCELLED): body { reason } ≥ 5 chars. Refund per the booking's
+          `policy` snapshot (src/lib/domain/policy.ts cancellationRefund): learner → tier for the notice given; instructor → instructor
+          share. Refused after the start (409 SESSION_STARTED). Sets `cancellation`, refunds that amount, notifies the other party.
         Scheduler: COUNTER_PROPOSED past expires_at → EXPIRED, authorisation cancelled, both notified.
+        RESCHEDULE_REQUESTED past expires_at → ACCEPTED at the original time, requester notified.
         All writes are refused while an admin views as the user (403 IMPERSONATION_READ_ONLY).
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
-        - { name: action, in: path, required: true, schema: { type: string, enum: [accept, decline, propose, accept-proposal, decline-proposal] } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [accept, decline, propose, accept-proposal, decline-proposal, reschedule, accept-reschedule, decline-reschedule, cancel] } }
       requestBody:
         required: false
         content:
@@ -213,7 +222,7 @@ components:
         note: { type: [string, "null"] }
     Booking:
       type: object
-      required: [id, status, training, instructor, learner, start_utc, end_utc, duration_min, note, expires_at, proposal, reschedule, meeting_url, breakdown, payment_id, payment_status, timeline, created_at]
+      required: [id, status, training, instructor, learner, start_utc, end_utc, duration_min, note, expires_at, proposal, reschedule, meeting_url, breakdown, policy, cancellation, payment_id, payment_status, timeline, created_at]
       properties:
         id: { type: string }
         status: { type: string, enum: [DRAFT, PENDING_INSTRUCTOR, COUNTER_PROPOSED, ACCEPTED, DECLINED, EXPIRED, RESCHEDULE_REQUESTED, COMPLETED, CANCELLED, NO_SHOW] }
@@ -241,6 +250,22 @@ components:
                 note: { type: [string, "null"] }
         meeting_url: { type: [string, "null"] }
         breakdown: { $ref: "./payments.yaml#/components/schemas/PriceBreakdown" }
+        policy:
+          type: object
+          description: Cancellation rules snapshotted from settings.yaml when the booking was requested (later changes don't apply)
+          required: [learner_tiers, instructor_refund_percent]
+          properties:
+            learner_tiers: { type: array, items: { $ref: "./settings.yaml#/components/schemas/RefundTier" } }
+            instructor_refund_percent: { type: integer }
+        cancellation:
+          oneOf:
+            - { type: "null" }
+            - type: object
+              required: [by, reason, refund_amount]
+              properties:
+                by: { type: string, enum: [LEARNER, INSTRUCTOR] }
+                reason: { type: string }
+                refund_amount: { type: integer, description: Minor units returned to the learner }
         payment_id: { type: string }
         payment_status: { type: string, enum: [PENDING, AUTHORISED, CAPTURED, VOIDED, FAILED, PARTIALLY_REFUNDED, REFUNDED] }
         timeline: { type: array, items: { $ref: "#/components/schemas/TimelineEntry" } }

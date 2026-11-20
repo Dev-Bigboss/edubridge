@@ -77,6 +77,13 @@ export const Booking = z.object({
   meeting_url: z.string().nullable(),
   /** BR-4: the price agreed at request time. */
   breakdown: PriceBreakdown,
+  /** OTO-9: the cancellation rules in force when the session was requested. */
+  policy: z.object({
+    learner_tiers: z.array(z.object({ min_hours_before: z.number().int(), refund_percent: z.number().int() })),
+    instructor_refund_percent: z.number().int(),
+  }),
+  /** Set when cancelled: who, why, and what went back to the learner. */
+  cancellation: z.object({ by: z.enum(["LEARNER", "INSTRUCTOR"]), reason: z.string(), refund_amount: z.number().int() }).nullable(),
   payment_id: z.string(),
   payment_status: z.enum(PAYMENT_STATUSES),
   timeline: z.array(TimelineEntry),

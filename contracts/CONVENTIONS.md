@@ -111,3 +111,5 @@ Every non-2xx response has this body:
 | Counter-proposal | Instructor picks one of their own free slots; learner has 48 h; the hold moves to the proposed time | `bookings.yaml` |
 | Confirmation | Capture on accept, receipt issued, meeting link, .ics to both with alarms 24 h and 1 h before; join opens 15 min before the start | `bookings.yaml`, `domain/ics.ts` |
 | Declining | Instructor gives a reason (sent to the learner); learner may decline a proposal without one | `bookings.yaml` |
+| Reschedule | Either side asks for one of the instructor's free slots; only the other side answers; unanswered by the earlier of 48 h or the start → original time stands | `bookings.yaml` |
+| Cancellation | Either side, before the start, with a reason; refund from the booking's policy snapshot (learner tiers or instructor share); preview shown before confirming | `bookings.yaml`, `domain/policy.ts` |

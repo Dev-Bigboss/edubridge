@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { LoadError } from "@/components/admin/catalog-admin";
 import { FormError } from "@/components/auth/auth-card";
 import { CalendarButton, joinState } from "@/components/booking/calendar-button";
+import { CancelDialog, ReschedulePanel, RescheduleDialog } from "@/components/booking/changes";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { useCountdown } from "@/components/booking/booking-detail";
 import { PersonAvatar } from "@/components/catalog/bits";
@@ -35,8 +36,16 @@ export function Requests() {
   if (!user) return <LoadingState />;
   const items = query.data?.items ?? [];
   const groups = [
-    { key: "forYou", items: items.filter((b) => b.status === "PENDING_INSTRUCTOR").sort((a, b) => (a.expires_at ?? "").localeCompare(b.expires_at ?? "")) },
-    { key: "forLearner", items: items.filter((b) => b.status === "COUNTER_PROPOSED") },
+    {
+      key: "forYou",
+      items: items
+        .filter((b) => b.status === "PENDING_INSTRUCTOR" || (b.status === "RESCHEDULE_REQUESTED" && b.reschedule?.requested_by === "LEARNER"))
+        .sort((a, b) => (a.expires_at ?? "").localeCompare(b.expires_at ?? "")),
+    },
+    {
+      key: "forLearner",
+      items: items.filter((b) => b.status === "COUNTER_PROPOSED" || (b.status === "RESCHEDULE_REQUESTED" && b.reschedule?.requested_by === "INSTRUCTOR")),
+    },
     { key: "upcoming", items: items.filter((b) => b.status === "ACCEPTED" && Date.parse(b.end_utc) > now) },
   ] as const;
 
@@ -76,7 +85,7 @@ function RequestCard({ booking: b, user }: { booking: Booking; user: User }) {
   const t = useTranslations("teach.requests");
   const zone = user.timezone;
   const countdown = useCountdown(b.status === "PENDING_INSTRUCTOR" || b.status === "COUNTER_PROPOSED" ? b.expires_at : null);
-  const [dialog, setDialog] = useState<"decline" | "propose" | null>(null);
+  const [dialog, setDialog] = useState<"decline" | "propose" | "reschedule" | "cancel" | null>(null);
   const action = useBookingAction(b.id);
   const titleId = `req-${b.id}`;
   const join = joinState(b);
@@ -135,6 +144,23 @@ function RequestCard({ booking: b, user }: { booking: Booking; user: User }) {
           </Button>
         </div>
       )}
+      {b.status === "RESCHEDULE_REQUESTED" && (
+        <div className="mb-4">
+          <ReschedulePanel booking={b} side="INSTRUCTOR" zone={zone} />
+        </div>
+      )}
+      {(b.status === "ACCEPTED" || b.status === "RESCHEDULE_REQUESTED") && join === "SOON" && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {b.status === "ACCEPTED" && (
+            <Button variant="outline" onClick={() => setDialog("reschedule")}>
+              {t("requestNewTime")}
+            </Button>
+          )}
+          <Button variant="ghost" className="text-danger hover:bg-danger-soft" onClick={() => setDialog("cancel")}>
+            {t("cancelSession")}
+          </Button>
+        </div>
+      )}
       {b.status === "ACCEPTED" && (
         <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle pt-4">
           {join === "OPEN" ? (
@@ -156,6 +182,8 @@ function RequestCard({ booking: b, user }: { booking: Booking; user: User }) {
 
       {dialog === "decline" && <DeclineDialog booking={b} onClose={() => setDialog(null)} />}
       {dialog === "propose" && <ProposeDialog booking={b} user={user} onClose={() => setDialog(null)} />}
+      {dialog === "reschedule" && <RescheduleDialog booking={b} zone={zone} onClose={() => setDialog(null)} />}
+      {dialog === "cancel" && <CancelDialog booking={b} side="INSTRUCTOR" onClose={() => setDialog(null)} />}
     </article>
   );
 }

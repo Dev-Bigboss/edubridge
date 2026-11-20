@@ -8,6 +8,7 @@ import { LoadError } from "@/components/admin/catalog-admin";
 import { PersonAvatar } from "@/components/catalog/bits";
 import { BreakdownLines } from "@/components/checkout/breakdown";
 import { CalendarButton, joinState } from "./calendar-button";
+import { CancelDialog, ReschedulePanel, RescheduleDialog } from "./changes";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/spinner";
@@ -17,7 +18,7 @@ import { toast } from "sonner";
 import { useBooking, useBookingAction } from "@/lib/api/hooks/bookings";
 import type { Booking } from "@/lib/api/schemas/bookings";
 import type { User } from "@/lib/api/schemas/auth";
-import { formatDuration } from "@/lib/domain/money";
+import { formatDuration, formatMoney } from "@/lib/domain/money";
 import { formatInZone, formatSessionTime, formatTimeRange, minutesUntil, timeAgo } from "@/lib/domain/time";
 
 /** "23 h 10 min", "45 min": how long the other side has left to answer (OTO-5). */
@@ -62,6 +63,8 @@ function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
   const countdown = useCountdown(b.status === "PENDING_INSTRUCTOR" || b.status === "COUNTER_PROPOSED" ? b.expires_at : null);
   const action = useBookingAction(b.id);
   const join = joinState(b);
+  const [change, setChange] = useState<"reschedule" | "cancel" | null>(null);
+  const changeable = (b.status === "ACCEPTED" || b.status === "RESCHEDULE_REQUESTED") && join !== "ENDED" && join !== "OPEN";
   const respond = async (name: "accept-proposal" | "decline-proposal") => {
     try {
       await action.mutateAsync({ action: name });
@@ -128,6 +131,18 @@ function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
           </div>
         </section>
       )}
+      {b.status === "RESCHEDULE_REQUESTED" && (
+        <div className="mb-6">
+          <ReschedulePanel booking={b} side="LEARNER" zone={zone} />
+        </div>
+      )}
+      {b.status === "CANCELLED" && b.cancellation && (
+        <Banner tone="neutral">
+          {b.cancellation.by === "LEARNER"
+            ? t("cancelledByYou", { amount: formatMoney({ amount: b.cancellation.refund_amount, currency: b.breakdown.currency }) })
+            : t("cancelledByInstructor", { name: b.instructor.name, amount: formatMoney({ amount: b.cancellation.refund_amount, currency: b.breakdown.currency }) })}
+        </Banner>
+      )}
       {b.status === "DECLINED" && (
         <Banner tone="neutral" action={<Button asChild variant="outline"><Link href={`/learn/book/${b.training.slug}`}>{t("bookAgain")}</Link></Button>}>
           {t("declined")}
@@ -153,6 +168,21 @@ function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
           {join === "OPEN" ? t("joinNow") : t("confirmed")}
         </Banner>
       )}
+
+      {changeable && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {b.status === "ACCEPTED" && (
+            <Button variant="outline" onClick={() => setChange("reschedule")}>
+              {t("requestNewTime")}
+            </Button>
+          )}
+          <Button variant="ghost" className="text-danger hover:bg-danger-soft" onClick={() => setChange("cancel")}>
+            {t("cancelSession")}
+          </Button>
+        </div>
+      )}
+      {change === "reschedule" && <RescheduleDialog booking={b} zone={zone} onClose={() => setChange(null)} />}
+      {change === "cancel" && <CancelDialog booking={b} side="LEARNER" onClose={() => setChange(null)} />}
 
       <div className="grid gap-6 md:grid-cols-[1fr_320px]">
         <section aria-labelledby="session" className="rounded-lg border border-border-subtle bg-white p-5 md:p-6">

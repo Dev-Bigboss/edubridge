@@ -225,7 +225,8 @@ Auth (email/password, Google, verify, reset, consent), learner + instructor onbo
 ### Phase 2: 1:1 and content (L) — SRS phase 2 (in progress)
 **Built so far:** instructor availability (weekly hours, date exceptions, minimum notice) (OTO-1); learner booking page with instructor, length, and free times in the viewer's zone, excluding cohort classes and held requests (OTO-2/10); request with card authorisation through the gateway, 30-min slot hold, expiry with the hold released (OTO-3/5/7, PAY-4); learner sessions list and booking page with countdown and history. Contract: `bookings.yaml`; payments now link to a booking or an enrolment.
 Then: instructor requests page with countdowns (OTO-4/5); accept captures the card, issues a receipt and creates the meeting link (OTO-8, PAY-4); decline with a reason; propose another time from the instructor's free slots, learner accepts or declines within 48 h (OTO-6); calendar invite (.ics) with 24 h and 1 h reminders; join button from 15 minutes before.
-**Next:** reschedule/cancel with refund preview (OTO-9, PAY-5); instructor schedule; session join and attendance; recordings; resources.
+Then: reschedule (either side proposes a free slot, the other accepts or the original stands) and cancel with a refund preview from the cancellation policy snapshotted at booking (OTO-9, PAY-5).
+**Next:** instructor schedule with cohort and 1:1 sessions (OTO-10); session join and attendance (COH-4); recordings; resources.
 
 Availability editor, slot picker, booking request with authorisation, instructor accept/decline/propose with expiry countdown, counter-proposal flow, reschedule/cancel with policy preview, .ics download and reminders display, unified instructor schedule with conflict prevention, session join, attendance, recordings player and management, resources upload/visibility/folders.
 *Req:* OTO-1..10, PAY-4/5, COH-4/5, REC-1..6, RES-1..4, ONB-5.

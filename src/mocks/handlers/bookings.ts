@@ -2,6 +2,8 @@ import { delay } from "msw";
 import { http, HttpResponse } from "msw/http";
 import { AvailabilityInput, BookingRequest, type Booking } from "@/lib/api/schemas/bookings";
 import { sessionBreakdown } from "@/lib/domain/checkout";
+import { formatMoney } from "@/lib/domain/money";
+import { cancellationRefund } from "@/lib/domain/policy";
 import { localInstant } from "@/lib/domain/cohort-schedule";
 import { WEEKDAYS } from "@/lib/api/schemas/cohort";
 import { MODALITY } from "@/lib/domain/enums";
@@ -11,7 +13,7 @@ import { formatSessionTime } from "@/lib/domain/time";
 import { canTransition, type BookingAction } from "@/lib/domain/booking-machine";
 import { db, findUser, newId, notify, save, sendMail, type StoredBooking } from "../db";
 import { omit } from "./catalog";
-import { nextReceiptNumber, settle } from "./checkout";
+import { nextReceiptNumber, refundPayment, settle } from "./checkout";
 import { apiError, blockWhileImpersonating, requireUser, url, validationError } from "./util";
 
 type StoredPayment = (typeof db.payments)[number];
@@ -105,6 +107,23 @@ export function sweepBookings(now = new Date()) {
           link: userId === b.learner_id ? `/learn/bookings/${b.id}` : "/teach/requests",
         });
       }
+      changed = true;
+    }
+  }
+  for (const b of db.bookings) {
+    // OTO-9: an unanswered reschedule lapses; the original time stands.
+    if (b.status === "RESCHEDULE_REQUESTED" && b.expires_at && new Date(b.expires_at) <= now) {
+      const requester = b.reschedule?.requested_by === "LEARNER" ? b.learner_id : b.instructor_id;
+      b.status = "ACCEPTED";
+      b.reschedule = null;
+      b.expires_at = null;
+      b.timeline.push({ at: now.toISOString(), actor: "SYSTEM", event: "RESCHEDULE_DECLINED", note: "No answer in time; the original time stands." });
+      notify(requester, {
+        type: "BOOKING_RESCHEDULED",
+        title: "Your new time wasn't accepted in time",
+        body: "The session stays at its original time.",
+        link: requester === b.learner_id ? `/learn/bookings/${b.id}` : "/teach/requests",
+      });
       changed = true;
     }
   }
@@ -268,6 +287,8 @@ export const bookingHandlers = [
       reschedule: null,
       meeting_url: null,
       breakdown,
+      policy: { learner_tiers: db.settings.learner_cancellation.tiers, instructor_refund_percent: db.settings.instructor_cancellation.refund_percent },
+      cancellation: null,
       payment_id: newId("pay"),
       timeline: [],
       created_at: now,
@@ -354,10 +375,16 @@ export const bookingHandlers = [
       propose: "PROPOSE_TIME",
       "accept-proposal": "ACCEPT_PROPOSAL",
       "decline-proposal": "DECLINE_PROPOSAL",
+      reschedule: "REQUEST_RESCHEDULE",
+      "accept-reschedule": "ACCEPT_RESCHEDULE",
+      "decline-reschedule": "DECLINE_RESCHEDULE",
+      cancel: "CANCEL",
     };
     const action = ACTIONS[params.action as string];
     if (!action) return apiError(404, "NOT_FOUND", "Unknown action.");
-    if (!canTransition(b.status, action, user.role)) {
+    // OTO-9: the person who asked for a reschedule waits for the other side.
+    const ownReschedule = (action === "ACCEPT_RESCHEDULE" || action === "DECLINE_RESCHEDULE") && b.reschedule?.requested_by === user.role;
+    if (!canTransition(b.status, action, user.role) || ownReschedule) {
       const why = b.status === "EXPIRED" ? "This request has expired." : "This booking has already moved on. Refresh to see where it stands.";
       return apiError(409, "INVALID_TRANSITION", why);
     }
@@ -440,6 +467,86 @@ export const bookingHandlers = [
         b.end_utc = b.proposal.end_utc;
         b.proposal = null;
         confirm("LEARNER", "PROPOSAL_ACCEPTED");
+        break;
+      }
+      case "REQUEST_RESCHEDULE": {
+        if (Date.parse(b.start_utc) <= now.getTime()) return apiError(409, "SESSION_STARTED", "This session has already started.");
+        if (!body.start_utc || Number.isNaN(Date.parse(body.start_utc))) {
+          return apiError(422, "VALIDATION_FAILED", "Pick a time.", { start_utc: ["Pick one of the free times."] });
+        }
+        if (!freeFor(body.start_utc)) return apiError(409, "SLOT_TAKEN", "That time isn't free any more. Pick another.");
+        const start = new Date(body.start_utc);
+        b.status = "RESCHEDULE_REQUESTED";
+        b.reschedule = {
+          requested_by: user.role as "LEARNER" | "INSTRUCTOR",
+          start_utc: start.toISOString(),
+          end_utc: new Date(start.getTime() + b.duration_min * 60_000).toISOString(),
+          note: body.note?.trim() || null,
+        };
+        // Answer within 48 h, and before the original start: after that the original time stands.
+        b.expires_at = new Date(Math.min(now.getTime() + PROPOSAL_EXPIRY_HOURS * 3_600_000, Date.parse(b.start_utc))).toISOString();
+        b.timeline.push({ at, actor: user.role as "LEARNER" | "INSTRUCTOR", event: "RESCHEDULE_REQUESTED", note: b.reschedule.note });
+        const other = user.role === "LEARNER" ? instructor : learner;
+        if (other) {
+          notify(other.id, {
+            type: "BOOKING_RESCHEDULED",
+            title: `${user.name} asked to move your session`,
+            body: `New time: ${formatSessionTime(b.reschedule.start_utc, other.timezone)}. Accept or keep the original time.`,
+            link: other.role === "LEARNER" ? `/learn/bookings/${b.id}` : "/teach/requests",
+          });
+        }
+        break;
+      }
+      case "ACCEPT_RESCHEDULE":
+      case "DECLINE_RESCHEDULE": {
+        if (!b.reschedule) return apiError(409, "INVALID_TRANSITION", "There's no reschedule to answer.");
+        const accepted = action === "ACCEPT_RESCHEDULE";
+        if (accepted && !freeFor(b.reschedule.start_utc)) return apiError(409, "SLOT_TAKEN", "That time is no longer free, so the original time stands.");
+        const requester = b.reschedule.requested_by === "LEARNER" ? learner : instructor;
+        if (accepted) {
+          b.start_utc = b.reschedule.start_utc;
+          b.end_utc = b.reschedule.end_utc;
+        }
+        b.status = "ACCEPTED";
+        b.reschedule = null;
+        b.expires_at = null;
+        b.timeline.push({ at, actor: user.role as "LEARNER" | "INSTRUCTOR", event: accepted ? "RESCHEDULE_ACCEPTED" : "RESCHEDULE_DECLINED", note: body.note?.trim() || null });
+        if (requester) {
+          notify(requester.id, {
+            type: "BOOKING_RESCHEDULED",
+            title: accepted ? "New time confirmed" : "The original time stands",
+            body: accepted ? `${formatSessionTime(b.start_utc, requester.timezone)}. Your calendar invite has been updated.` : `${user.name} kept the original time.`,
+            link: requester.role === "LEARNER" ? `/learn/bookings/${b.id}` : "/teach/requests",
+          });
+          if (accepted) sendMail(requester.email, "Session moved (updated calendar invite attached)", requester.role === "LEARNER" ? `/learn/bookings/${b.id}` : "/teach/requests");
+        }
+        break;
+      }
+      case "CANCEL": {
+        const reason = body.reason?.trim() ?? "";
+        if (reason.length < 5) return apiError(422, "VALIDATION_FAILED", "Say why, in a few words.", { reason: ["Say why, in a few words. The other person sees this."] });
+        const by = user.role as "LEARNER" | "INSTRUCTOR";
+        const refund = cancellationRefund({ policy: b.policy, total: b.breakdown.total, startUtc: b.start_utc, by, now });
+        if (!refund.allowed) return apiError(409, "SESSION_STARTED", "This session has already started, so it can't be cancelled.");
+        if (refund.amount > 0) refundPayment(payment, refund.amount);
+        b.status = "CANCELLED";
+        b.reschedule = null;
+        b.expires_at = null;
+        b.cancellation = { by, reason, refund_amount: refund.amount };
+        b.timeline.push({ at, actor: by, event: "CANCELLED", note: reason });
+        const money = formatMoney({ amount: refund.amount, currency: b.breakdown.currency });
+        const other = by === "LEARNER" ? instructor : learner;
+        if (other) {
+          notify(other.id, {
+            type: "BOOKING_DECLINED",
+            title: `${user.name} cancelled your session`,
+            body: by === "INSTRUCTOR" ? `${reason} You've been refunded ${money}.` : reason,
+            link: other.role === "LEARNER" ? `/learn/bookings/${b.id}` : "/teach/requests",
+          });
+        }
+        if (by === "LEARNER" && refund.amount > 0) {
+          notify(b.learner_id, { type: "PAYMENT_REFUNDED", title: `${money} refunded`, body: `${refund.percent}% back under the cancellation policy.`, link: "/learn/payments" });
+        }
         break;
       }
       case "DECLINE_PROPOSAL":

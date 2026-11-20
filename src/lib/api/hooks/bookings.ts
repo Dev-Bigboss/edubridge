@@ -92,7 +92,16 @@ export function useTeachBookings() {
   });
 }
 
-export type BookingActionName = "accept" | "decline" | "propose" | "accept-proposal" | "decline-proposal";
+export type BookingActionName =
+  | "accept"
+  | "decline"
+  | "propose"
+  | "accept-proposal"
+  | "decline-proposal"
+  | "reschedule"
+  | "accept-reschedule"
+  | "decline-reschedule"
+  | "cancel";
 
 /** Accepting captures money, so a double click must not send twice: the state machine refuses the second. */
 export function useBookingAction(id: string) {

@@ -1411,7 +1411,9 @@
       "noteHint": "For example, why the original time doesn't work.",
       "proposeCta": "Send proposal",
       "proposed": "New time sent to {name}",
-      "goBack": "Go back"
+      "goBack": "Go back",
+      "requestNewTime": "Request a new time",
+      "cancelSession": "Cancel session"
     }
   },
   "booking": {
@@ -1502,11 +1504,52 @@
       "joinNow": "Your session is about to start.",
       "join": "Join session",
       "failed": "That didn't work. Please try again.",
-      "youAsked": "You asked for"
+      "youAsked": "You asked for",
+      "requestNewTime": "Request a new time",
+      "cancelSession": "Cancel session",
+      "cancelledByYou": "You cancelled this session. {amount} was refunded to your card.",
+      "cancelledByInstructor": "{name} cancelled this session. {amount} was refunded to your card."
     },
     "calendar": {
       "add": "Add to calendar",
       "title": "{training} with {name}"
+    },
+    "changes": {
+      "rescheduleTitle": "Request a new time",
+      "rescheduleBody": "Pick another of the instructor's free times for this {length} session. The other person accepts it, or the original time stands.",
+      "currently": "Currently:",
+      "loadingTimes": "Finding free times",
+      "noTimes": "No other free times in the next four weeks.",
+      "note": "Note (optional)",
+      "noteHint": "Why the change, so the other person can decide quickly.",
+      "pickTime": "Pick a new time.",
+      "sendReschedule": "Send request",
+      "rescheduleSent": "Request sent. The session stays at its current time until it's accepted.",
+      "goBack": "Go back",
+      "failed": "That didn't work. Please try again.",
+      "cancelTitle": "Cancel this session?",
+      "cancelBody": "{name} is told straight away. This can't be undone.",
+      "youGetBack": "You get {amount} back ({percent}%)",
+      "theyGetBack": "{name} gets {amount} back ({percent}%)",
+      "ofPaid": "of {total} paid",
+      "notice": "{hours, plural, one {# hour} other {# hours}} before the start",
+      "policy": "Cancellation policy for this session",
+      "reason": "Reason",
+      "reasonHint": "{name} sees this.",
+      "reasonRequired": "Say why, in a few words.",
+      "keep": "Keep the session",
+      "cancelAndRefund": "Cancel and refund {amount}",
+      "cancelNoRefund": "Cancel without a refund",
+      "cancelled": "Session cancelled. {amount} refunded.",
+      "rescheduleRegion": "Reschedule request",
+      "youAsked": "You asked to move this session to",
+      "theyAsked": "{name} asked to move this session to",
+      "waitingFor": "Waiting for {name}. If they don't answer before the session, the original time stands.",
+      "orKeep": "Or keep the original time: {when}.",
+      "acceptNew": "Accept new time",
+      "keepOriginal": "Keep original time",
+      "moved": "Session moved. Your calendar invite is updated.",
+      "kept": "The original time stands."
     }
   }
 }

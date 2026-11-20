@@ -76,3 +76,30 @@ export function diffSettings(a: SettingsInput, b: SettingsInput): string {
   }
   return parts.join(". ") || "No changes";
 }
+
+/** The cancellation rules a booking was made under (BR-4 style: later policy changes don't apply). */
+export type BookingPolicy = { learner_tiers: RefundTier[]; instructor_refund_percent: number };
+
+/**
+ * OTO-9, PAY-5: what goes back to the learner when a confirmed session is cancelled. Learners get
+ * the tier for the notice they give; when the instructor cancels, the instructor share applies.
+ * Cancelling after the start isn't a cancellation (it's a no-show), so it's refused.
+ */
+export function cancellationRefund({
+  policy,
+  total,
+  startUtc,
+  by,
+  now = new Date(),
+}: {
+  policy: BookingPolicy;
+  total: number;
+  startUtc: string;
+  by: "LEARNER" | "INSTRUCTOR";
+  now?: Date;
+}): { allowed: boolean; hours_before: number; percent: number; amount: number } {
+  const hoursBefore = (Date.parse(startUtc) - now.getTime()) / 3_600_000;
+  if (hoursBefore <= 0) return { allowed: false, hours_before: hoursBefore, percent: 0, amount: 0 };
+  const percent = by === "INSTRUCTOR" ? policy.instructor_refund_percent : refundPercent(policy.learner_tiers, hoursBefore);
+  return { allowed: true, hours_before: hoursBefore, percent, amount: Math.round((total * percent) / 100) };
+}
