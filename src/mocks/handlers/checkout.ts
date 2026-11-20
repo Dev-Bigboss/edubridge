@@ -8,7 +8,7 @@ import { formatMoney } from "@/lib/domain/money";
 import { resolvePrice } from "@/lib/domain/pricing";
 import { db, findUser, newId, notify, save, sendMail } from "../db";
 import { VISIBLE_COHORTS, omit, published, toCard, toPublicCohort } from "./catalog";
-import { apiError, requireUser, url } from "./util";
+import { apiError, blockWhileImpersonating, requireUser, url } from "./util";
 
 type StoredPayment = (typeof db.payments)[number];
 
@@ -123,6 +123,8 @@ export const checkoutHandlers = [
     await delay(500);
     const user = requireUser("LEARNER");
     if (user instanceof Response) return user;
+    const blocked0 = blockWhileImpersonating();
+    if (blocked0) return blocked0;
     const key = request.headers.get("Idempotency-Key");
     if (!key) return apiError(400, "IDEMPOTENCY_KEY_REQUIRED", "Missing Idempotency-Key header.");
     const again = db.payments.find((p) => p.idempotency_key === key && p.learner_id === user.id);

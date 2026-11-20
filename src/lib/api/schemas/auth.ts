@@ -23,6 +23,11 @@ export const User = z.object({
    * (new Google sign-ups, or after a document changes). The app asks before anything else.
    */
   consent_required: z.boolean(),
+  /**
+   * ADM-2: set while an admin is viewing the app as this user. The session is read-only and the
+   * app shows a banner with a way back. Absent or null otherwise.
+   */
+  impersonated_by: z.object({ id: z.string(), name: z.string(), started_at: z.string() }).nullable().optional(),
 });
 export type User = z.infer<typeof User>;
 

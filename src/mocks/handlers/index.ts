@@ -1,4 +1,5 @@
 import { adminCatalogHandlers } from "./admin-catalog";
+import { adminUserHandlers } from "./admin-users";
 import { authHandlers } from "./auth";
 import { catalogHandlers } from "./catalog";
 import { checkoutHandlers } from "./checkout";
@@ -14,6 +15,7 @@ export const handlers = [
   ...authHandlers,
   ...catalogHandlers,
   ...adminCatalogHandlers,
+  ...adminUserHandlers,
   ...pricingHandlers,
   ...cohortHandlers,
   ...checkoutHandlers,

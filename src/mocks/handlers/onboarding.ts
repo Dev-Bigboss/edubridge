@@ -12,9 +12,9 @@ import {
   VerificationInput,
   type OnboardingState,
 } from "@/lib/api/schemas/onboarding";
-import { db, save, toUser, type MockUser } from "../db";
+import { db, notify, save, toUser, type MockUser } from "../db";
 import { getUploadedFile } from "./uploads";
-import { apiError, requireUser, url, validationError } from "./util";
+import { apiError, requireUser, url, validationError, blockWhileImpersonating } from "./util";
 
 function record(user: MockUser) {
   db.onboarding[user.id] ??= {
@@ -54,6 +54,8 @@ export const onboardingHandlers = [
     await delay(350);
     const user = onboardingUser();
     if (user instanceof Response) return user;
+    const readOnly = blockWhileImpersonating();
+    if (readOnly) return readOnly;
     const section = String(params.section);
     const steps: readonly string[] = user.role === "LEARNER" ? LEARNER_STEPS : INSTRUCTOR_STEPS;
     if (!steps.includes(section) || section === "payout") return apiError(404, "NOT_FOUND", "Unknown step.");
@@ -130,6 +132,8 @@ export const onboardingHandlers = [
     await delay(500);
     const user = onboardingUser();
     if (user instanceof Response) return user;
+    const readOnly = blockWhileImpersonating();
+    if (readOnly) return readOnly;
     const required: readonly string[] = user.role === "LEARNER" ? LEARNER_STEPS : INSTRUCTOR_STEPS;
     const missing = required.filter((s) => !record(user).completed_steps.includes(s));
     if (missing.length) {
@@ -139,7 +143,17 @@ export const onboardingHandlers = [
     }
     user.onboarding_status = "COMPLETED";
     // ONB-3: instructors now wait for an admin to approve them.
-    if (user.role === "INSTRUCTOR") user.approval_status = "PENDING";
+    if (user.role === "INSTRUCTOR") {
+      user.approval_status = "PENDING";
+      for (const admin of db.users.filter((u) => u.role === "ADMIN")) {
+        notify(admin.id, {
+          type: "INSTRUCTOR_APPLICATION",
+          title: "New instructor application",
+          body: `${user.name} finished onboarding and is waiting for approval.`,
+          link: `/admin/users/${user.id}`,
+        });
+      }
+    }
     save();
     return HttpResponse.json({ user: toUser(user) });
   }),

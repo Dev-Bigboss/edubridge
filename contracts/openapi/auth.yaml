@@ -113,6 +113,17 @@ paths:
       summary: Sign out and clear session cookies
       responses:
         "204": { description: Signed out }
+  /auth/impersonation/end:
+    post:
+      summary: Leave "view as" and return to the admin's own session (ADM-2). Audited
+      description: The only write allowed in an impersonated session (besides logout). 409 NOT_IMPERSONATING otherwise.
+      responses:
+        "200":
+          description: The admin's session
+          content: { application/json: { schema: { type: object, required: [user], properties: { user: { $ref: "#/components/schemas/User" } } } } }
+        "409":
+          description: NOT_IMPERSONATING
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
   /auth/register:
     post:
       summary: Create a learner or instructor account (ONB-1, ONB-4)
@@ -288,3 +299,13 @@ components:
         consent_required:
           type: boolean
           description: True when the user hasn't accepted the current terms/privacy versions (ONB-4)
+        impersonated_by:
+          description: "ADM-2: set while an admin views the app as this user (read-only session). Null otherwise."
+          oneOf:
+            - { type: "null" }
+            - type: object
+              required: [id, name, started_at]
+              properties:
+                id: { type: string }
+                name: { type: string }
+                started_at: { type: string, format: date-time }

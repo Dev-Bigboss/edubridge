@@ -1,0 +1,114 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Admin users"
+  version: 0.1.0
+  description: |
+    User management (ADM-2) and instructor approval (ONB-3). ADMIN only (403 otherwise).
+    Zod mirror: src/lib/api/schemas/admin-users.ts. Mock: src/mocks/handlers/admin-users.ts.
+
+    Rules:
+    - Every action writes an audit entry with the admin, the target and the reason (ADM-5).
+    - Admins can't act on their own account (409 SELF_ACTION).
+    - reject, suspend and impersonate need `reason` (≥ 5 chars, 422 field_errors.reason).
+    - approve/reject only for INSTRUCTOR with approval_status PENDING (409 INVALID_TRANSITION). The instructor
+      gets an in-app notification and an email; reject sends the reason. Submitting instructor onboarding notifies
+      every admin (INSTRUCTOR_APPLICATION).
+    - suspend ends all of the user's sessions at once; sign-in then returns 403 ACCOUNT_SUSPENDED.
+    - reset-access emails a password reset link and revokes all sessions. Refused for suspended accounts.
+    - impersonate (ADM-2 "impersonate (audited)") replaces the admin's session with a read-only session as the target.
+      GET /auth/me then returns `impersonated_by`. While impersonating, every write returns
+      403 IMPERSONATION_READ_ONLY except POST /auth/impersonation/end and /auth/logout. Never for ADMIN targets (403)
+      or non-ACTIVE accounts (409). Start and end are both audited. Suggested server-side limit: 30 minutes.
+servers:
+  - url: /api/v1
+paths:
+  /admin/users:
+    get:
+      summary: Search people. PENDING instructor applications sort first, then newest accounts
+      parameters:
+        - { name: q, in: query, description: Name or email contains, schema: { type: string } }
+        - { name: role, in: query, schema: { type: string, enum: [LEARNER, INSTRUCTOR, ADMIN] } }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING_VERIFICATION, ACTIVE, SUSPENDED] } }
+        - { name: approval, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED] } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor, total, pending_approvals]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AdminUserRow" } }
+                  next_cursor: { type: [string, "null"] }
+                  total: { type: integer }
+                  pending_approvals: { type: integer, description: Across all users, for the review shortcut }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/users/{id}:
+    get:
+      summary: One person with their onboarding answers, stats and admin history
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user, onboarding, stats, history]
+                properties:
+                  user: { $ref: "#/components/schemas/AdminUserRow" }
+                  onboarding:
+                    description: The `sections` object of onboarding.yaml's OnboardingState; null for admins. Document URLs are signed.
+                    type: [object, "null"]
+                  stats:
+                    type: object
+                    required: [enrolments, trainings_taught, payments_total]
+                    properties:
+                      enrolments: { type: integer }
+                      trainings_taught: { type: integer }
+                      payments_total: { type: integer, description: "Minor units, USD, net of refunds" }
+                  history: { type: array, items: { $ref: "#/components/schemas/AuditEntry" }, description: Latest 20 entries targeting this user }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/users/{id}/{action}:
+    post:
+      summary: approve | reject | suspend | reactivate | reset-access | impersonate
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [approve, reject, suspend, reactivate, reset-access, impersonate] } }
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { reason: { type: string, maxLength: 500 } } } } } }
+      responses:
+        "200":
+          description: Updated user (impersonate returns the target's session user)
+          content: { application/json: { schema: { type: object, required: [user], properties: { user: { type: object } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+  schemas:
+    AdminUserRow:
+      allOf:
+        - { $ref: "./auth.yaml#/components/schemas/User" }
+        - type: object
+          required: [created_at, last_sign_in_at]
+          properties:
+            created_at: { type: string, format: date-time }
+            last_sign_in_at: { type: [string, "null"], format: date-time }
+    AuditEntry:
+      type: object
+      required: [id, actor_id, actor_name, action, target_type, target_id, summary, created_at]
+      properties:
+        id: { type: string }
+        actor_id: { type: string }
+        actor_name: { type: string }
+        action: { type: string, description: "e.g. user.suspend, cohort.cancel, pricing_rule.created" }
+        target_type: { type: string }
+        target_id: { type: string }
+        summary: { type: string, description: Human-readable, includes the reason when one was given }
+        created_at: { type: string, format: date-time }

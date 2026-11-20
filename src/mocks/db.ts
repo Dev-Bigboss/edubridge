@@ -20,7 +20,12 @@ export const MOCK_MFA_CODE = "123456";
 
 export { LEGAL_VERSIONS } from "@/lib/legal/versions";
 
-export type MockUser = User & { password: string | null; headline?: string | null };
+export type MockUser = User & {
+  password: string | null;
+  headline?: string | null;
+  created_at?: string;
+  last_sign_in_at?: string | null;
+};
 
 /** ADM-5: admin actions and price/policy changes. */
 export type AuditEntry = {
@@ -55,6 +60,8 @@ type State = {
   tokens: Record<string, Token>;
   outbox: MockEmail[];
   session: string | null;
+  /** ADM-2: the admin viewing as `session`, when impersonating. */
+  impersonation: { admin_id: string; started_at: string; reason: string } | null;
   pendingMfa: Record<string, string>;
 };
 
@@ -69,6 +76,49 @@ const seedUser = (u: Partial<MockUser> & Pick<MockUser, "id" | "role" | "email" 
   password: MOCK_PASSWORD,
   ...u,
 });
+
+/** The pending applicant's submitted onboarding, so approval (ONB-3) has something to review. */
+function seedOnboarding(): State["onboarding"] {
+  const file = (id: string, purpose: "ID_DOCUMENT" | "CREDENTIAL", name: string) => ({
+    id, purpose, name, content_type: "application/pdf", size_bytes: 248_000, scan_status: "CLEAN" as const, url: null,
+  });
+  return {
+    usr_instructor_pending: {
+      completed_steps: ["profile", "expertise", "verification", "payout", "availability"],
+      sections: {
+        profile: {
+          name: "Demo Applicant",
+          avatar: null,
+          timezone: "Africa/Lagos",
+          country: "NG",
+          headline: "Statistician and university tutor",
+          bio: "I teach statistics and research methods to undergraduates and help final-year students plan and analyse their projects. Eight years of tutoring, with a focus on making the maths feel practical.",
+        },
+        expertise: {
+          category_ids: ["cat_uni_course", "cat_topic"],
+          subjects: ["Statistics", "Research methods", "SPSS", "R"],
+          qualifications: [
+            { title: "MSc Statistics", institution: "University of Ibadan", year: 2017 },
+            { title: "BSc Mathematics", institution: "University of Lagos", year: 2014 },
+          ],
+        },
+        verification: {
+          id_document: file("upl_seed_id", "ID_DOCUMENT", "national-id.pdf"),
+          credentials: [file("upl_seed_msc", "CREDENTIAL", "msc-certificate.pdf")],
+        },
+        payout: { status: "COMPLETE" },
+        availability: {
+          timezone: "Africa/Lagos",
+          weekly: [
+            { weekday: 2, start: "17:00", end: "20:00" },
+            { weekday: 4, start: "17:00", end: "20:00" },
+            { weekday: 6, start: "09:00", end: "13:00" },
+          ],
+        },
+      },
+    },
+  };
+}
 
 /** A few demo notifications so the bell isn't empty: recent ones unread, older ones read. */
 function seedNotifications(): State["notifications"] {
@@ -118,6 +168,23 @@ function seed(): State {
         timezone: "Europe/London",
         headline: "Data analyst teaching Python and SQL",
       }),
+      seedUser({
+        id: "usr_instructor_pending",
+        role: "INSTRUCTOR",
+        email: "applicant@example.com",
+        name: "Demo Applicant",
+        approval_status: "PENDING",
+        headline: "Statistician and university tutor",
+        created_at: "2026-11-17T10:12:00.000Z",
+      }),
+      seedUser({
+        id: "usr_learner_suspended",
+        role: "LEARNER",
+        email: "suspended@example.com",
+        name: "Demo Suspended Learner",
+        status: "SUSPENDED",
+        created_at: "2026-09-02T08:00:00.000Z",
+      }),
     ],
     categories: [
       {
@@ -156,7 +223,7 @@ function seed(): State {
       { id: "mod_cohort", code: "COHORT", name: "Cohort", active: true, pricing_units: ["PER_SEAT"] },
       { id: "mod_1on1", code: "ONE_ON_ONE", name: "One-on-one", active: true, pricing_units: ["PER_HOUR", "PER_SESSION"] },
     ],
-    onboarding: {},
+    onboarding: seedOnboarding(),
     trainings: seedTrainings(),
     ...seedHistory(),
     notifications: seedNotifications(),
@@ -165,6 +232,7 @@ function seed(): State {
     tokens: {},
     outbox: [],
     session: null,
+    impersonation: null,
     pendingMfa: {},
   };
 }
@@ -319,7 +387,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v8";
+const STORE_KEY = "edubridge.mock.db.v9";
 
 function load(): State {
   try {
@@ -358,7 +426,11 @@ export function toUser(mock: MockUser): User {
   const user: Partial<MockUser> = { ...mock };
   delete user.password;
   delete user.headline;
-  return user as User;
+  delete user.created_at;
+  delete user.last_sign_in_at;
+  const imp = db.impersonation && db.session === mock.id ? db.impersonation : null;
+  const admin = imp && findUser(imp.admin_id);
+  return { ...(user as User), impersonated_by: admin ? { id: admin.id, name: admin.name, started_at: imp.started_at } : null };
 }
 
 export const findUserByEmail = (email: string | undefined) =>
@@ -419,6 +491,9 @@ export const mockSession = {
   get: (): string | null => db.session,
   set(userId: string | null) {
     db.session = userId;
+    db.impersonation = null;
+    const user = findUser(userId);
+    if (user) user.last_sign_in_at = new Date().toISOString();
     save();
   },
   startMfa(userId: string): string {

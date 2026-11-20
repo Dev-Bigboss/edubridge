@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 import { Toaster } from "sonner";
 import { ApiError } from "@/lib/api/client";
 
@@ -44,6 +45,7 @@ export function Providers({ children }: { children: ReactNode }) {
       {MOCKING && !apiReady && <MswStarter onReady={markReady} />}
       <QueryClientProvider client={queryClient}>
         {children}
+        <ImpersonationBanner />
         <Toaster position="top-right" richColors closeButton />
       </QueryClientProvider>
     </ApiReadyContext.Provider>

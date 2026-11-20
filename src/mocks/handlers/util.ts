@@ -1,7 +1,7 @@
 import { HttpResponse } from "msw/http";
 import type { z } from "zod";
 import { API_BASE_URL } from "@/lib/api/client";
-import { findUser, mockSession, type MockUser } from "../db";
+import { db, findUser, mockSession, type MockUser } from "../db";
 
 export const url = (path: string) => `${API_BASE_URL}${path}`;
 
@@ -23,4 +23,11 @@ export function validationError(error: z.ZodError) {
   const field_errors: Record<string, string[]> = {};
   for (const issue of error.issues) (field_errors[issue.path.join(".")] ??= []).push(issue.message);
   return apiError(422, "VALIDATION_FAILED", "Some answers need another look.", field_errors);
+}
+
+/** ADM-2: an admin viewing as someone can look, not act. The backend refuses every write but ending it. */
+export function blockWhileImpersonating(): Response | null {
+  return db.impersonation
+    ? apiError(403, "IMPERSONATION_READ_ONLY", "You're viewing as this user, so changes are turned off.")
+    : null;
 }

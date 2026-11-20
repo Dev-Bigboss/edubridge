@@ -95,3 +95,5 @@ Every non-2xx response has this body:
 | Checkout | Stripe-hosted Checkout; enrolment confirmed only by the signed webhook; return page polls | `payments.yaml` |
 | Receipts | Sequential `EB-YYYY-NNNNN` on capture; PDF emailed and linked by signed URL; the app also renders it | `payments.yaml` |
 | Notifications | Backend writes title/body per event in the user's language, same event sends the email; types in `enums.ts`; bell polls every 60 s until Phase 3 real-time | `notifications.yaml` |
+| Admin actions on users | Reason required for reject, suspend and view-as; never on your own account; all audited | `admin-users.yaml` |
+| View as (impersonate) | Read-only session as the user, banner on every page, not for admins, start and end audited | `admin-users.yaml`, `auth.yaml` |

@@ -2,7 +2,7 @@ import { delay } from "msw";
 import { http, HttpResponse } from "msw/http";
 import { db, save } from "../db";
 import { omit } from "./catalog";
-import { apiError, requireUser, url } from "./util";
+import { apiError, blockWhileImpersonating, requireUser, url } from "./util";
 
 const PAGE = 20;
 
@@ -42,6 +42,8 @@ export const notificationHandlers = [
     await delay(200);
     const user = requireUser();
     if (user instanceof Response) return user;
+    const readOnly = blockWhileImpersonating();
+    if (readOnly) return readOnly;
     const now = new Date().toISOString();
     for (const n of mine(user.id)) n.read_at ??= now;
     save();
@@ -52,6 +54,8 @@ export const notificationHandlers = [
     await delay(100);
     const user = requireUser();
     if (user instanceof Response) return user;
+    const readOnly = blockWhileImpersonating();
+    if (readOnly) return readOnly;
     const n = mine(user.id).find((x) => x.id === params.id);
     if (!n) return apiError(404, "NOT_FOUND", "That notification doesn't exist.");
     n.read_at ??= new Date().toISOString();

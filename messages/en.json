@@ -725,6 +725,142 @@
       "create": "Create draft cohort",
       "saved": "Cohort saved",
       "created": "{name} created as a draft. Open it when you're ready for learners."
+    },
+    "users": {
+      "title": "Users",
+      "intro": "Everyone with an account. Open a person to review an application, reset access or suspend them.",
+      "pendingBanner": "{count, plural, one {# instructor is} other {# instructors are}} waiting for approval.",
+      "review": "Review applications",
+      "filters": "Filter users",
+      "search": "Search by name or email",
+      "role": "Role",
+      "allRoles": "All roles",
+      "roles": {
+        "LEARNER": "Learner",
+        "INSTRUCTOR": "Instructor",
+        "ADMIN": "Admin"
+      },
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "statuses": {
+        "PENDING_VERIFICATION": "Email not confirmed",
+        "ACTIVE": "Active",
+        "SUSPENDED": "Suspended"
+      },
+      "approval": "Approval",
+      "anyApproval": "Any approval",
+      "approvals": {
+        "PENDING": "Waiting for approval",
+        "APPROVED": "Approved",
+        "REJECTED": "Not approved"
+      },
+      "count": "{count, plural, one {# person} other {# people}}",
+      "noMatches": "No one matches",
+      "noMatchesBody": "Try a different name or email, or clear the filters.",
+      "clearFilters": "Clear filters",
+      "empty": "No users yet",
+      "emptyBody": "People appear here as soon as they create an account.",
+      "person": "Person",
+      "joined": "Joined",
+      "lastSignIn": "Last sign-in",
+      "never": "Never",
+      "backToUsers": "All users",
+      "notFound": "This user doesn't exist",
+      "notFoundBody": "The account may have been deleted, or the link is wrong.",
+      "pendingNote": "This instructor finished onboarding and is waiting for your decision. Check their qualifications and documents, then approve or reject. They're emailed either way.",
+      "noOnboarding": "Nothing submitted yet.",
+      "account": "Account",
+      "timezone": "Time zone",
+      "mfa": "Two-step sign-in",
+      "on": "On",
+      "off": "Off",
+      "enrolments": "Enrolments",
+      "paid": "Paid in total",
+      "teaching": "Trainings assigned",
+      "history": "Admin history",
+      "noHistory": "No admin actions on this account yet.",
+      "profile": "Profile",
+      "country": "Country",
+      "expertise": "Teaching",
+      "categories": "Categories",
+      "subjects": "Subjects",
+      "qualifications": "Qualifications",
+      "documents": "Identity and credentials",
+      "idDocument": "Photo ID",
+      "credential": "Credential",
+      "scan": {
+        "SCANNING": "Being scanned",
+        "CLEAN": "Scanned, safe",
+        "INFECTED": "Blocked: failed virus scan"
+      },
+      "open": "Open",
+      "payoutAndTimes": "Payouts and availability",
+      "payout": "Payout account",
+      "payoutStatus": {
+        "NOT_STARTED": "Not set up",
+        "PENDING": "Being verified by Stripe",
+        "COMPLETE": "Ready"
+      },
+      "availability": "Weekly availability",
+      "learning": "Learning",
+      "goals": "Goals",
+      "interests": "Interests",
+      "education": "Education",
+      "do": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "suspend": "Suspend account",
+        "reactivate": "Reactivate account",
+        "reset-access": "Send password reset",
+        "impersonate": "View as this user"
+      },
+      "reason": "Reason",
+      "reasonRequired": "Say why, in a few words. It's kept in the audit log.",
+      "goBack": "Go back",
+      "actionFailed": "That didn't work. Please try again.",
+      "confirm": {
+        "approve": {
+          "title": "Approve {name}?",
+          "body": "Their profile goes live and admins can assign them to trainings. They're emailed straight away.",
+          "cta": "Approve instructor"
+        },
+        "reject": {
+          "title": "Reject {name}'s application?",
+          "body": "They can't teach, and they're emailed your reason.",
+          "cta": "Reject application",
+          "reasonHint": "Sent to the applicant, so be specific and kind: what's missing or why."
+        },
+        "suspend": {
+          "title": "Suspend {name}?",
+          "body": "They're signed out everywhere and can't sign in until you reactivate the account. Nothing is deleted.",
+          "cta": "Suspend account",
+          "reasonHint": "Kept in the audit log. Not shown to them."
+        },
+        "reactivate": {
+          "title": "Reactivate {name}?",
+          "body": "They can sign in again straight away.",
+          "cta": "Reactivate account"
+        },
+        "reset-access": {
+          "title": "Send {name} a password reset?",
+          "body": "We email {email} a link to choose a new password and sign them out on every device.",
+          "cta": "Send reset link"
+        },
+        "impersonate": {
+          "title": "View the app as {name}?",
+          "body": "You'll see exactly what they see, read-only. Nothing you do can change their account. This is recorded in the audit log.",
+          "cta": "Start viewing",
+          "reasonHint": "For example, the support request you're looking into."
+        }
+      },
+      "done": {
+        "approve": "{name} is approved",
+        "reject": "{name}'s application was rejected",
+        "suspend": "{name} is suspended",
+        "reactivate": "{name} can sign in again",
+        "reset-access": "Reset link sent to {name}",
+        "impersonate": "Viewing as {name}"
+      }
     }
   },
   "catalog": {
@@ -972,5 +1108,11 @@
     "emptyUnreadBody": "Nothing unread. Older notifications are under All.",
     "emptyShort": "No notifications yet",
     "emptyShortBody": "Updates about classes and payments appear here."
+  },
+  "impersonation": {
+    "label": "Viewing as another user",
+    "text": "You're viewing as {name}. Nothing can be changed. Signed in as {admin}.",
+    "end": "Stop viewing and return",
+    "endFailed": "We couldn't end the view. Sign out to be safe."
   }
 }
