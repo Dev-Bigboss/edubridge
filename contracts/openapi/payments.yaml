@@ -92,6 +92,64 @@ paths:
           content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Payment" } } } } } }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
+  /admin/payments:
+    get:
+      summary: Payments that reached the gateway (not PENDING or VOIDED), newest first, 25 per page (ADMIN)
+      parameters:
+        - { name: q, in: query, description: "Learner name/email, description, receipt number or id contains", schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [CAPTURED, PARTIALLY_REFUNDED, REFUNDED, FAILED] } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor, total, sums]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/AdminPaymentRow" } }
+                  next_cursor: { type: [string, "null"] }
+                  total: { type: integer }
+                  sums:
+                    type: object
+                    description: Over the whole filtered set, minor units
+                    required: [captured, refunded]
+                    properties: { captured: { type: integer }, refunded: { type: integer } }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/payments/{id}/refund:
+    post:
+      summary: Full or partial refund to the original payment method (PAY-5). ADMIN, Idempotency-Key required (PAY-8)
+      description: |
+        amount ≤ total − refunded_amount (422 amount); 409 NOT_REFUNDABLE when nothing is left or the payment never
+        captured. cancel_enrolment only with a full refund of what's left (422 cancel_enrolment): the enrolment becomes
+        REFUNDED, the cohort's enrolled_count drops and a FULL cohort reopens while its deadline hasn't passed.
+        The learner gets a PAYMENT_REFUNDED notification and an email with the reason; an audit entry
+        `payment.refund` records amount, receipt, reason and whether the enrolment was cancelled.
+        Status becomes PARTIALLY_REFUNDED or REFUNDED. With Stripe: one Refund object per call.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, reason, cancel_enrolment]
+              properties:
+                amount: { type: integer, minimum: 1, description: Minor units }
+                reason: { type: string, minLength: 5, maxLength: 500 }
+                cancel_enrolment: { type: boolean }
+      responses:
+        "200":
+          description: Updated payment
+          content: { application/json: { schema: { type: object, required: [payment], properties: { payment: { $ref: "#/components/schemas/AdminPaymentRow" } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
 components:
   responses:
     Error:
@@ -163,3 +221,12 @@ components:
             status: { type: string, enum: [PUBLISHED, ARCHIVED, DRAFT] }
             category_name: { type: string }
         cohort: { $ref: "./cohorts.yaml#/components/schemas/PublicCohort" }
+    AdminPaymentRow:
+      allOf:
+        - { $ref: "#/components/schemas/Payment" }
+        - type: object
+          required: [learner, enrolment_status, cohort_id]
+          properties:
+            learner: { type: object, required: [id, name, email], properties: { id: { type: string }, name: { type: string }, email: { type: string } } }
+            enrolment_status: { type: string, enum: [PENDING_PAYMENT, CONFIRMED, CANCELLED, REFUNDED] }
+            cohort_id: { type: string }

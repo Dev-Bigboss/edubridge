@@ -11,3 +11,9 @@ export function seatBreakdown(price: Price) {
   const tax = 0;
   return { currency: price.currency, unit_price: price, quantity: 1, subtotal, discount, tax, total: subtotal - discount + tax };
 }
+
+/** PAY-5: how much of a payment can still be refunded. Only money actually taken can go back. */
+export function refundable(p: { status: string; refunded_amount: number; breakdown: { total: number } }): number {
+  if (p.status !== "CAPTURED" && p.status !== "PARTIALLY_REFUNDED") return 0;
+  return Math.max(0, p.breakdown.total - p.refunded_amount);
+}

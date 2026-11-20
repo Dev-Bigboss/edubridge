@@ -96,3 +96,31 @@ export const LearnerEnrolment = z.object({
 });
 export type LearnerEnrolment = z.infer<typeof LearnerEnrolment>;
 export const LearnerEnrolmentList = z.object({ items: z.array(LearnerEnrolment) });
+
+/* ---------- admin (PAY-5) ---------- */
+
+export const AdminPaymentRow = Payment.extend({
+  learner: z.object({ id: z.string(), name: z.string(), email: z.string() }),
+  enrolment_status: z.enum(ENROLMENT_STATUSES),
+  cohort_id: z.string(),
+});
+export type AdminPaymentRow = z.infer<typeof AdminPaymentRow>;
+
+export const AdminPaymentPage = z.object({
+  items: z.array(AdminPaymentRow),
+  next_cursor: z.string().nullable(),
+  total: z.number().int(),
+  /** Over the filtered set: money taken and money returned, in USD minor units. */
+  sums: z.object({ captured: z.number().int(), refunded: z.number().int() }),
+});
+export type AdminPaymentPage = z.infer<typeof AdminPaymentPage>;
+
+export const RefundRequest = z.object({
+  amount: z.number().int().positive(),
+  reason: z.string().trim().min(5).max(500),
+  /** Only with a full refund: cancel the enrolment and free the seat. */
+  cancel_enrolment: z.boolean(),
+});
+export type RefundRequest = z.infer<typeof RefundRequest>;
+
+export type AdminPaymentFilters = { q?: string; status?: string; from?: string; to?: string };

@@ -100,3 +100,4 @@ Every non-2xx response has this body:
 | Platform settings | Versioned like prices; save needs the current version (409 otherwise); a booking keeps the policy in force when it was made | `settings.yaml` |
 | Cancellation policy | Learner: refund tiers by hours of notice (one tier at 0 h, never more refund for later notice). Instructor cancels: one refund %. Values await the PO (plan §8 Q3) | `settings.yaml`, `domain/policy.ts` |
 | Audit log | Append-only, 25 per page, filters by text, admin, type and day | `settings.yaml` |
+| Manual refunds | Full or partial, reason required and sent to the learner, Idempotency-Key; cancelling the enrolment (and freeing the seat) only with a full refund | `payments.yaml` |
