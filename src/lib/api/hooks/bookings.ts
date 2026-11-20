@@ -83,3 +83,28 @@ export function useBooking(id: string) {
 export function useMyBookings() {
   return useApiQuery({ queryKey: ["me", "bookings"], queryFn: ({ signal }) => api("/me/bookings", { schema: BookingList, signal }) });
 }
+
+export function useTeachBookings() {
+  return useApiQuery({
+    queryKey: ["teach", "bookings"],
+    refetchInterval: 60_000,
+    queryFn: ({ signal }) => api("/teach/bookings", { schema: BookingList, signal }),
+  });
+}
+
+export type BookingActionName = "accept" | "decline" | "propose" | "accept-proposal" | "decline-proposal";
+
+/** Accepting captures money, so a double click must not send twice: the state machine refuses the second. */
+export function useBookingAction(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ action, body }: { action: BookingActionName; body?: Record<string, unknown> }) =>
+      api(`/bookings/${id}/${action}`, { method: "POST", body: body ?? {}, schema: BookingResponse }).then((r) => r.booking),
+    onSuccess: (booking) => {
+      qc.setQueryData(["booking", id], booking);
+      void qc.invalidateQueries({ queryKey: ["teach", "bookings"] });
+      void qc.invalidateQueries({ queryKey: ["me", "bookings"] });
+      void qc.invalidateQueries({ queryKey: ["slots"] });
+    },
+  });
+}

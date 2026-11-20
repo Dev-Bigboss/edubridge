@@ -1369,6 +1369,49 @@
       "save": "Save availability",
       "saved": "Availability saved",
       "failed": "That didn't save. Please try again."
+    },
+    "requests": {
+      "title": "Session requests",
+      "intro": "Answer one-on-one requests before they expire. The learner's card is held and charged only when you accept. Times are in your time zone.",
+      "empty": "No requests right now",
+      "emptyBody": "When a learner requests a session in your free hours, it appears here and we notify you.",
+      "groups": {
+        "forYou": "Waiting for you",
+        "forLearner": "Waiting for the learner",
+        "upcoming": "Coming up"
+      },
+      "answerWithin": "Answer within {countdown}",
+      "learnerHas": "Learner has {countdown}",
+      "when": "When",
+      "theyAsked": "They asked for",
+      "youProposed": "You proposed",
+      "length": "Length",
+      "price": "Price",
+      "accept": "Accept",
+      "propose": "Propose another time",
+      "decline": "Decline",
+      "accepted": "Confirmed with {name}. They're charged now and both of you get the calendar invite.",
+      "declined": "Request declined. The learner's card hold is released.",
+      "failed": "That didn't work. Please try again.",
+      "join": "Join session",
+      "joinOpens": "Confirmed. Join opens 15 minutes before the start.",
+      "declineTitle": "Decline {name}'s request?",
+      "declineBody": "Their card isn't charged and the hold is released.",
+      "reason": "Reason",
+      "reasonHint": "The learner sees this, so be kind and specific.",
+      "reasonRequired": "Tell the learner why, in a few words.",
+      "declineCta": "Decline request",
+      "proposeTitle": "Propose another time",
+      "proposeBody": "Pick one of your free times for this {length} session. {name} has 48 hours to accept.",
+      "loadingTimes": "Finding your free times",
+      "noTimes": "You have no other free times in the next four weeks. Add hours on your Availability page first.",
+      "youllPropose": "You'll propose {when}.",
+      "pickTime": "Pick a time to propose.",
+      "noteLabel": "Note to the learner (optional)",
+      "noteHint": "For example, why the original time doesn't work.",
+      "proposeCta": "Send proposal",
+      "proposed": "New time sent to {name}",
+      "goBack": "Go back"
     }
   },
   "booking": {
@@ -1423,7 +1466,7 @@
       "waiting": "Waiting for {name} to accept. They have {countdown} left to answer (until {when}). Your card is held, not charged.",
       "expired": "{name} didn't answer in time, so the request expired. Nothing was charged and the hold is released.",
       "bookAgain": "Pick another time",
-      "confirmed": "Confirmed. The join link appears here before the session.",
+      "confirmed": "Confirmed and paid. The join button appears here 15 minutes before the start.",
       "session": "Session",
       "when": "When",
       "length": "Length",
@@ -1448,7 +1491,22 @@
         "CANCELLED": "Cancelled",
         "COMPLETED": "Session completed",
         "NO_SHOW": "Marked as missed"
-      }
+      },
+      "proposalTitle": "{name} proposed another time",
+      "proposalDeadline": "Answer within {countdown}, or the request closes and the hold on your card is released.",
+      "acceptProposal": "Accept new time",
+      "declineProposal": "Decline",
+      "proposalAccepted": "Confirmed for the new time",
+      "proposalDeclined": "Request closed. The hold on your card is released.",
+      "declined": "The instructor couldn't take this session. Nothing was charged and the hold is released.",
+      "joinNow": "Your session is about to start.",
+      "join": "Join session",
+      "failed": "That didn't work. Please try again.",
+      "youAsked": "You asked for"
+    },
+    "calendar": {
+      "add": "Add to calendar",
+      "title": "{training} with {name}"
     }
   }
 }

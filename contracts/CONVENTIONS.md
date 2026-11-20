@@ -108,3 +108,6 @@ Every non-2xx response has this body:
 | 1:1 lengths and price | 1 h to 4 h in 30-min steps; per-hour price × length (rounded to the cent) or flat per session; frozen on the booking | `bookings.yaml`, `domain/checkout.ts` |
 | Slot hold | A DRAFT holds its slot 30 min while the learner authorises; then PENDING_INSTRUCTOR holds it until answered or expired | `bookings.yaml` |
 | Payments ↔ bookings | A payment has either `enrolment_id` (cohort seat) or `booking_id` (1:1), never both | `payments.yaml` |
+| Counter-proposal | Instructor picks one of their own free slots; learner has 48 h; the hold moves to the proposed time | `bookings.yaml` |
+| Confirmation | Capture on accept, receipt issued, meeting link, .ics to both with alarms 24 h and 1 h before; join opens 15 min before the start | `bookings.yaml`, `domain/ics.ts` |
+| Declining | Instructor gives a reason (sent to the learner); learner may decline a proposal without one | `bookings.yaml` |

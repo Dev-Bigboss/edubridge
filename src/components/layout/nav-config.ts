@@ -49,7 +49,7 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
   INSTRUCTOR: [
     { href: "/teach", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "OTO-4, PAY-7" },
-    { href: "/teach/requests", labelKey: "requests", icon: Inbox, phase: 2, req: "OTO-4..6" },
+    { href: "/teach/requests", labelKey: "requests", icon: Inbox, phase: 2, req: "OTO-4..6", ready: true },
     { href: "/teach/schedule", labelKey: "schedule", icon: CalendarCheck, phase: 2, req: "OTO-10" },
     { href: "/teach/availability", labelKey: "availability", icon: CalendarClock, phase: 2, req: "OTO-1", ready: true },
     { href: "/teach/trainings", labelKey: "myTrainings", icon: GraduationCap, phase: 2, req: "COH-1, RES-1" },

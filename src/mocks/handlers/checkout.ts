@@ -13,6 +13,10 @@ import { apiError, blockWhileImpersonating, requireUser, url } from "./util";
 
 type StoredPayment = (typeof db.payments)[number];
 
+/** PAY-6: sequential, never reused. */
+export const nextReceiptNumber = (nowIso: string) =>
+  `EB-${nowIso.slice(0, 4)}-${String(db.payments.filter((p) => p.receipt_number).length + 1).padStart(5, "0")}`;
+
 /** How long the mock gateway's "webhook" takes to arrive after the learner pays. */
 export const MOCK_WEBHOOK_DELAY_MS = 1500;
 
@@ -74,7 +78,7 @@ export function settle(payment: StoredPayment) {
     payment.captured_at = now;
     payment.method = "Visa ending 4242";
     // PAY-6: sequential, never reused. The backend renders the PDF and emails it.
-    payment.receipt_number = `EB-${now.slice(0, 4)}-${String(db.payments.filter((p) => p.receipt_number).length + 1).padStart(5, "0")}`;
+    payment.receipt_number = nextReceiptNumber(now);
     // receipt_url (the emailed PDF) comes from the backend; the demo can't render PDFs.
     if (cohort.enrolled_count >= cohort.capacity || !["OPEN", "FULL"].includes(cohort.status)) {
       // Someone took the last seat while this learner was on the payment page.

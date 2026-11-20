@@ -4,7 +4,7 @@ import { ArrowLeft, CalendarX, Info, LockKeyhole, SearchX, XCircle } from "lucid
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FormError } from "@/components/auth/auth-card";
 import { PersonAvatar } from "@/components/catalog/bits";
 import { BreakdownLines } from "@/components/checkout/breakdown";
@@ -20,10 +20,10 @@ import { ONE_ON_ONE_LENGTHS } from "@/lib/api/schemas/bookings";
 import type { PublicTrainingDetail } from "@/lib/api/schemas/catalog";
 import type { User } from "@/lib/api/schemas/auth";
 import { cn } from "@/lib/cn";
+import { SlotPicker } from "./slot-picker";
 import { MODALITY } from "@/lib/domain/enums";
 import { formatDuration, formatMoney, formatPriceTag } from "@/lib/domain/money";
-import { groupByLocalDay } from "@/lib/domain/slots";
-import { formatInZone, formatSessionTime, zoneLabel } from "@/lib/domain/time";
+import { formatSessionTime, zoneLabel } from "@/lib/domain/time";
 
 /** /learn/book/[slug] (OTO-2/3/7, PAY-4): instructor, length, a free time in my zone, then authorise. */
 export function BookSession({ slug, user }: { slug: string; user: User }) {
@@ -69,7 +69,6 @@ function Booker({ training, zone }: { training: PublicTrainingDetail; zone: stri
   const priced = training.instructors.filter((i) => i.price);
   const instructorId = priced.find((i) => i.id === params.get("instructor"))?.id ?? (priced.length === 1 ? priced[0].id : null);
   const [duration, setDuration] = useState(60);
-  const [day, setDay] = useState<string | null>(null);
   const [start, setStart] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +76,7 @@ function Booker({ training, zone }: { training: PublicTrainingDetail; zone: stri
   const slots = useSlots(training.id, instructorId, duration);
   const quote = useBookingQuote(training.id, instructorId, duration);
   const request = useRequestBooking();
-  const days = useMemo(() => groupByLocalDay(slots.data?.slots ?? [], zone), [slots.data, zone]);
-  const selectedDay = days.find((d) => d.date === day) ?? days[0];
+  const hasSlots = (slots.data?.slots.length ?? 0) > 0;
   const instructor = priced.find((i) => i.id === instructorId);
 
   const chooseInstructor = (id: string) => {
@@ -87,7 +85,6 @@ function Booker({ training, zone }: { training: PublicTrainingDetail; zone: stri
     next.delete("cancelled");
     router.replace(`${pathname}?${next}`, { scroll: false });
     setStart(null);
-    setDay(null);
   };
 
   const submit = async () => {
@@ -173,54 +170,10 @@ function Booker({ training, zone }: { training: PublicTrainingDetail; zone: stri
                   <LoadingState label={t("loadingTimes")} />
                 ) : slots.isError ? (
                   <FormError message={t("timesError")} />
-                ) : days.length === 0 ? (
+                ) : !hasSlots || !slots.data ? (
                   <EmptyState icon={CalendarX} title={t("noTimes")} description={priced.length > 1 ? t("noTimesOther") : t("noTimesBody")} className="py-8" />
                 ) : (
-                  <>
-                    <div role="radiogroup" aria-label={t("day")} className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-2">
-                      {days.map((d) => {
-                        const active = d.date === selectedDay?.date;
-                        const date = new Date(`${d.date}T12:00:00Z`);
-                        return (
-                          <button
-                            key={d.date}
-                            type="button"
-                            role="radio"
-                            aria-checked={active}
-                            aria-label={`${date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })}, ${t("timesCount", { count: d.starts.length })}`}
-                            onClick={() => (setDay(d.date), setStart(null))}
-                            className={cn(
-                              "flex min-w-[76px] shrink-0 flex-col items-center rounded-md border px-3 py-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary",
-                              active ? "border-primary bg-primary text-white" : "border-border bg-white text-heading hover:border-body/50",
-                            )}
-                          >
-                            <span className="text-xs uppercase">{date.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
-                            <span className="font-heading text-lg font-semibold">{date.getUTCDate()}</span>
-                            <span className="text-xs">{date.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {selectedDay && (
-                      <div role="radiogroup" aria-label={t("time")} className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-                        {selectedDay.starts.map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            role="radio"
-                            aria-checked={start === s}
-                            onClick={() => setStart(s)}
-                            className={cn(
-                              "min-h-11 rounded-sm border text-[15px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-primary",
-                              start === s ? "border-primary bg-primary font-medium text-white" : "border-border bg-white text-heading hover:border-primary",
-                            )}
-                          >
-                            {formatInZone(s, zone, "HH:mm")}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
+                  <SlotPicker slots={slots.data.slots} zone={zone} value={start} onChange={setStart} />
                 )}
               </Step>
 

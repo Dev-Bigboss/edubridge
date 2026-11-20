@@ -7,12 +7,14 @@ import { useEffect, useState } from "react";
 import { LoadError } from "@/components/admin/catalog-admin";
 import { PersonAvatar } from "@/components/catalog/bits";
 import { BreakdownLines } from "@/components/checkout/breakdown";
+import { CalendarButton, joinState } from "./calendar-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/spinner";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ApiError } from "@/lib/api/client";
-import { useBooking } from "@/lib/api/hooks/bookings";
+import { toast } from "sonner";
+import { useBooking, useBookingAction } from "@/lib/api/hooks/bookings";
 import type { Booking } from "@/lib/api/schemas/bookings";
 import type { User } from "@/lib/api/schemas/auth";
 import { formatDuration } from "@/lib/domain/money";
@@ -57,7 +59,17 @@ export function BookingDetail({ id, user }: { id: string; user: User }) {
 
 function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
   const t = useTranslations("booking.detail");
-  const countdown = useCountdown(b.status === "PENDING_INSTRUCTOR" ? b.expires_at : null);
+  const countdown = useCountdown(b.status === "PENDING_INSTRUCTOR" || b.status === "COUNTER_PROPOSED" ? b.expires_at : null);
+  const action = useBookingAction(b.id);
+  const join = joinState(b);
+  const respond = async (name: "accept-proposal" | "decline-proposal") => {
+    try {
+      await action.mutateAsync({ action: name });
+      toast.success(name === "accept-proposal" ? t("proposalAccepted") : t("proposalDeclined"));
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("failed"));
+    }
+  };
   const confirmingCard = b.status === "DRAFT" && b.payment_status === "PENDING";
   const cardFailed = b.status === "DRAFT" && b.payment_status === "FAILED";
 
@@ -96,9 +108,49 @@ function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
           {t("expired", { name: b.instructor.name })}
         </Banner>
       )}
+      {b.status === "COUNTER_PROPOSED" && b.proposal && (
+        <section aria-labelledby="proposal" className="mb-6 rounded-md border border-primary/25 bg-surface-2 p-5">
+          <h2 id="proposal" className="mb-1 text-lg">
+            {t("proposalTitle", { name: b.instructor.name })}
+          </h2>
+          <p className="mb-1 font-medium text-heading">
+            {formatInZone(b.proposal.start_utc, zone, "EEEE d MMMM")}, {formatTimeRange(b.proposal.start_utc, b.proposal.end_utc, zone)}
+          </p>
+          {b.proposal.note && <p className="mb-2 leading-relaxed">“{b.proposal.note}”</p>}
+          <p className="mb-4 text-sm">{t("proposalDeadline", { countdown: countdown ?? "" })}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => void respond("accept-proposal")} loading={action.isPending && action.variables?.action === "accept-proposal"}>
+              {t("acceptProposal")}
+            </Button>
+            <Button variant="outline" onClick={() => void respond("decline-proposal")} loading={action.isPending && action.variables?.action === "decline-proposal"}>
+              {t("declineProposal")}
+            </Button>
+          </div>
+        </section>
+      )}
+      {b.status === "DECLINED" && (
+        <Banner tone="neutral" action={<Button asChild variant="outline"><Link href={`/learn/book/${b.training.slug}`}>{t("bookAgain")}</Link></Button>}>
+          {t("declined")}
+        </Banner>
+      )}
       {b.status === "ACCEPTED" && b.meeting_url && (
-        <Banner tone="success" icon={<Video aria-hidden="true" className="size-5 shrink-0 text-success" />}>
-          {t("confirmed")}
+        <Banner
+          tone="success"
+          icon={<Video aria-hidden="true" className="size-5 shrink-0 text-success" />}
+          action={
+            <span className="flex flex-wrap gap-2">
+              {join === "OPEN" && (
+                <Button asChild>
+                  <a href={b.meeting_url} target="_blank" rel="noreferrer">
+                    {t("join")}
+                  </a>
+                </Button>
+              )}
+              <CalendarButton booking={b} withName={b.instructor.name} />
+            </span>
+          }
+        >
+          {join === "OPEN" ? t("joinNow") : t("confirmed")}
         </Banner>
       )}
 
@@ -109,7 +161,7 @@ function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
           </h2>
           <dl className="space-y-4 text-[15px]">
             <div>
-              <dt className="text-sm">{t("when")}</dt>
+              <dt className="text-sm">{b.status === "COUNTER_PROPOSED" ? t("youAsked") : t("when")}</dt>
               <dd className="text-heading">
                 {formatInZone(b.start_utc, zone, "EEEE d MMMM")}, {formatTimeRange(b.start_utc, b.end_utc, zone)}
               </dd>

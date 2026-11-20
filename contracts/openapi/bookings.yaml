@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     Instructor availability (OTO-1), free slots (OTO-2), booking requests with a card hold (OTO-3/5/7, PAY-4).
-    Accept/decline/propose, reschedule and cancel follow in the next slices and extend this file.
+    Accept/decline/propose and counter-proposals (OTO-4/6/8) are below; reschedule and cancel extend this file next.
     Zod mirror: src/lib/api/schemas/bookings.ts. Mock: src/mocks/handlers/bookings.ts.
     Rules mirrored in src/lib/domain/slots.ts, checkout.ts (sessionBreakdown), booking-machine.ts.
 
@@ -126,6 +126,48 @@ paths:
       summary: My bookings (LEARNER), newest start first, without DRAFTs
       responses:
         "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Booking" } } } } } } }
+  /teach/bookings:
+    get:
+      summary: My bookings as the instructor (INSTRUCTOR), by start time, without DRAFTs
+      responses:
+        "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Booking" } } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /bookings/{id}/{action}:
+    post:
+      summary: Answer a request or a counter-proposal (OTO-4/6/8, PAY-4)
+      description: |
+        Who may do what follows src/lib/domain/booking-machine.ts; anything else is 409 INVALID_TRANSITION
+        (which also makes a repeated click harmless). The caller must be the booking's learner or instructor (404 otherwise).
+        - accept (INSTRUCTOR, PENDING_INSTRUCTOR → ACCEPTED): capture the authorised payment (receipt number issued),
+          create the meeting (Zoom, plan §8 Q1), email both parties the confirmation with the .ics invite
+          (reminders 24 h and 1 h before, src/lib/domain/ics.ts), notify the learner (BOOKING_ACCEPTED).
+        - decline (INSTRUCTOR → DECLINED): body { reason } ≥ 5 chars (422 reason), cancel the authorisation, notify the learner with the reason.
+        - propose (INSTRUCTOR → COUNTER_PROPOSED): body { start_utc, note? }; start must be one of the instructor's free slots for the
+          same length, ignoring this booking's own hold (409 SLOT_TAKEN). Sets `proposal` and expires_at = now + 48 h; the original
+          slot is released and the proposed one held. Authorisation stays in place. Notifies the learner.
+        - accept-proposal (LEARNER, COUNTER_PROPOSED → ACCEPTED): re-checks the time (409 SLOT_TAKEN), moves the booking to it, then as accept.
+        - decline-proposal (LEARNER → DECLINED): body { note? }; cancel the authorisation, notify the instructor.
+        Scheduler: COUNTER_PROPOSED past expires_at → EXPIRED, authorisation cancelled, both notified.
+        All writes are refused while an admin views as the user (403 IMPERSONATION_READ_ONLY).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [accept, decline, propose, accept-proposal, decline-proposal] } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+                start_utc: { type: string, format: date-time }
+                note: { type: [string, "null"], maxLength: 500 }
+      responses:
+        "200": { description: Updated booking, content: { application/json: { schema: { type: object, required: [booking], properties: { booking: { $ref: "#/components/schemas/Booking" } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
 components:
   responses:
     Error:

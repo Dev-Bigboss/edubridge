@@ -8,9 +8,10 @@ import { MODALITY } from "@/lib/domain/enums";
 import { resolvePrice } from "@/lib/domain/pricing";
 import { availabilityProblems, freeSlots, todayIn, type Busy } from "@/lib/domain/slots";
 import { formatSessionTime } from "@/lib/domain/time";
-import { db, findUser, newId, notify, save, type StoredBooking } from "../db";
+import { canTransition, type BookingAction } from "@/lib/domain/booking-machine";
+import { db, findUser, newId, notify, save, sendMail, type StoredBooking } from "../db";
 import { omit } from "./catalog";
-import { settle } from "./checkout";
+import { nextReceiptNumber, settle } from "./checkout";
 import { apiError, blockWhileImpersonating, requireUser, url, validationError } from "./util";
 
 type StoredPayment = (typeof db.payments)[number];
@@ -20,6 +21,8 @@ const HOLD_MIN = 30;
 const HOLDING = new Set(["PENDING_INSTRUCTOR", "COUNTER_PROPOSED", "ACCEPTED", "RESCHEDULE_REQUESTED"]);
 const TEACHING = new Set(["OPEN", "FULL", "CLOSED", "IN_PROGRESS"]);
 const DAY = 86_400_000;
+/** Plan §2.1: the learner answers a counter-proposal within 48 h, well inside the card hold's ~7 days. */
+export const PROPOSAL_EXPIRY_HOURS = 48;
 
 /* ---------- helpers ---------- */
 
@@ -85,6 +88,23 @@ export function sweepBookings(now = new Date()) {
         body: `${instructorOf(b.instructor_id).name} didn't answer in time. Your card wasn't charged and the hold is released.`,
         link: `/learn/bookings/${b.id}`,
       });
+      changed = true;
+    }
+    if (b.status === "COUNTER_PROPOSED" && b.expires_at && new Date(b.expires_at) <= now) {
+      b.status = "EXPIRED";
+      b.expires_at = null;
+      b.proposal = null;
+      b.timeline.push({ at: now.toISOString(), actor: "SYSTEM", event: "EXPIRED", note: null });
+      const payment = db.payments.find((p) => p.id === b.payment_id);
+      if (payment?.status === "AUTHORISED") payment.status = "VOIDED";
+      for (const userId of [b.learner_id, b.instructor_id]) {
+        notify(userId, {
+          type: "BOOKING_EXPIRED",
+          title: "The proposed time expired",
+          body: "Nobody accepted the new time in time, so the request is closed. The card hold is released.",
+          link: userId === b.learner_id ? `/learn/bookings/${b.id}` : "/teach/requests",
+        });
+      }
       changed = true;
     }
   }
@@ -299,5 +319,144 @@ export const bookingHandlers = [
       .sort((a, b) => b.start_utc.localeCompare(a.start_utc))
       .map(toBooking);
     return HttpResponse.json({ items });
+  }),
+
+  /* ---------- the instructor's side (OTO-4) ---------- */
+  http.get(url("/teach/bookings"), async () => {
+    await delay(250);
+    const user = requireUser("INSTRUCTOR");
+    if (user instanceof Response) return user;
+    sweepBookings();
+    const items = db.bookings
+      .filter((b) => b.instructor_id === user.id && b.status !== "DRAFT")
+      .sort((a, b) => a.start_utc.localeCompare(b.start_utc))
+      .map(toBooking);
+    return HttpResponse.json({ items });
+  }),
+
+  /**
+   * OTO-4/6/8, PAY-4: accept | decline | propose (instructor), accept-proposal | decline-proposal
+   * (learner). The booking state machine decides what each person may do.
+   */
+  http.post(url("/bookings/:id/:action"), async ({ params, request }) => {
+    await delay(450);
+    const user = requireUser("LEARNER", "INSTRUCTOR");
+    if (user instanceof Response) return user;
+    const readOnly = blockWhileImpersonating();
+    if (readOnly) return readOnly;
+    sweepBookings();
+    const b = db.bookings.find((x) => x.id === params.id);
+    const mine = b && (user.role === "LEARNER" ? b.learner_id === user.id : b.instructor_id === user.id);
+    if (!b || !mine) return apiError(404, "NOT_FOUND", "We couldn't find that booking.");
+    const ACTIONS: Record<string, BookingAction> = {
+      accept: "ACCEPT",
+      decline: "DECLINE",
+      propose: "PROPOSE_TIME",
+      "accept-proposal": "ACCEPT_PROPOSAL",
+      "decline-proposal": "DECLINE_PROPOSAL",
+    };
+    const action = ACTIONS[params.action as string];
+    if (!action) return apiError(404, "NOT_FOUND", "Unknown action.");
+    if (!canTransition(b.status, action, user.role)) {
+      const why = b.status === "EXPIRED" ? "This request has expired." : "This booking has already moved on. Refresh to see where it stands.";
+      return apiError(409, "INVALID_TRANSITION", why);
+    }
+    const body = (await request.json().catch(() => ({}))) as { reason?: string; start_utc?: string; note?: string };
+    const now = new Date();
+    const at = now.toISOString();
+    const payment = db.payments.find((p) => p.id === b.payment_id)!;
+    const learner = findUser(b.learner_id);
+    const instructor = findUser(b.instructor_id);
+    const confirm = (actor: "INSTRUCTOR" | "LEARNER", event: "ACCEPTED" | "PROPOSAL_ACCEPTED") => {
+      // PAY-4: capture only now. OTO-8: meeting link, invites and reminders.
+      payment.status = "CAPTURED";
+      payment.captured_at = at;
+      payment.receipt_number = nextReceiptNumber(at);
+      b.status = "ACCEPTED";
+      b.expires_at = null;
+      b.meeting_url = `https://meet.example.com/edubridge/${b.id}`;
+      b.timeline.push({ at, actor, event, note: null });
+      for (const person of [learner, instructor]) {
+        if (!person) continue;
+        sendMail(person.email, `Confirmed: ${formatSessionTime(b.start_utc, person.timezone)} (calendar invite attached)`, person.role === "LEARNER" ? `/learn/bookings/${b.id}` : "/teach/requests");
+      }
+      notify(actor === "INSTRUCTOR" ? b.learner_id : b.instructor_id, {
+        type: "BOOKING_ACCEPTED",
+        title: "Session confirmed",
+        body: `${formatSessionTime(b.start_utc, (actor === "INSTRUCTOR" ? learner : instructor)?.timezone ?? "UTC")}. The join link and calendar invite are ready.`,
+        link: actor === "INSTRUCTOR" ? `/learn/bookings/${b.id}` : "/teach/requests",
+      });
+    };
+    const freeFor = (startIso: string) => {
+      const a = db.availability[b.instructor_id];
+      const start = new Date(startIso);
+      return (
+        !!a &&
+        freeSlots({ availability: a, busy: busyFor(b.instructor_id, now, b.id), durationMin: b.duration_min, from: todayIn(a.timezone, new Date(start.getTime() - 2 * DAY)), days: 4 }).includes(start.toISOString())
+      );
+    };
+
+    switch (action) {
+      case "ACCEPT":
+        confirm("INSTRUCTOR", "ACCEPTED");
+        break;
+      case "DECLINE": {
+        const reason = body.reason?.trim() ?? "";
+        if (reason.length < 5) return apiError(422, "VALIDATION_FAILED", "Say why, in a few words.", { reason: ["Tell the learner why, in a few words. They see this."] });
+        b.status = "DECLINED";
+        b.expires_at = null;
+        payment.status = "VOIDED";
+        b.timeline.push({ at, actor: "INSTRUCTOR", event: "DECLINED", note: reason });
+        notify(b.learner_id, {
+          type: "BOOKING_DECLINED",
+          title: `${instructor?.name ?? "The instructor"} can't take this session`,
+          body: `${reason} Your card wasn't charged and the hold is released.`,
+          link: `/learn/bookings/${b.id}`,
+        });
+        break;
+      }
+      case "PROPOSE_TIME": {
+        if (!body.start_utc || Number.isNaN(Date.parse(body.start_utc))) {
+          return apiError(422, "VALIDATION_FAILED", "Pick a time.", { start_utc: ["Pick a time from your free times."] });
+        }
+        if (!freeFor(body.start_utc)) return apiError(409, "SLOT_TAKEN", "That time isn't free in your calendar any more. Pick another.");
+        const start = new Date(body.start_utc);
+        b.status = "COUNTER_PROPOSED";
+        b.proposal = { start_utc: start.toISOString(), end_utc: new Date(start.getTime() + b.duration_min * 60_000).toISOString(), note: body.note?.trim() || null };
+        b.expires_at = new Date(now.getTime() + PROPOSAL_EXPIRY_HOURS * 3_600_000).toISOString();
+        b.timeline.push({ at, actor: "INSTRUCTOR", event: "TIME_PROPOSED", note: b.proposal.note });
+        notify(b.learner_id, {
+          type: "BOOKING_RESCHEDULED",
+          title: `${instructor?.name ?? "Your instructor"} proposed another time`,
+          body: `${formatSessionTime(b.proposal.start_utc, learner?.timezone ?? "UTC")}. Accept or decline within ${PROPOSAL_EXPIRY_HOURS} hours.`,
+          link: `/learn/bookings/${b.id}`,
+        });
+        break;
+      }
+      case "ACCEPT_PROPOSAL": {
+        if (!b.proposal) return apiError(409, "INVALID_TRANSITION", "There's no proposed time to accept.");
+        if (!freeFor(b.proposal.start_utc)) return apiError(409, "SLOT_TAKEN", "That time is no longer free. Ask the instructor for another.");
+        b.start_utc = b.proposal.start_utc;
+        b.end_utc = b.proposal.end_utc;
+        b.proposal = null;
+        confirm("LEARNER", "PROPOSAL_ACCEPTED");
+        break;
+      }
+      case "DECLINE_PROPOSAL":
+        b.status = "DECLINED";
+        b.expires_at = null;
+        b.proposal = null;
+        payment.status = "VOIDED";
+        b.timeline.push({ at, actor: "LEARNER", event: "PROPOSAL_DECLINED", note: body.note?.trim() || null });
+        notify(b.instructor_id, {
+          type: "BOOKING_DECLINED",
+          title: `${learner?.name ?? "The learner"} declined your proposed time`,
+          body: "The request is closed and their card hold is released.",
+          link: "/teach/requests",
+        });
+        break;
+    }
+    save();
+    return HttpResponse.json({ booking: toBooking(b) });
   }),
 ];
