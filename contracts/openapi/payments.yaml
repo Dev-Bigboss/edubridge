@@ -20,7 +20,9 @@ info:
 
     Seats aren't held during payment. If the cohort filled while the learner was on Stripe, the webhook
     handler refunds in full immediately (Payment REFUNDED, Enrolment REFUNDED, `failure_message` explains).
-    Receipts as PDF and the payment history list are PAY-6, the next slice.
+    Receipts (PAY-6): on capture the backend assigns a sequential `receipt_number` (EB-YYYY-NNNNN, never
+    reused), renders a PDF, emails it, and exposes it as a signed, short-lived `receipt_url`. The app also
+    shows the receipt at /receipts/{payment_id} from the payment record.
 servers:
   - url: /api/v1
 paths:
@@ -67,6 +69,29 @@ paths:
                   cohort_id: { type: string }
                   training_slug: { type: string }
         "404": { $ref: "#/components/responses/Error" }
+  /me/enrolments:
+    get:
+      summary: The signed-in LEARNER's enrolments with training and cohort (TRN-7, COH-4)
+      description: |
+        CONFIRMED enrolments, plus REFUNDED ones whose cohort was CANCELLED (so the learner sees what happened).
+        ARCHIVED trainings are included. Sorted by cohort start date.
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/LearnerEnrolment" } } } } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /me/payments:
+    get:
+      summary: The signed-in LEARNER's payments, newest first, without VOIDED (abandoned) attempts (PAY-6)
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Payment" } } } } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
 components:
   responses:
     Error:
@@ -108,7 +133,7 @@ components:
         confirmed_at: { type: [string, "null"], format: date-time }
     Payment:
       type: object
-      required: [id, learner_id, enrolment_id, description, breakdown, status, method, failure_message, refunded_amount, created_at, captured_at]
+      required: [id, learner_id, enrolment_id, description, breakdown, status, method, failure_message, refunded_amount, created_at, captured_at, receipt_number, receipt_url]
       properties:
         id: { type: string }
         learner_id: { type: string }
@@ -121,3 +146,20 @@ components:
         refunded_amount: { type: integer, minimum: 0 }
         created_at: { type: string, format: date-time }
         captured_at: { type: [string, "null"], format: date-time }
+        receipt_number: { type: [string, "null"], description: "Set on capture, e.g. EB-2026-00042" }
+        receipt_url: { type: [string, "null"], description: Signed URL of the emailed PDF receipt }
+    LearnerEnrolment:
+      type: object
+      required: [enrolment, training, cohort]
+      properties:
+        enrolment: { $ref: "#/components/schemas/Enrolment" }
+        training:
+          type: object
+          required: [id, slug, title, status, category_name]
+          properties:
+            id: { type: string }
+            slug: { type: string }
+            title: { type: string }
+            status: { type: string, enum: [PUBLISHED, ARCHIVED, DRAFT] }
+            category_name: { type: string }
+        cohort: { $ref: "./cohorts.yaml#/components/schemas/PublicCohort" }

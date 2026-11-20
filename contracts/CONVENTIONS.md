@@ -93,3 +93,4 @@ Every non-2xx response has this body:
 | Enrolment statuses | `PENDING_PAYMENT, CONFIRMED, CANCELLED, REFUNDED` | `payments.yaml` |
 | Seat holds | None while paying; if the cohort fills meanwhile, the webhook refunds in full at once | `payments.yaml` |
 | Checkout | Stripe-hosted Checkout; enrolment confirmed only by the signed webhook; return page polls | `payments.yaml` |
+| Receipts | Sequential `EB-YYYY-NNNNN` on capture; PDF emailed and linked by signed URL; the app also renders it | `payments.yaml` |

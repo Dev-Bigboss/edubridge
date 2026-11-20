@@ -226,7 +226,9 @@
       "intro": "Your trainings, upcoming sessions and bookings will show here.",
       "emptyTitle": "You haven't enrolled in anything yet",
       "emptyBody": "Browse cohorts that start soon or book a one-on-one session with an instructor at a time that suits you.",
-      "emptyCta": "Browse trainings"
+      "emptyCta": "Browse trainings",
+      "nextTitle": "Your next classes",
+      "seeAll": "See all my trainings"
     },
     "instructor": {
       "intro": "Booking requests, today's sessions and your earnings will show here.",
@@ -892,7 +894,64 @@
       "tryAgain": "Try again",
       "backToTraining": "Back to the training",
       "unknown": "We couldn't find that payment",
-      "unknownBody": "If you paid, your confirmation is on its way by email and your seat shows on your dashboard."
+      "unknownBody": "If you paid, your confirmation is on its way by email and your seat shows on your dashboard.",
+      "myTrainings": "Go to my trainings"
+    }
+  },
+  "learner": {
+    "trainings": {
+      "title": "My trainings",
+      "intro": "Everything you've enrolled in. Times are shown in your time zone.",
+      "empty": "You haven't enrolled in anything yet",
+      "emptyBody": "Find a live cohort or an instructor for the exam, course or topic you're working on.",
+      "browse": "Browse trainings",
+      "groups": {
+        "IN_PROGRESS": "In progress",
+        "UPCOMING": "Starting soon",
+        "FINISHED": "Finished",
+        "CANCELLED": "Cancelled"
+      },
+      "with": "with {name}",
+      "archived": "No longer in the catalogue, still yours",
+      "cancelledNote": "This cohort was cancelled. You were refunded {amount} in full.",
+      "nextClass": "Next class",
+      "firstClass": "First class",
+      "dates": "Dates",
+      "dateRange": "{start} to {end}",
+      "schedule": "Schedule",
+      "paid": "Paid {amount} on {date}",
+      "joinSoon": "Class links appear here before each session",
+      "receipt": "Receipt"
+    },
+    "payments": {
+      "title": "Payments",
+      "intro": "Every payment you've made, with receipts and refunds.",
+      "empty": "No payments yet",
+      "emptyBody": "When you enrol in a training, the payment and its receipt appear here.",
+      "browse": "Browse trainings",
+      "date": "Date",
+      "for": "For",
+      "amount": "Amount",
+      "status": "Status",
+      "receipt": "Receipt",
+      "receiptFor": "Receipt for {what}",
+      "noReceipt": "No receipt",
+      "refunded": "{amount} refunded"
+    },
+    "receipt": {
+      "title": "Receipt",
+      "back": "Back to payments",
+      "print": "Print or save as PDF",
+      "downloadPdf": "Download PDF",
+      "billedTo": "Billed to",
+      "from": "From",
+      "company": "EduBridge",
+      "paidOn": "Paid on",
+      "method": "Payment method",
+      "refunded": "{amount} was refunded to your original payment method.",
+      "footer": "Thank you for learning with EduBridge. A copy of this receipt was emailed to you. Questions about a payment? Reply to that email.",
+      "unavailable": "This receipt isn't available",
+      "unavailableBody": "Receipts exist for completed payments only. Your payment history has every receipt you have."
     }
   }
 }

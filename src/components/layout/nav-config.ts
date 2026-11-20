@@ -38,9 +38,9 @@ export type NavItem = {
 export const NAV: Record<Role, NavItem[]> = {
   LEARNER: [
     { href: "/learn", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "NTF-1" },
-    { href: "/learn/trainings", labelKey: "myTrainings", icon: BookOpen, phase: 1, req: "TRN-7, COH-4" },
+    { href: "/learn/trainings", labelKey: "myTrainings", icon: BookOpen, phase: 1, req: "TRN-7, COH-4", ready: true },
     { href: "/learn/bookings", labelKey: "oneOnOneBookings", icon: CalendarClock, phase: 2, req: "OTO-2..9" },
-    { href: "/learn/payments", labelKey: "payments", icon: CreditCard, phase: 1, req: "PAY-6" },
+    { href: "/learn/payments", labelKey: "payments", icon: CreditCard, phase: 1, req: "PAY-6", ready: true },
     { href: "/learn/messages", labelKey: "messages", icon: MessageCircle, phase: 3, req: "MSG-1..6" },
     { href: "/learn/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1" },
     { href: "/learn/settings", labelKey: "settings", icon: Settings, phase: 1, req: "NTF-2, ONB-2" },

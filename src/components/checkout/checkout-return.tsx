@@ -2,6 +2,7 @@
 
 import { CircleCheck, CircleX, LoaderCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { AuthCard } from "@/components/auth/auth-card";
@@ -23,6 +24,14 @@ export function CheckoutReturn({ paymentId }: { paymentId: string | null }) {
   const query = usePayment(paymentId);
   const [slow, setSlow] = useState(false);
   const pending = !query.data || query.data.payment.status === "PENDING";
+  const qc = useQueryClient();
+
+  // Once settled, seats, "My trainings" and payment history have all changed.
+  useEffect(() => {
+    if (pending) return;
+    void qc.invalidateQueries({ queryKey: ["me"] });
+    void qc.invalidateQueries({ queryKey: ["catalog"] });
+  }, [pending, qc]);
 
   useEffect(() => {
     if (!pending) return;
@@ -74,7 +83,7 @@ export function CheckoutReturn({ paymentId }: { paymentId: string | null }) {
           {payment.method && <p className="text-sm">{t("paidWith", { method: payment.method })}</p>}
           <p className="rounded-sm bg-success-soft px-4 py-3 text-[15px] leading-relaxed text-heading">{t("emailSent")}</p>
           <Button asChild className="w-full">
-            <Link href="/learn">{t("dashboard")}</Link>
+            <Link href="/learn/trainings">{t("myTrainings")}</Link>
           </Button>
         </div>
       </AuthCard>

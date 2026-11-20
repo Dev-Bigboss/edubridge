@@ -2,7 +2,7 @@ import type { User } from "@/lib/api/schemas/auth";
 import type { Category, Modality, Training } from "@/lib/api/schemas/catalog";
 import type { Cohort } from "@/lib/api/schemas/cohort";
 import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
-import { seedCohorts } from "./seed-cohorts";
+import { seedCohorts, seedLearnerHistory } from "./seed-cohorts";
 import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
 
@@ -67,6 +67,11 @@ const seedUser = (u: Partial<MockUser> & Pick<MockUser, "id" | "role" | "email" 
   password: MOCK_PASSWORD,
   ...u,
 });
+
+function seedHistory() {
+  const cohorts = seedCohorts();
+  return { cohorts, ...seedLearnerHistory(cohorts) };
+}
 
 function seed(): State {
   return {
@@ -135,9 +140,7 @@ function seed(): State {
     ],
     onboarding: {},
     trainings: seedTrainings(),
-    cohorts: seedCohorts(),
-    enrolments: [],
-    payments: [],
+    ...seedHistory(),
     pricingRules: seedRules(),
     audit: [],
     tokens: {},
@@ -297,7 +300,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v6";
+const STORE_KEY = "edubridge.mock.db.v7";
 
 function load(): State {
   try {

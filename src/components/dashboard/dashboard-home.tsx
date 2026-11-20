@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingState } from "@/components/ui/spinner";
+import { useMyEnrolments } from "@/lib/api/hooks/me";
+import { nextSession } from "@/lib/domain/cohort-schedule";
+import { browserTimeZone, formatSessionTime } from "@/lib/domain/time";
 import type { User } from "@/lib/api/schemas/auth";
 import { useSession } from "@/lib/auth/session";
 import { cn } from "@/lib/cn";
@@ -24,13 +28,21 @@ const CONFIG: Record<Area, { icon: LucideIcon; ctaHref: string }> = {
 export function DashboardHome({ area }: { area: Area }) {
   const t = useTranslations("dashboard");
   const { data: user } = useSession();
-  const { icon, ctaHref } = CONFIG[area];
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="mb-1 text-[28px]">{t("greeting", { name: user?.name.split(" ")[0] ?? "" })}</h1>
       <p className="mb-8 leading-relaxed">{t(`${area}.intro`)}</p>
       {user && <AccountNotice user={user} />}
+      {area === "learner" ? <LearnerHome fallback={<Empty area={area} />} /> : <Empty area={area} />}
+    </div>
+  );
+}
+
+function Empty({ area }: { area: Area }) {
+  const t = useTranslations("dashboard");
+  const { icon, ctaHref } = CONFIG[area];
+  return (
       <EmptyState
         icon={icon}
         title={t(`${area}.emptyTitle`)}
@@ -41,7 +53,48 @@ export function DashboardHome({ area }: { area: Area }) {
           </Button>
         }
       />
-    </div>
+  );
+}
+
+/** NTF-1 starts here: the learner's next classes, soonest first. Empty state until they enrol. */
+function LearnerHome({ fallback }: { fallback: React.ReactNode }) {
+  const t = useTranslations("dashboard.learner");
+  const enrolments = useMyEnrolments();
+  const { data: user } = useSession();
+  if (enrolments.isPending) return <LoadingState />;
+  const now = new Date();
+  const zone = user?.timezone ?? browserTimeZone();
+  const upcoming = (enrolments.data?.items ?? [])
+    .filter((i) => i.enrolment.status === "CONFIRMED")
+    .map((i) => ({ item: i, next: nextSession(i.cohort, now) }))
+    .filter((x): x is { item: (typeof x)["item"]; next: string } => x.next !== null && x.item.cohort.status !== "CANCELLED")
+    .sort((a, b) => a.next.localeCompare(b.next));
+  if (upcoming.length === 0) return <>{fallback}</>;
+  return (
+    <section aria-labelledby="next-classes">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+        <h2 id="next-classes" className="text-section">
+          {t("nextTitle")}
+        </h2>
+        <Link href="/learn/trainings" className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline">
+          {t("seeAll")}
+        </Link>
+      </div>
+      <ul className="divide-y divide-border-subtle rounded-lg border border-border-subtle bg-white">
+        {upcoming.slice(0, 3).map(({ item, next }) => (
+          <li key={item.enrolment.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            <div className="min-w-0">
+              <p className="font-medium text-heading">{item.training.title}</p>
+              <p className="text-sm">{item.cohort.name}</p>
+            </div>
+            <p className="flex items-center gap-2 text-[15px] text-heading">
+              <CalendarClock aria-hidden="true" className="size-4 text-primary" />
+              {formatSessionTime(next, zone)}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

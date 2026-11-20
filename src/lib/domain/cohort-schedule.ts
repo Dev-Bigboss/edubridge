@@ -95,3 +95,36 @@ export function deadlineFromDate(date: string, zone: string): string {
 export function dateInZone(utcIso: string, zone: string): string {
   return formatInZone(utcIso, zone, "yyyy-MM-dd");
 }
+
+/**
+ * The next class that hasn't ended yet, or null once the cohort is over. A class that's running
+ * right now counts as "next", so learners can still find it. Phase 2 replaces this with the
+ * backend's dated sessions (COH-4), which can include one-off changes.
+ */
+export function nextSession(
+  c: { start_date: string; end_date: string; schedule: CohortSchedule },
+  now: Date = new Date(),
+): string | null {
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - DAY_MS).toISOString().slice(0, 10);
+  const from = c.start_date > today ? c.start_date : today;
+  const end = Date.parse(`${c.end_date}T00:00:00Z`);
+  for (let t = Date.parse(`${from}T00:00:00Z`); t <= end; t += DAY_MS) {
+    const d = new Date(t);
+    if (!c.schedule.weekdays.includes(WEEKDAYS[(d.getUTCDay() + 6) % 7])) continue;
+    const start = localInstant(d.toISOString().slice(0, 10), c.schedule.start_time, c.schedule.timezone);
+    if (start.getTime() + c.schedule.duration_min * 60_000 > now.getTime()) return start.toISOString();
+  }
+  return null;
+}
+
+export type EnrolmentPhase = "UPCOMING" | "IN_PROGRESS" | "FINISHED" | "CANCELLED";
+
+/** Which group a learner's enrolment sits in on "My trainings". */
+export function enrolmentPhase(
+  c: { status: string; first_session_at: string; start_date: string; end_date: string; schedule: CohortSchedule },
+  now: Date = new Date(),
+): EnrolmentPhase {
+  if (c.status === "CANCELLED") return "CANCELLED";
+  if (c.status === "COMPLETED" || nextSession(c, now) === null) return "FINISHED";
+  return new Date(c.first_session_at) <= now ? "IN_PROGRESS" : "UPCOMING";
+}

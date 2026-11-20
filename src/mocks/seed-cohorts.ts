@@ -1,5 +1,6 @@
 import { TZDate } from "@date-fns/tz";
 import { WEEKDAYS, type Cohort, type CohortSchedule, type Weekday } from "@/lib/api/schemas/cohort";
+import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
 
 /**
  * Demo cohorts, dated relative to today so the demo never goes stale: enrolment is open on some,
@@ -120,6 +121,23 @@ export function seedCohorts(now = new Date()): Cohort[] {
     ),
     makeCohort(
       {
+        // Running cohort of a training archived since: hidden from the catalogue, still the learners' (TRN-7).
+        id: "coh_aa_2025",
+        training_id: "trn_ican_aa_2025",
+        name: "Autumn cohort",
+        schedule: lagos(["MON", "THU"], "18:00", 120),
+        startsInDays: -24,
+        weeks: 8,
+        capacity: 20,
+        min_enrolment: 6,
+        enrolled_count: 11,
+        status: "IN_PROGRESS",
+        instructor_id: "usr_instructor_1",
+      },
+      now,
+    ),
+    makeCohort(
+      {
         id: "coh_mth_past",
         training_id: "trn_mth101",
         name: "Last semester's cohort",
@@ -135,4 +153,49 @@ export function seedCohorts(now = new Date()): Cohort[] {
       now,
     ),
   ];
+}
+
+/**
+ * The demo learner's history: a finished cohort and one in progress on a training that has since
+ * been archived (TRN-7: still theirs). Paid and receipted, so the payments page has rows.
+ */
+export function seedLearnerHistory(cohorts: Cohort[]): { enrolments: Enrolment[]; payments: Payment[] } {
+  const items = [
+    { cohort: "coh_mth_past", training: "trn_mth101", title: "MTH 101: Elementary Mathematics I", amount: 25000, n: 1 },
+    { cohort: "coh_aa_2025", training: "trn_ican_aa_2025", title: "ICAN Audit and Assurance (2025 syllabus)", amount: 40000, n: 2 },
+  ];
+  const enrolments: Enrolment[] = [];
+  const payments: Payment[] = [];
+  for (const it of items) {
+    const cohort = cohorts.find((c) => c.id === it.cohort)!;
+    const paidAt = new Date(new Date(cohort.enrolment_deadline).getTime() - 7 * DAY).toISOString();
+    const price = { amount: it.amount, currency: "USD", unit: "PER_SEAT" as const };
+    enrolments.push({
+      id: `enr_seed_${it.n}`,
+      learner_id: "usr_learner_1",
+      training_id: it.training,
+      cohort_id: it.cohort,
+      status: "CONFIRMED",
+      price,
+      payment_id: `pay_seed_${it.n}`,
+      created_at: paidAt,
+      confirmed_at: paidAt,
+    });
+    payments.push({
+      id: `pay_seed_${it.n}`,
+      learner_id: "usr_learner_1",
+      enrolment_id: `enr_seed_${it.n}`,
+      description: `${it.title} · ${cohort.name}`,
+      breakdown: { currency: "USD", unit_price: price, quantity: 1, subtotal: it.amount, discount: 0, tax: 0, total: it.amount },
+      status: "CAPTURED",
+      method: "Visa ending 4242",
+      failure_message: null,
+      refunded_amount: 0,
+      created_at: paidAt,
+      captured_at: paidAt,
+      receipt_number: `EB-${paidAt.slice(0, 4)}-${String(it.n).padStart(5, "0")}`,
+      receipt_url: null,
+    });
+  }
+  return { enrolments, payments };
 }

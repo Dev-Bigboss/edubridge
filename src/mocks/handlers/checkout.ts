@@ -60,6 +60,9 @@ function settle(payment: StoredPayment) {
     payment.status = "CAPTURED";
     payment.captured_at = now;
     payment.method = "Visa ending 4242";
+    // PAY-6: sequential, never reused. The backend renders the PDF and emails it.
+    payment.receipt_number = `EB-${now.slice(0, 4)}-${String(db.payments.filter((p) => p.receipt_number).length + 1).padStart(5, "0")}`;
+    // receipt_url (the emailed PDF) comes from the backend; the demo can't render PDFs.
     if (cohort.enrolled_count >= cohort.capacity || !["OPEN", "FULL"].includes(cohort.status)) {
       // Someone took the last seat while this learner was on the payment page.
       refundPayment(payment, payment.breakdown.total);
@@ -156,6 +159,8 @@ export const checkoutHandlers = [
       refunded_amount: 0,
       created_at,
       captured_at: null,
+      receipt_number: null,
+      receipt_url: null,
       idempotency_key: key,
     };
     db.enrolments.push(enrolment);

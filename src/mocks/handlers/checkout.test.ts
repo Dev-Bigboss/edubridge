@@ -53,6 +53,7 @@ describe("cohort checkout mock (payments.yaml, PAY-1/2, COH-2)", () => {
 
     const done = await payment(p.id);
     expect(done.payment).toMatchObject({ status: "CAPTURED", method: "Visa ending 4242" });
+    expect(done.payment.receipt_number).toMatch(/^EB-\d{4}-\d{5}$/);
     expect(done.enrolment).toMatchObject({ status: "CONFIRMED", price: { amount: 25000 } });
     expect(done.training_slug).toBe("mth-101-elementary-mathematics-i");
     expect(db.cohorts.find((c) => c.id === "coh_mth_sem1")!.enrolled_count).toBe(before + 1);
@@ -74,7 +75,7 @@ describe("cohort checkout mock (payments.yaml, PAY-1/2, COH-2)", () => {
     const a = await start("coh_mth_sem1", "key-1");
     const b = await start("coh_mth_sem1", "key-1");
     expect(b.payment.id).toBe(a.payment.id);
-    expect(db.payments).toHaveLength(1);
+    expect(db.payments.filter((p) => p.idempotency_key === "key-1")).toHaveLength(1);
   });
 
   it("refunds in full when the last seat went while the learner was paying", async () => {

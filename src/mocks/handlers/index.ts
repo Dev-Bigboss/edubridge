@@ -3,6 +3,7 @@ import { authHandlers } from "./auth";
 import { catalogHandlers } from "./catalog";
 import { checkoutHandlers } from "./checkout";
 import { cohortHandlers } from "./cohorts";
+import { meHandlers } from "./me";
 import { onboardingHandlers } from "./onboarding";
 import { pricingHandlers } from "./pricing";
 import { uploadHandlers } from "./uploads";
@@ -15,6 +16,7 @@ export const handlers = [
   ...pricingHandlers,
   ...cohortHandlers,
   ...checkoutHandlers,
+  ...meHandlers,
   ...onboardingHandlers,
   ...uploadHandlers,
 ];

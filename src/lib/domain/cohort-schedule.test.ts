@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateInZone, deadlineFromDate, formatCalendarDate, formatWeekdays, localInstant, planSessions, scheduleInZone, seatsLeft } from "./cohort-schedule";
+import { dateInZone, deadlineFromDate, enrolmentPhase, formatCalendarDate, formatWeekdays, localInstant, nextSession, planSessions, scheduleInZone, seatsLeft } from "./cohort-schedule";
 import { makeCohort } from "@/mocks/seed-cohorts";
 
 const lagosEvening = { weekdays: ["TUE", "THU"] as const, start_time: "18:00", duration_min: 120, timezone: "Africa/Lagos" };
@@ -94,5 +94,35 @@ describe("planSessions and deadlines (COH-1)", () => {
     expect(deadline).toBe("2027-01-10T22:59:00.000Z");
     expect(dateInZone(deadline, "Africa/Lagos")).toBe("2027-01-10");
     expect(localInstant("2027-07-01", "10:30", "America/New_York").toISOString()).toBe("2027-07-01T14:30:00.000Z");
+  });
+});
+
+describe("next class and enrolment groups (My trainings)", () => {
+  // Tue/Thu 18:00–20:00 Lagos (17:00–19:00 UTC), 12 Jan to 21 Jan 2027
+  const c = {
+    start_date: "2027-01-12",
+    end_date: "2027-01-21",
+    first_session_at: "2027-01-12T17:00:00.000Z",
+    status: "OPEN",
+    schedule: { weekdays: ["TUE", "THU"] as ("TUE" | "THU")[], start_time: "18:00", duration_min: 120, timezone: "Africa/Lagos" },
+  };
+  const at = (iso: string) => new Date(iso);
+
+  it("finds the first class before the cohort starts", () => {
+    expect(nextSession(c, at("2027-01-01T00:00:00Z"))).toBe("2027-01-12T17:00:00.000Z");
+    expect(enrolmentPhase(c, at("2027-01-01T00:00:00Z"))).toBe("UPCOMING");
+  });
+
+  it("keeps a class that's running as next, then moves to the following one", () => {
+    expect(nextSession(c, at("2027-01-12T18:30:00Z"))).toBe("2027-01-12T17:00:00.000Z");
+    expect(nextSession(c, at("2027-01-12T19:00:01Z"))).toBe("2027-01-14T17:00:00.000Z");
+    expect(enrolmentPhase({ ...c, status: "IN_PROGRESS" }, at("2027-01-13T00:00:00Z"))).toBe("IN_PROGRESS");
+  });
+
+  it("is finished after the last class, when completed, and separate when cancelled", () => {
+    expect(nextSession(c, at("2027-01-21T19:00:01Z"))).toBeNull();
+    expect(enrolmentPhase(c, at("2027-01-22T00:00:00Z"))).toBe("FINISHED");
+    expect(enrolmentPhase({ ...c, status: "COMPLETED" }, at("2027-01-13T00:00:00Z"))).toBe("FINISHED");
+    expect(enrolmentPhase({ ...c, status: "CANCELLED" }, at("2027-01-01T00:00:00Z"))).toBe("CANCELLED");
   });
 });

@@ -64,8 +64,15 @@ export const Payment = z.object({
   refunded_amount: Amount,
   created_at: z.string(),
   captured_at: z.string().nullable(),
+  /**
+   * PAY-6: set once paid. The app shows the receipt at /receipts/{id}; `receipt_url` is the PDF the
+   * backend generates and emails (signed, short-lived), offered as a download when present.
+   */
+  receipt_number: z.string().nullable(),
+  receipt_url: z.string().nullable(),
 });
 export type Payment = z.infer<typeof Payment>;
+export const PaymentList = z.object({ items: z.array(Payment) });
 
 /** POST /checkout/sessions: send the learner to the gateway's hosted page (PAY-1: no card data here). */
 export const CheckoutSession = z.object({ payment: Payment, checkout_url: z.string() });
@@ -73,3 +80,19 @@ export const CheckoutSession = z.object({ payment: Payment, checkout_url: z.stri
 /** GET /payments/{id}: the payment with its enrolment, polled by the return page (PAY-2). */
 export const PaymentDetail = z.object({ payment: Payment, enrolment: Enrolment, cohort_id: z.string(), training_slug: z.string() });
 export type PaymentDetail = z.infer<typeof PaymentDetail>;
+
+/** GET /me/enrolments: what the learner has joined, with enough to show it without more calls. */
+export const LearnerEnrolment = z.object({
+  enrolment: Enrolment,
+  training: z.object({
+    id: z.string(),
+    slug: z.string(),
+    title: z.string(),
+    /** TRN-7: ARCHIVED trainings stay listed for learners who enrolled. */
+    status: z.enum(["PUBLISHED", "ARCHIVED", "DRAFT"]),
+    category_name: z.string(),
+  }),
+  cohort: PublicCohort,
+});
+export type LearnerEnrolment = z.infer<typeof LearnerEnrolment>;
+export const LearnerEnrolmentList = z.object({ items: z.array(LearnerEnrolment) });
