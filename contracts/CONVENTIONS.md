@@ -82,3 +82,7 @@ Every non-2xx response has this body:
 | Slugs | From the title while DRAFT, frozen once published | `catalog.yaml` |
 | Instructor rate | Stored per training assignment (`TrainingInstructor.custom_rate`, SRS §5), with its own unit | `catalog.yaml` |
 | Price versions | Added, never edited; start now or later and after the latest version; dated changes start at the admin's local midnight | `pricing.yaml` |
+| Catalogue search | Every word must match title, summary, category, category details or instructor name; case and accents ignored; default sort relevance with a query, newest without | `catalog.yaml`, `domain/catalog.ts` |
+| Price filter | Bands on the card's "from" price (under $50, $50–150, $150–300, over $300); unpriced trainings drop out | `domain/catalog.ts` |
+| Cohort schedule | Weekdays + local start time + length in the instructor's zone; the backend expands sessions; UTC first-session instant lets clients convert (days can shift across midnight) | `cohorts.yaml` |
+| Cohort visibility | Guests see `OPEN, FULL, CLOSED, IN_PROGRESS`; drafts, completed and cancelled stay hidden | `cohorts.yaml` |

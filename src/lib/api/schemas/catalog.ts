@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { PRICING_UNITS, TRAINING_LEVELS, TRAINING_STATUSES } from "@/lib/domain/enums";
+import { Cohort } from "./cohort";
 import { StoredFile } from "./uploads";
 
 /** Mirrors contracts/openapi/catalog.yaml. */
@@ -133,3 +134,74 @@ export const ModalityInput = z.object({
   pricing_units: z.array(z.enum(PRICING_UNITS)).min(1, { error: "Pick at least one pricing unit." }),
 });
 export type ModalityInput = z.infer<typeof ModalityInput>;
+
+/* ---------- public catalogue (TRN-6, TRN-7) ---------- */
+
+/**
+ * What a guest sees. Only PUBLISHED trainings; archived ones return 404 here and stay readable
+ * to enrolled learners through their enrolment (TRN-7). No admin fields (status, overrides).
+ */
+export const PublicInstructor = z.object({
+  id: z.string(),
+  name: z.string(),
+  avatar_url: z.string().nullable(),
+  headline: z.string().nullable(),
+});
+export type PublicInstructor = z.infer<typeof PublicInstructor>;
+
+export const PublicTrainingCard = z.object({
+  id: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  thumbnail: StoredFile.nullable(),
+  level: z.enum(TRAINING_LEVELS),
+  language: z.string(),
+  duration_hours: z.number().positive().nullable(),
+  category: z.object({ id: z.string(), name: z.string(), slug: z.string() }),
+  modality: z.object({ id: z.string(), code: z.string(), name: z.string() }),
+  instructors: z.array(PublicInstructor),
+  /** PRC-7: lowest price a learner can pay today, with its unit. Null only if pricing is missing. */
+  from_price: PriceSchema.nullable(),
+  /** Cohort trainings: start date (YYYY-MM-DD) of the next cohort open for enrolment. */
+  next_start_date: z.string().nullable(),
+  published_at: z.string(),
+});
+export type PublicTrainingCard = z.infer<typeof PublicTrainingCard>;
+
+export const CATALOG_SORTS = ["relevance", "newest", "price_asc", "price_desc", "title"] as const;
+export type CatalogSort = (typeof CATALOG_SORTS)[number];
+
+export const CatalogPage = z.object({
+  items: z.array(PublicTrainingCard),
+  next_cursor: z.string().nullable(),
+  total: z.number().int(),
+  /** Options for the filter controls, from published trainings only. */
+  facets: z.object({
+    instructors: z.array(z.object({ id: z.string(), name: z.string() })),
+    languages: z.array(z.string()),
+  }),
+});
+export type CatalogPage = z.infer<typeof CatalogPage>;
+
+export const PublicCohort = Cohort.omit({ training_id: true }).extend({
+  /** BR-4: the price a learner enrolling in this cohort pays now. */
+  price: PriceSchema.nullable(),
+  instructor: PublicInstructor,
+});
+export type PublicCohort = z.infer<typeof PublicCohort>;
+
+export const PublicTrainingDetail = PublicTrainingCard.extend({
+  description: z.string(),
+  /** TRN-4: category fields with their labels, in the category's order. Empty values left out. */
+  details: z.array(z.object({ key: z.string(), label: z.string(), value: z.union([z.string(), z.array(z.string())]) })),
+  /** 1:1 trainings: each instructor's price (PRC-3/4). Cohort trainings: same list, price null. */
+  instructors: z.array(PublicInstructor.extend({ price: PriceSchema.nullable() })),
+  /** Cohort trainings: cohorts a learner can see (OPEN, FULL, CLOSED, IN_PROGRESS), soonest first. */
+  cohorts: z.array(PublicCohort),
+});
+export type PublicTrainingDetail = z.infer<typeof PublicTrainingDetail>;
+export const PublicTrainingResponse = z.object({ training: PublicTrainingDetail });
+
+export const PublicCohortResponse = z.object({ cohort: PublicCohort, training: PublicTrainingCard });
+export type PublicCohortResponse = z.infer<typeof PublicCohortResponse>;

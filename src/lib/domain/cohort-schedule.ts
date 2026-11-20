@@ -1,0 +1,51 @@
+import { WEEKDAYS, type CohortSchedule, type Weekday } from "@/lib/api/schemas/cohort";
+import { formatInZone, zoneLabel } from "./time";
+
+/**
+ * A cohort's recurring schedule is stored in the instructor's zone (COH-1). Learners see it in
+ * their own zone, and a time zone gap can move a class to the day before or after, so weekdays
+ * shift with the time. The first session's UTC instant anchors the conversion.
+ */
+export function scheduleInZone(
+  schedule: CohortSchedule,
+  firstSessionAt: string,
+  zone: string,
+): { weekdays: Weekday[]; start: string; end: string; zone: string } {
+  const start = new Date(firstSessionAt);
+  const end = new Date(start.getTime() + schedule.duration_min * 60_000);
+  const isoDay = (z: string) => Number(formatInZone(firstSessionAt, z, "i")); // 1 = Mon … 7 = Sun
+  let shift = isoDay(zone) - isoDay(schedule.timezone);
+  if (shift > 3) shift -= 7; // Sun → Mon across the week boundary
+  if (shift < -3) shift += 7;
+  const weekdays = schedule.weekdays
+    .map((d) => WEEKDAYS[(WEEKDAYS.indexOf(d) + shift + 7) % 7])
+    .sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b));
+  return {
+    weekdays,
+    start: formatInZone(start.toISOString(), zone, "HH:mm"),
+    end: formatInZone(end.toISOString(), zone, "HH:mm"),
+    zone: zoneLabel(firstSessionAt, zone),
+  };
+}
+
+/** "Tue and Thu", "Mon, Wed and Fri" in the given locale. */
+export function formatWeekdays(weekdays: Weekday[], locale = "en-GB"): string {
+  // 2024-01-01 was a Monday, so day index i is 2024-01-(1+i).
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  const names = weekdays.map((d) => fmt.format(new Date(Date.UTC(2024, 0, 1 + WEEKDAYS.indexOf(d)))));
+  return new Intl.ListFormat(locale, { style: "long", type: "conjunction" }).format(names);
+}
+
+/** "12 Jan 2027" for a calendar date string, never shifted by the viewer's zone. */
+export function formatCalendarDate(date: string, locale = "en-GB"): string {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export function seatsLeft(c: { capacity: number; enrolled_count: number }): number {
+  return Math.max(0, c.capacity - c.enrolled_count);
+}

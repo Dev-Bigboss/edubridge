@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Dialog } from "radix-ui";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ROLE_HOME } from "@/lib/auth/routes";
 import { useSession } from "@/lib/auth/session";
@@ -21,7 +21,6 @@ const NAV = [
 /** Port of the original Header1: transparent over the hero, white and sticky once you scroll. */
 export function SiteHeader() {
   const t = useTranslations();
-  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -43,25 +42,10 @@ export function SiteHeader() {
         <Logo priority />
 
         <nav aria-label={t("nav.primary")} className="hidden xl:block">
-          <ul className="flex items-center gap-2">
-            {NAV.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("?")[0]);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex min-h-11 items-center rounded-sm px-3 font-heading text-heading transition-colors duration-150 hover:text-primary",
-                      active && "text-primary",
-                    )}
-                  >
-                    {t(`nav.${item.key}`)}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          {/* The current path is only known at request time; until then the links render without a highlight. */}
+          <Suspense fallback={<DesktopNav pathname={null} />}>
+            <DesktopNavWithPath />
+          </Suspense>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -110,6 +94,35 @@ export function SiteHeader() {
         </div>
       </div>
     </header>
+  );
+}
+
+function DesktopNavWithPath() {
+  return <DesktopNav pathname={usePathname()} />;
+}
+
+function DesktopNav({ pathname }: { pathname: string | null }) {
+  const t = useTranslations("nav");
+  return (
+    <ul className="flex items-center gap-2">
+      {NAV.map((item) => {
+        const active = pathname !== null && (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("?")[0]));
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex min-h-11 items-center rounded-sm px-3 font-heading text-heading transition-colors duration-150 hover:text-primary",
+                active && "text-primary",
+              )}
+            >
+              {t(item.key)}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

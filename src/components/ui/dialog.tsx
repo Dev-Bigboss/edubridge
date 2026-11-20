@@ -26,7 +26,7 @@ export function Dialog({
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal>
-        <D.Overlay className="fixed inset-0 z-40 bg-ink/50" />
+        <D.Overlay className="fixed inset-0 z-50 bg-ink/50" />
         <D.Content
           className={cn(
             // Centred with inset + auto margins rather than transforms, so scrolling inside stays reliable on phones.

@@ -611,5 +611,119 @@
         "RULE": "The standard price for this format and category."
       }
     }
+  },
+  "catalog": {
+    "title": "Browse trainings",
+    "intro": "Join a live cohort that keeps you on schedule, or book one-on-one sessions with an instructor who fits your goals.",
+    "searchLabel": "Search trainings",
+    "searchPlaceholder": "Search by exam, course code or topic, e.g. ICAN, MTH 101, Python",
+    "count": "{count, plural, =0 {No trainings} one {# training} other {# trainings}}",
+    "loading": "Loading trainings",
+    "updating": "Updating results",
+    "error": "We couldn't load the catalogue",
+    "errorBody": "Check your connection and try again. Nothing you chose has been lost.",
+    "retry": "Try again",
+    "empty": "No trainings yet",
+    "emptyBody": "New trainings are being prepared. Check back soon, or create an account to hear when they open.",
+    "noMatches": "No trainings match your search",
+    "noMatchesBody": "Try fewer words, a different spelling, or remove a filter.",
+    "format": {
+      "cohort": "Cohort",
+      "oneOnOne": "One-on-one"
+    },
+    "levels": {
+      "BEGINNER": "Beginner",
+      "INTERMEDIATE": "Intermediate",
+      "ADVANCED": "Advanced",
+      "ALL_LEVELS": "All levels"
+    },
+    "units": {
+      "PER_SEAT": "per seat",
+      "PER_SESSION": "per session",
+      "PER_HOUR": "per hour"
+    },
+    "card": {
+      "starts": "Starts {date}",
+      "hours": "{count, plural, one {# hour} other {# hours}}",
+      "more": "+{count} more",
+      "from": "From"
+    },
+    "sort": {
+      "label": "Sort by",
+      "relevance": "Best match",
+      "newest": "Newest",
+      "price_asc": "Price: low to high",
+      "price_desc": "Price: high to low",
+      "title": "Title A to Z"
+    },
+    "filters": {
+      "title": "Filters",
+      "open": "Filters",
+      "openCount": "Filters ({count})",
+      "active": "Active filters",
+      "category": "Category",
+      "all": "All categories",
+      "format": "Format",
+      "allFormats": "All formats",
+      "price": "Price",
+      "anyPrice": "Any price",
+      "bands": {
+        "under_50": "Under $50",
+        "50_150": "$50 to $150",
+        "150_300": "$150 to $300",
+        "over_300": "Over $300"
+      },
+      "language": "Language",
+      "anyLanguage": "Any language",
+      "instructor": "Instructor",
+      "anyInstructor": "Any instructor",
+      "clear": "Clear all",
+      "remove": "Remove filter: {label}",
+      "searchChip": "“{q}”",
+      "show": "{count, plural, =0 {No trainings to show} one {Show # training} other {Show # trainings}}",
+      "done": "Done"
+    },
+    "detail": {
+      "breadcrumb": "Breadcrumb",
+      "about": "About this training",
+      "facts": "At a glance",
+      "format": "Format",
+      "level": "Level",
+      "language": "Language",
+      "duration": "Live teaching",
+      "chooseCohort": "Choose a cohort",
+      "chooseInstructor": "Choose an instructor",
+      "cohorts": "Upcoming cohorts",
+      "timesIn": "Times are shown in your time zone ({zone}).",
+      "noCohorts": "No cohorts scheduled yet",
+      "noCohortsBody": "The next cohort hasn't been announced. Look at similar trainings in the meantime.",
+      "noneOpen": "Every cohort is full or closed right now. New cohorts are added regularly.",
+      "similar": "See similar trainings",
+      "instructors": "Your instructor",
+      "requestSession": "Request a session",
+      "bookingSoon": "Booking one-on-one sessions opens in the next release. Prices shown are what you'd pay per unit.",
+      "notFound": "This training isn't available",
+      "notFoundBody": "It may have been archived or its address changed. If you're already enrolled, you'll still find it under My trainings.",
+      "browse": "Browse trainings"
+    },
+    "cohort": {
+      "with": "With {name}",
+      "dates": "Dates",
+      "dateRange": "{start} to {end}",
+      "schedule": "Schedule",
+      "sessions": "{count, plural, one {# live session} other {# live sessions}}",
+      "seats": "Seats",
+      "seatsLeft": "{left} of {capacity} seats left",
+      "noSeats": "No seats left",
+      "firstSession": "First session",
+      "deadline": "Enrol by {when}",
+      "deadlinePassed": "Enrolment has closed",
+      "enrol": "Enrol",
+      "blocked": {
+        "FULL": "This cohort is full",
+        "NOT_OPEN": "Not open for enrolment",
+        "DEADLINE_PASSED": "Enrolment has closed"
+      }
+    }
   }
 }

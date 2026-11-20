@@ -1,5 +1,7 @@
 import type { User } from "@/lib/api/schemas/auth";
 import type { Category, Modality, Training } from "@/lib/api/schemas/catalog";
+import type { Cohort } from "@/lib/api/schemas/cohort";
+import { seedCohorts } from "./seed-cohorts";
 import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
 
@@ -40,6 +42,7 @@ type State = {
   categories: Category[];
   onboarding: Record<string, Pick<OnboardingState, "completed_steps" | "sections">>;
   trainings: Training[];
+  cohorts: Cohort[];
   pricingRules: PricingRuleDto[];
   audit: AuditEntry[];
   modalities: Modality[];
@@ -128,6 +131,7 @@ function seed(): State {
     ],
     onboarding: {},
     trainings: seedTrainings(),
+    cohorts: seedCohorts(),
     pricingRules: seedRules(),
     audit: [],
     tokens: {},
@@ -216,6 +220,60 @@ function seedTrainings(): Training[] {
     },
     {
       ...base,
+      id: "trn_sql_1on1",
+      slug: "sql-for-analysts-one-on-one",
+      title: "SQL for Analysts, one-on-one",
+      summary: "Learn to query real business data with joins, grouping and window functions, one session at a time.",
+      description:
+        "Private sessions for analysts and students who need SQL for work or a project. You bring a dataset or use ours, and each session builds one practical skill: filtering, joins, aggregation, window functions and writing queries others can read.",
+      category_id: "cat_topic",
+      modality_id: "mod_1on1",
+      level: "BEGINNER",
+      language: "en",
+      duration_hours: null,
+      status: "PUBLISHED",
+      published_at: "2026-11-10T09:00:00.000Z",
+      metadata: { topic_tags: ["SQL", "Data analysis"] },
+      instructors: [inst("usr_instructor_3", "Demo Instructor Three", "Data analyst teaching Python and SQL")],
+    },
+    {
+      ...base,
+      id: "trn_excel_fr",
+      slug: "excel-pour-la-finance",
+      title: "Excel pour la finance",
+      summary: "Séances individuelles en français : tableaux croisés, modèles financiers et graphiques clairs.",
+      description:
+        "Des séances individuelles pour maîtriser Excel dans un contexte financier : fonctions de recherche, tableaux croisés dynamiques, modèles de prévision et présentation des résultats. Chaque séance part de vos propres fichiers.",
+      category_id: "cat_topic",
+      modality_id: "mod_1on1",
+      level: "INTERMEDIATE",
+      language: "fr",
+      duration_hours: null,
+      status: "PUBLISHED",
+      published_at: "2026-11-12T09:00:00.000Z",
+      price_override: { amount: 3500, currency: "USD", unit: "PER_HOUR" },
+      metadata: { topic_tags: ["Excel", "Finance"] },
+      instructors: [inst("usr_instructor_3", "Demo Instructor Three", "Data analyst teaching Python and SQL")],
+    },
+    {
+      ...base,
+      id: "trn_ican_aa_2025",
+      slug: "ican-audit-and-assurance-2025-syllabus",
+      title: "ICAN Audit and Assurance (2025 syllabus)",
+      summary: "Replaced by the 2026 syllabus course. Kept for learners who are already enrolled.",
+      description:
+        "Live classes for the 2025 ICAN Audit and Assurance syllabus. This training is archived: it no longer appears in the catalogue, but learners who enrolled keep their recordings and resources.",
+      category_id: "cat_prof_exam",
+      modality_id: "mod_cohort",
+      level: "INTERMEDIATE",
+      language: "en",
+      duration_hours: 20,
+      status: "ARCHIVED",
+      metadata: { exam_body: "ICAN", exam_code: "AA" },
+      instructors: [inst("usr_instructor_1", "Test Instructor", "Chartered accountant teaching ICAN")],
+    },
+    {
+      ...base,
       id: "trn_python_da",
       slug: "python-for-data-analysis",
       title: "Python for Data Analysis",
@@ -233,7 +291,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v4";
+const STORE_KEY = "edubridge.mock.db.v5";
 
 function load(): State {
   try {
