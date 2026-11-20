@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw/http";
 import type { LearnerEnrolment } from "@/lib/api/schemas/payments";
 import { db } from "../db";
 import { omit, toPublicCohort } from "./catalog";
+import { nextCohortSession } from "./sessions";
 import { requireUser, url } from "./util";
 
 /** Enrolments a learner sees: paid ones, and ones refunded because the cohort was cancelled. */
@@ -29,6 +30,7 @@ export const meHandlers = [
             enrolment: e,
             training: { id: training.id, slug: training.slug, title: training.title, status: training.status, category_name: category?.name ?? "" },
             cohort: toPublicCohort(training, cohort, now),
+            next_session: e.status === "CONFIRMED" ? nextCohortSession(cohort, now.getTime()) : null,
           },
         ];
       })

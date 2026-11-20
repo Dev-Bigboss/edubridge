@@ -1179,8 +1179,9 @@
       "dateRange": "{start} to {end}",
       "schedule": "Schedule",
       "paid": "Paid {amount} on {date}",
-      "joinSoon": "Class links appear here before each session",
-      "receipt": "Receipt"
+      "joinSoon": "Join opens 15 minutes before each class",
+      "receipt": "Receipt",
+      "joinClass": "Join class"
     },
     "payments": {
       "title": "Payments",
@@ -1414,6 +1415,45 @@
       "goBack": "Go back",
       "requestNewTime": "Request a new time",
       "cancelSession": "Cancel session"
+    },
+    "schedule": {
+      "title": "Schedule",
+      "intro": "Everything you teach, cohort classes and one-on-one sessions together. Times are in {zone}.",
+      "empty": "Nothing scheduled",
+      "emptyBody": "Cohort classes you're assigned to and one-on-one sessions you accept appear here.",
+      "needsAttendance": "{count, plural, one {# session needs attendance} other {# sessions need attendance}}",
+      "today": "Today",
+      "cohort": "Cohort",
+      "oneOnOne": "One-on-one",
+      "learners": "{count, plural, one {# learner} other {# learners}}",
+      "join": "Join",
+      "joinLabel": "Join {what} with {who}",
+      "takeAttendance": "Take attendance",
+      "attendanceTaken": "{present} of {total} came",
+      "attendanceLabel": "{action}: {what}, {who}"
+    },
+    "attendance": {
+      "back": "Schedule",
+      "notFound": "We couldn't find that session",
+      "notFoundBody": "It may have been cancelled, or it isn't one of yours.",
+      "cohortClass": "Cohort class",
+      "oneOnOne": "One-on-one session",
+      "join": "Join session",
+      "notYet": "You can take attendance once the session has started.",
+      "register": "{count, plural, one {Attendance (# learner)} other {Attendance (# learners)}}",
+      "restPresent": "Mark everyone else present",
+      "oneOnOneNote": "Marking the learner absent records a missed session (no-show). Present or late completes the session.",
+      "markFor": "Attendance for {name}",
+      "marks": {
+        "PRESENT": "Present",
+        "LATE": "Late",
+        "ABSENT": "Absent"
+      },
+      "missing": "{count, plural, one {# learner not marked yet} other {# learners not marked yet}}",
+      "markSomeone": "Mark at least one learner.",
+      "save": "Save attendance",
+      "saved": "Attendance saved",
+      "failed": "That didn't save. Please try again."
     }
   },
   "booking": {

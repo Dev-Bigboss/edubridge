@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateInZone, deadlineFromDate, enrolmentPhase, formatCalendarDate, formatWeekdays, localInstant, nextSession, planSessions, scheduleInZone, seatsLeft } from "./cohort-schedule";
+import { cohortSessions, dateInZone, deadlineFromDate, enrolmentPhase, formatCalendarDate, formatWeekdays, localInstant, nextSession, planSessions, scheduleInZone, seatsLeft } from "./cohort-schedule";
 import { makeCohort } from "@/mocks/seed-cohorts";
 
 const lagosEvening = { weekdays: ["TUE", "THU"] as const, start_time: "18:00", duration_min: 120, timezone: "Africa/Lagos" };
@@ -124,5 +124,20 @@ describe("next class and enrolment groups (My trainings)", () => {
     expect(enrolmentPhase(c, at("2027-01-22T00:00:00Z"))).toBe("FINISHED");
     expect(enrolmentPhase({ ...c, status: "COMPLETED" }, at("2027-01-13T00:00:00Z"))).toBe("FINISHED");
     expect(enrolmentPhase({ ...c, status: "CANCELLED" }, at("2027-01-01T00:00:00Z"))).toBe("CANCELLED");
+  });
+});
+
+describe("dated cohort sessions (COH-4)", () => {
+  it("lists every class with a stable id, in UTC, matching planSessions", () => {
+    const c = {
+      id: "coh_x",
+      start_date: "2027-01-11",
+      end_date: "2027-01-21",
+      schedule: { weekdays: ["TUE", "THU"] as ("TUE" | "THU")[], start_time: "18:00", duration_min: 120, timezone: "Africa/Lagos" },
+    };
+    const s = cohortSessions(c);
+    expect(s.map((x) => x.id)).toEqual(["coh_x:2027-01-12", "coh_x:2027-01-14", "coh_x:2027-01-19", "coh_x:2027-01-21"]);
+    expect(s[0]).toMatchObject({ start_utc: "2027-01-12T17:00:00.000Z", end_utc: "2027-01-12T19:00:00.000Z" });
+    expect(s).toHaveLength(planSessions(c.start_date, c.end_date, c.schedule).count);
   });
 });

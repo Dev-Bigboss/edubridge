@@ -73,6 +73,8 @@ type State = {
   /** OTO-1: each instructor's hours, in their own zone. */
   availability: Record<string, Availability>;
   bookings: StoredBooking[];
+  /** COH-4: marks per session id, then learner id. */
+  attendance: Record<string, Record<string, "PRESENT" | "LATE" | "ABSENT">>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -201,7 +203,15 @@ export function notify(userId: string, n: Pick<Notification, "type" | "title" | 
 
 function seedHistory() {
   const cohorts = seedCohorts();
-  return { cohorts, ...seedLearnerHistory(cohorts) };
+  const history = seedLearnerHistory(cohorts);
+  // Classmates in the running Autumn cohort, so the attendance sheet has a real roster.
+  const classmates = [1, 2, 3].map((n) => ({
+    ...history.enrolments.find((e) => e.cohort_id === "coh_aa_2025")!,
+    id: `enr_roster_${n}`,
+    learner_id: `usr_roster_${n}`,
+    payment_id: `pay_roster_${n}`,
+  }));
+  return { cohorts, enrolments: [...history.enrolments, ...classmates], payments: history.payments };
 }
 
 function seed(): State {
@@ -231,6 +241,9 @@ function seed(): State {
         timezone: "Europe/London",
         headline: "Data analyst teaching Python and SQL",
       }),
+      ...["Ada", "Chidi", "Fola"].map((first, i) =>
+        seedUser({ id: `usr_roster_${i + 1}`, role: "LEARNER", email: `${first.toLowerCase()}.demo@example.com`, name: `${first} Demo` }),
+      ),
       seedUser({
         id: "usr_instructor_pending",
         role: "INSTRUCTOR",
@@ -294,6 +307,7 @@ function seed(): State {
     mfaSetup: {},
     availability: seedAvailability(),
     bookings: [],
+    attendance: {},
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -456,7 +470,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v12";
+const STORE_KEY = "edubridge.mock.db.v13";
 
 function load(): State {
   try {

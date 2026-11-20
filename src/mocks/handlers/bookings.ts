@@ -4,8 +4,7 @@ import { AvailabilityInput, BookingRequest, type Booking } from "@/lib/api/schem
 import { sessionBreakdown } from "@/lib/domain/checkout";
 import { formatMoney } from "@/lib/domain/money";
 import { cancellationRefund } from "@/lib/domain/policy";
-import { localInstant } from "@/lib/domain/cohort-schedule";
-import { WEEKDAYS } from "@/lib/api/schemas/cohort";
+import { cohortSessions } from "@/lib/domain/cohort-schedule";
 import { MODALITY } from "@/lib/domain/enums";
 import { resolvePrice } from "@/lib/domain/pricing";
 import { availabilityProblems, freeSlots, todayIn, type Busy } from "@/lib/domain/slots";
@@ -60,13 +59,7 @@ export function busyFor(instructorId: string, now = new Date(), ignoreBookingId?
   }
   for (const c of db.cohorts) {
     if (c.instructor_id !== instructorId || !TEACHING.has(c.status)) continue;
-    const end = Date.parse(`${c.end_date}T12:00:00Z`);
-    for (let t = Date.parse(`${c.start_date}T12:00:00Z`); t <= end; t += DAY) {
-      const date = new Date(t).toISOString().slice(0, 10);
-      if (!c.schedule.weekdays.includes(WEEKDAYS[(new Date(t).getUTCDay() + 6) % 7])) continue;
-      const start = localInstant(date, c.schedule.start_time, c.schedule.timezone);
-      busy.push({ start: start.toISOString(), end: new Date(start.getTime() + c.schedule.duration_min * 60_000).toISOString() });
-    }
+    for (const session of cohortSessions(c)) busy.push({ start: session.start_utc, end: session.end_utc });
   }
   return busy;
 }

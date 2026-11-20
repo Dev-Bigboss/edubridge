@@ -113,3 +113,4 @@ Every non-2xx response has this body:
 | Declining | Instructor gives a reason (sent to the learner); learner may decline a proposal without one | `bookings.yaml` |
 | Reschedule | Either side asks for one of the instructor's free slots; only the other side answers; unanswered by the earlier of 48 h or the start → original time stands | `bookings.yaml` |
 | Cancellation | Either side, before the start, with a reason; refund from the booking's policy snapshot (learner tiers or instructor share); preview shown before confirming | `bookings.yaml`, `domain/policy.ts` |
+| Sessions and attendance | Cohort classes are dated sessions with their own join link; attendance PRESENT/LATE/ABSENT from the start; for a 1:1, absent = no-show, present/late = completed | `sessions.yaml` |

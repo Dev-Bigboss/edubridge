@@ -4,6 +4,7 @@ import { Archive, BookOpen, CalendarDays, Clock, ReceiptText } from "lucide-reac
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LoadError } from "@/components/admin/catalog-admin";
+import { joinState } from "@/components/booking/calendar-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -125,7 +126,16 @@ function EnrolmentCard({ item, zone, now, phase }: { item: LearnerEnrolment; zon
           {t("paid", { amount: formatMoney(enrolment.price), date: formatCalendarDate(enrolment.created_at.slice(0, 10)) })}
         </span>
         <span className="flex flex-wrap items-center gap-x-5">
-          {next && phase !== "FINISHED" && <span className="text-heading">{t("joinSoon")}</span>}
+          {item.next_session && phase !== "FINISHED" && phase !== "CANCELLED" &&
+            (joinState({ ...item.next_session, meeting_url: item.next_session.join_url }) === "OPEN" ? (
+              <Button asChild>
+                <a href={item.next_session.join_url} target="_blank" rel="noreferrer">
+                  {t("joinClass")}
+                </a>
+              </Button>
+            ) : (
+              <span className="text-heading">{t("joinSoon")}</span>
+            ))}
           <Link href={`/receipts/${enrolment.payment_id}`} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">
             <ReceiptText aria-hidden="true" className="size-4" />
             {t("receipt")}

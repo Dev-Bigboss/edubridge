@@ -210,8 +210,13 @@ components:
         receipt_url: { type: [string, "null"], description: Signed URL of the emailed PDF receipt }
     LearnerEnrolment:
       type: object
-      required: [enrolment, training, cohort]
+      required: [enrolment, training, cohort, next_session]
       properties:
+        next_session:
+          description: COH-4, the next class with its join link; null once the cohort is over or cancelled
+          oneOf:
+            - { type: "null" }
+            - { type: object, required: [id, start_utc, end_utc, join_url], properties: { id: { type: string }, start_utc: { type: string }, end_utc: { type: string }, join_url: { type: string } } }
         enrolment: { $ref: "#/components/schemas/Enrolment" }
         training:
           type: object

@@ -128,3 +128,27 @@ export function enrolmentPhase(
   if (c.status === "COMPLETED" || nextSession(c, now) === null) return "FINISHED";
   return new Date(c.first_session_at) <= now ? "IN_PROGRESS" : "UPCOMING";
 }
+
+export type DatedSession = { id: string; date: string; start_utc: string; end_utc: string };
+
+/**
+ * COH-4: the dated sessions a cohort's schedule produces. Ids are stable (`cohort:date`) so
+ * attendance and join links can hang off them; the backend stores real session rows instead.
+ */
+export function cohortSessions(c: { id: string; start_date: string; end_date: string; schedule: CohortSchedule }): DatedSession[] {
+  const out: DatedSession[] = [];
+  const end = Date.parse(`${c.end_date}T12:00:00Z`);
+  for (let t = Date.parse(`${c.start_date}T12:00:00Z`); t <= end; t += DAY_MS) {
+    const d = new Date(t);
+    if (!c.schedule.weekdays.includes(WEEKDAYS[(d.getUTCDay() + 6) % 7])) continue;
+    const date = d.toISOString().slice(0, 10);
+    const start = localInstant(date, c.schedule.start_time, c.schedule.timezone);
+    out.push({
+      id: `${c.id}:${date}`,
+      date,
+      start_utc: start.toISOString(),
+      end_utc: new Date(start.getTime() + c.schedule.duration_min * 60_000).toISOString(),
+    });
+  }
+  return out;
+}

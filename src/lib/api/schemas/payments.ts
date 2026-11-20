@@ -103,6 +103,8 @@ export const LearnerEnrolment = z.object({
     category_name: z.string(),
   }),
   cohort: PublicCohort,
+  /** COH-4: the next class with its join link (null once the cohort is over). */
+  next_session: z.object({ id: z.string(), start_utc: z.string(), end_utc: z.string(), join_url: z.string() }).nullable(),
 });
 export type LearnerEnrolment = z.infer<typeof LearnerEnrolment>;
 export const LearnerEnrolmentList = z.object({ items: z.array(LearnerEnrolment) });
