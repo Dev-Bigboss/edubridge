@@ -86,3 +86,10 @@ Every non-2xx response has this body:
 | Price filter | Bands on the card's "from" price (under $50, $50–150, $150–300, over $300); unpriced trainings drop out | `domain/catalog.ts` |
 | Cohort schedule | Weekdays + local start time + length in the instructor's zone; the backend expands sessions; UTC first-session instant lets clients convert (days can shift across midnight) | `cohorts.yaml` |
 | Cohort visibility | Guests see `OPEN, FULL, CLOSED, IN_PROGRESS`; drafts, completed and cancelled stay hidden | `cohorts.yaml` |
+| Cohort creation | Admin only for now (plan §8 Q8 open) | `cohorts.yaml` |
+| Cohort editing | Everything until it starts; then name and seats only; nothing once completed or cancelled | `cohorts.yaml` |
+| Enrolment deadline | Admin picks a day; it closes at 23:59 in the cohort's zone; must be no later than the first class | `cohorts.yaml` |
+| Cohort cancel | Needs a reason; refunds every paid seat in full and emails it (COH-5) | `cohorts.yaml` |
+| Enrolment statuses | `PENDING_PAYMENT, CONFIRMED, CANCELLED, REFUNDED` | `payments.yaml` |
+| Seat holds | None while paying; if the cohort fills meanwhile, the webhook refunds in full at once | `payments.yaml` |
+| Checkout | Stripe-hosted Checkout; enrolment confirmed only by the signed webhook; return page polls | `payments.yaml` |

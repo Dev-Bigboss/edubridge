@@ -41,3 +41,40 @@ export const Cohort = z.object({
   instructor_id: z.string(),
 });
 export type Cohort = z.infer<typeof Cohort>;
+
+export const CohortResponse = z.object({ cohort: Cohort });
+
+/** Admin list row: the cohort plus the names the table shows. */
+export const AdminCohort = Cohort.extend({
+  training_title: z.string(),
+  instructor_name: z.string(),
+});
+export type AdminCohort = z.infer<typeof AdminCohort>;
+export const AdminCohortList = z.object({ items: z.array(AdminCohort) });
+
+/**
+ * COH-1 form body. The backend computes session_count and first_session_at from the dates and
+ * schedule. The deadline is an instant (UTC); the form picks a date and closes at 23:59 in the
+ * schedule's zone.
+ */
+export const CohortInput = z
+  .object({
+    training_id: z.string().min(1, { error: "Choose a training." }),
+    instructor_id: z.string().min(1, { error: "Choose the instructor." }),
+    name: z.string().trim().min(3, { error: "Give the cohort a name learners will recognise." }).max(60),
+    start_date: z.iso.date({ error: "Choose a start date." }),
+    end_date: z.iso.date({ error: "Choose an end date." }),
+    schedule: CohortSchedule,
+    capacity: z.number({ error: "Enter how many seats." }).int().min(1, { error: "At least 1 seat." }).max(500),
+    min_enrolment: z.number().int().min(1).nullable(),
+    enrolment_deadline: z.string().min(1, { error: "Choose the last day to enrol." }),
+  })
+  .refine((v) => v.end_date >= v.start_date, { path: ["end_date"], error: "End on or after the start date." })
+  .refine((v) => v.min_enrolment === null || v.min_enrolment <= v.capacity, {
+    path: ["min_enrolment"],
+    error: "The minimum can't be more than the seats.",
+  });
+export type CohortInput = z.infer<typeof CohortInput>;
+
+export const COHORT_ACTIONS = ["open", "close", "start", "complete", "cancel"] as const;
+export type CohortAction = (typeof COHORT_ACTIONS)[number];

@@ -8,7 +8,7 @@ import { db, findUser } from "../db";
 import { apiError, url } from "./util";
 
 /** Cohort states a guest can see (COH-3). Drafts, finished and cancelled cohorts stay hidden. */
-const VISIBLE_COHORTS = new Set(["OPEN", "FULL", "CLOSED", "IN_PROGRESS"]);
+export const VISIBLE_COHORTS = new Set(["OPEN", "FULL", "CLOSED", "IN_PROGRESS"]);
 
 /** Name and headline from the user's profile, falling back to what the training stored at assignment. */
 const instructorOf = (id: string, assigned?: TrainingInstructor) => {
@@ -24,7 +24,7 @@ const instructorOf = (id: string, assigned?: TrainingInstructor) => {
 /** Strips how the price was resolved; guests see the amount and unit only. */
 const price = (p: Price | null): Price | null => (p ? { amount: p.amount, currency: p.currency, unit: p.unit } : null);
 
-function toCard(t: Training, now: Date): PublicTrainingCard & { keywords: string[] } {
+export function toCard(t: Training, now: Date): PublicTrainingCard & { keywords: string[] } {
   const category = db.categories.find((c) => c.id === t.category_id)!;
   const modality = db.modalities.find((m) => m.id === t.modality_id)!;
   const nextCohort = db.cohorts
@@ -50,9 +50,9 @@ function toCard(t: Training, now: Date): PublicTrainingCard & { keywords: string
   };
 }
 
-const published = () => db.trainings.filter((t) => t.status === "PUBLISHED");
+export const published = () => db.trainings.filter((t) => t.status === "PUBLISHED");
 
-function toPublicCohort(t: Training, c: Cohort, now: Date): PublicCohort {
+export function toPublicCohort(t: Training, c: Cohort, now: Date): PublicCohort {
   return {
     ...omit(c, "training_id"),
     price: price(resolvePrice(t, db.pricingRules, { instructorId: c.instructor_id, at: now })),
@@ -83,7 +83,7 @@ function toDetail(t: Training, now: Date): PublicTrainingDetail {
   };
 }
 
-function omit<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K> {
+export function omit<T extends object, K extends keyof T>(obj: T, key: K): Omit<T, K> {
   const copy = { ...obj };
   delete copy[key];
   return copy;

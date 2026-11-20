@@ -610,6 +610,119 @@
         "INSTRUCTOR_RATE": "This instructor's own rate for this training.",
         "RULE": "The standard price for this format and category."
       }
+    },
+    "cohorts": {
+      "title": "Cohorts",
+      "intro": "Groups of learners taking a training together on a fixed schedule. Learners can enrol once a cohort is open.",
+      "new": "New cohort",
+      "edit": "Edit cohort",
+      "filters": "Filter cohorts",
+      "training": "Training",
+      "allTrainings": "All cohort trainings",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "statuses": {
+        "DRAFT": "Draft",
+        "OPEN": "Open for enrolment",
+        "FULL": "Full",
+        "CLOSED": "Enrolment closed",
+        "IN_PROGRESS": "In progress",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled"
+      },
+      "empty": "No cohorts yet",
+      "emptyBody": "Create a cohort under a cohort training, then open it so learners can enrol.",
+      "noMatches": "No cohorts match",
+      "noMatchesBody": "Try another training or status.",
+      "clearFilters": "Clear filters",
+      "cohort": "Cohort",
+      "dates": "Dates",
+      "seats": "Seats",
+      "actions": "Actions",
+      "sessions": "{count, plural, one {# session} other {# sessions}}",
+      "seatsValue": "{enrolled} of {capacity} taken",
+      "belowMinimum": "Below the minimum of {min}",
+      "finished": "No changes",
+      "manage": "Manage {name}",
+      "manageShort": "Manage",
+      "editAction": "Edit details",
+      "do": {
+        "open": "Open for enrolment",
+        "close": "Close enrolment",
+        "start": "Mark as started",
+        "complete": "Mark as completed",
+        "cancel": "Cancel cohort"
+      },
+      "confirm": {
+        "open": {
+          "title": "Open {name} for enrolment?",
+          "body": "Learners will see it on the training page and can pay for a seat until the deadline.",
+          "cta": "Open for enrolment"
+        },
+        "close": {
+          "title": "Close enrolment for {name}?",
+          "body": "No one else can enrol. {count, plural, =0 {No learners are enrolled yet.} one {The # enrolled learner keeps their seat.} other {The # enrolled learners keep their seats.}}",
+          "cta": "Close enrolment"
+        },
+        "start": {
+          "title": "Mark {name} as started?",
+          "body": "Enrolment stops and the dates and schedule can no longer change.",
+          "cta": "Mark as started"
+        },
+        "complete": {
+          "title": "Mark {name} as completed?",
+          "body": "The cohort moves to history. Learners keep access to its recordings and resources.",
+          "cta": "Mark as completed"
+        },
+        "cancel": {
+          "title": "Cancel {name}?",
+          "body": "{count, plural, =0 {No one has paid yet, so there's nothing to refund.} one {The # enrolled learner is refunded in full and emailed.} other {All # enrolled learners are refunded in full and emailed.}} This can't be undone.",
+          "cta": "Cancel cohort and refund"
+        }
+      },
+      "done": {
+        "open": "{name} is open for enrolment",
+        "close": "Enrolment closed for {name}",
+        "start": "{name} is in progress",
+        "complete": "{name} is completed",
+        "cancel": "{name} is cancelled and learners are being refunded"
+      },
+      "keep": "Go back",
+      "reason": "Reason",
+      "reasonHint": "Learners see this in their email, so keep it plain and kind.",
+      "reasonRequired": "Say why, in a few words. Learners see this.",
+      "actionFailed": "That didn't work. Please try again.",
+      "startedNote": "This cohort has started, so only its name and seats can change.",
+      "chooseTraining": "Choose a training",
+      "draft": "draft",
+      "noCohortTrainings": "No cohort trainings yet. Create one under Trainings first.",
+      "instructor": "Instructor",
+      "chooseInstructor": "Choose the instructor",
+      "noInstructors": "Assign an instructor to this training first.",
+      "name": "Cohort name",
+      "nameHint": "Shown to learners, e.g. \"January evening cohort\".",
+      "scheduleLegend": "Dates and schedule",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "days": "Class days",
+      "startTime": "Start time",
+      "length": "Class length",
+      "timezone": "Time zone",
+      "timezoneHint": "Usually the instructor's. Learners see times in their own zone.",
+      "deadline": "Last day to enrol",
+      "deadlineHint": "Enrolment closes at 23:59 on this day, in the cohort's time zone.",
+      "capacity": "Seats",
+      "enrolledNow": "{count, plural, one {# learner is} other {# learners are}} enrolled already.",
+      "minimum": "Minimum to run (optional)",
+      "minimumHint": "If fewer enrol by the deadline, you can cancel and everyone is refunded.",
+      "noMinimum": "No minimum",
+      "preview": "{count, plural, =0 {No classes} one {# class} other {# classes}}. First class {first}, last day {end}.",
+      "previewNone": "No class falls between these dates. Check the class days.",
+      "cancelEdit": "Cancel",
+      "save": "Save changes",
+      "create": "Create draft cohort",
+      "saved": "Cohort saved",
+      "created": "{name} created as a draft. Open it when you're ready for learners."
     }
   },
   "catalog": {
@@ -724,6 +837,62 @@
         "NOT_OPEN": "Not open for enrolment",
         "DEADLINE_PASSED": "Enrolment has closed"
       }
+    }
+  },
+  "checkout": {
+    "title": "Confirm your seat",
+    "intro": "Check the details, then pay securely. Your seat is confirmed as soon as the payment goes through.",
+    "loading": "Loading your order",
+    "loadError": "We couldn't load your order",
+    "loadErrorBody": "Check your connection and try again.",
+    "retry": "Try again",
+    "notFound": "This cohort isn't available",
+    "notFoundBody": "It may have been cancelled or removed. Other cohorts may still have seats.",
+    "browse": "Browse trainings",
+    "cancelled": "Payment cancelled. Nothing was charged, and you can pay whenever you're ready.",
+    "dates": "Dates",
+    "dateRange": "{start} to {end}",
+    "schedule": "Schedule (your time)",
+    "sessions": "{count, plural, one {# live session} other {# live sessions}}",
+    "firstClass": "first {when}",
+    "instructor": "Instructor",
+    "back": "Back to the training",
+    "order": "Order summary",
+    "seat": "{count, plural, one {1 seat} other {# seats}}",
+    "discount": "Discount",
+    "tax": "Tax",
+    "total": "Total",
+    "pay": "Pay {total} securely",
+    "secureNote": "You'll pay on Stripe's secure page. EduBridge never sees or stores your card details.",
+    "startError": "We couldn't start the payment. Please try again.",
+    "goToDashboard": "Go to my dashboard",
+    "otherCohorts": "See other cohorts",
+    "blocked": {
+      "ALREADY_ENROLLED": "You're already enrolled in this cohort. There's nothing more to pay.",
+      "FULL": "This cohort is full. Another cohort may still have seats.",
+      "NOT_OPEN": "This cohort isn't open for enrolment right now.",
+      "DEADLINE_PASSED": "Enrolment for this cohort has closed.",
+      "NO_PRICE": "This cohort can't be bought yet. Please check back soon."
+    },
+    "return": {
+      "pendingTitle": "Confirming your payment",
+      "pendingBody": "This usually takes a few seconds. Please keep this page open.",
+      "slowBody": "This is taking longer than usual. You can close this page: we'll email you as soon as it's confirmed, and nothing is charged twice.",
+      "checking": "Checking with the bank",
+      "successTitle": "You're enrolled",
+      "successBody": "Your seat in {what} is confirmed.",
+      "paidWith": "Paid with {method}",
+      "emailSent": "We've emailed your confirmation. Class links appear on your dashboard before each session.",
+      "dashboard": "Go to my dashboard",
+      "refundedTitle": "You've been refunded",
+      "refundedBody": "We couldn't confirm your seat, so {amount} is on its way back to your card.",
+      "otherCohorts": "See other cohorts",
+      "failedTitle": "Payment didn't go through",
+      "failedBody": "Nothing was charged. You can try again or use another card.",
+      "tryAgain": "Try again",
+      "backToTraining": "Back to the training",
+      "unknown": "We couldn't find that payment",
+      "unknownBody": "If you paid, your confirmation is on its way by email and your seat shows on your dashboard."
     }
   }
 }

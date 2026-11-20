@@ -34,3 +34,29 @@ export function canEnrol(
   }
   return { ok: true };
 }
+
+/**
+ * Admin actions (POST /admin/cohorts/{id}/{action}) and the status each one moves to. FULL is
+ * never chosen by hand: the backend sets it when the last seat is paid and clears it when one frees.
+ */
+export const COHORT_ACTION_TARGET = {
+  open: "OPEN",
+  close: "CLOSED",
+  start: "IN_PROGRESS",
+  complete: "COMPLETED",
+  cancel: "CANCELLED",
+} as const satisfies Record<string, CohortStatus>;
+export type CohortActionName = keyof typeof COHORT_ACTION_TARGET;
+
+export function cohortActions(status: CohortStatus): CohortActionName[] {
+  return (Object.keys(COHORT_ACTION_TARGET) as CohortActionName[]).filter(
+    // FULL → OPEN happens on its own when a seat frees, so it is never a button.
+    (a) => canMoveCohort(status, COHORT_ACTION_TARGET[a]) && !(status === "FULL" && a === "open"),
+  );
+}
+
+/** Dates, schedule and instructor can change until the cohort starts; seats and name until it ends. */
+export function cohortEditable(status: CohortStatus): "ALL" | "SEATS_AND_NAME" | "NONE" {
+  if (status === "COMPLETED" || status === "CANCELLED") return "NONE";
+  return status === "IN_PROGRESS" ? "SEATS_AND_NAME" : "ALL";
+}

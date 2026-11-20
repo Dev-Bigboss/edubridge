@@ -58,7 +58,7 @@ export const NAV: Record<Role, NavItem[]> = {
   ADMIN: [
     { href: "/admin", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "ADM-1" },
     { href: "/admin/trainings", labelKey: "trainings", icon: BookOpen, phase: 1, req: "TRN-1..7", ready: true },
-    { href: "/admin/cohorts", labelKey: "cohorts", icon: Layers, phase: 1, req: "COH-1..5" },
+    { href: "/admin/cohorts", labelKey: "cohorts", icon: Layers, phase: 1, req: "COH-1..5", ready: true },
     { href: "/admin/catalog", labelKey: "categoriesAndModalities", icon: Tags, phase: 1, req: "TRN-2..4", ready: true },
     { href: "/admin/pricing", labelKey: "pricing", icon: BadgeDollarSign, phase: 1, req: "PRC-1..5", ready: true },
     { href: "/admin/users", labelKey: "users", icon: Users, phase: 1, req: "ADM-2, ONB-3" },

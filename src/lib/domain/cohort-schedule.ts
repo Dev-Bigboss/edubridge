@@ -1,3 +1,4 @@
+import { TZDate } from "@date-fns/tz";
 import { WEEKDAYS, type CohortSchedule, type Weekday } from "@/lib/api/schemas/cohort";
 import { formatInZone, zoneLabel } from "./time";
 
@@ -48,4 +49,49 @@ export function formatCalendarDate(date: string, locale = "en-GB"): string {
 
 export function seatsLeft(c: { capacity: number; enrolled_count: number }): number {
   return Math.max(0, c.capacity - c.enrolled_count);
+}
+
+const DAY_MS = 86_400_000;
+
+/**
+ * COH-1/4: the sessions a schedule produces between two calendar dates (inclusive), in the
+ * schedule's zone. Returns the count and the first session's UTC instant (null when none fall
+ * in the range). The backend owns the real session list; this mirrors it for the form preview.
+ */
+export function planSessions(
+  startDate: string,
+  endDate: string,
+  schedule: CohortSchedule,
+): { count: number; firstSessionAt: string | null } {
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start || schedule.weekdays.length === 0) {
+    return { count: 0, firstSessionAt: null };
+  }
+  let count = 0;
+  let first: Date | null = null;
+  for (let t = start; t <= end; t += DAY_MS) {
+    const d = new Date(t);
+    if (!schedule.weekdays.includes(WEEKDAYS[(d.getUTCDay() + 6) % 7])) continue;
+    count++;
+    first ??= localInstant(d.toISOString().slice(0, 10), schedule.start_time, schedule.timezone);
+  }
+  return { count, firstSessionAt: first?.toISOString() ?? null };
+}
+
+/** The UTC instant of a wall-clock time on a calendar date in a zone ("2027-01-12", "18:00", "Africa/Lagos"). */
+export function localInstant(date: string, time: string, zone: string): Date {
+  const [y, m, d] = date.split("-").map(Number);
+  const [h, min] = time.split(":").map(Number);
+  return new Date(new TZDate(y, m - 1, d, h, min, zone).getTime());
+}
+
+/** Enrolment closes at the end of the chosen day in the schedule's zone. */
+export function deadlineFromDate(date: string, zone: string): string {
+  return localInstant(date, "23:59", zone).toISOString();
+}
+
+/** The calendar date (in `zone`) of a UTC instant, for filling a date input back in. */
+export function dateInZone(utcIso: string, zone: string): string {
+  return formatInZone(utcIso, zone, "yyyy-MM-dd");
 }

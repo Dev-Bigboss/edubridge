@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canEnrol, canMoveCohort } from "./cohort-machine";
+import { canEnrol, canMoveCohort, cohortActions, cohortEditable } from "./cohort-machine";
 
 describe("cohort status flow (COH-3)", () => {
   it("follows the SRS order", () => {
@@ -38,5 +38,21 @@ describe("canEnrol (COH-2)", () => {
 
   it("blocks when not open", () => {
     expect(canEnrol({ ...base, status: "DRAFT" }, now)).toEqual({ ok: false, reason: "NOT_OPEN" });
+  });
+});
+
+describe("admin cohort actions", () => {
+  it("offers only the moves the status flow allows", () => {
+    expect(cohortActions("DRAFT")).toEqual(["open", "cancel"]);
+    expect(cohortActions("OPEN")).toEqual(["close", "start", "cancel"]);
+    expect(cohortActions("FULL")).toEqual(["close", "start", "cancel"]);
+    expect(cohortActions("IN_PROGRESS")).toEqual(["complete", "cancel"]);
+    expect(cohortActions("COMPLETED")).toEqual([]);
+  });
+
+  it("locks dates once a cohort starts and everything once it ends", () => {
+    expect(cohortEditable("OPEN")).toBe("ALL");
+    expect(cohortEditable("IN_PROGRESS")).toBe("SEATS_AND_NAME");
+    expect(cohortEditable("CANCELLED")).toBe("NONE");
   });
 });

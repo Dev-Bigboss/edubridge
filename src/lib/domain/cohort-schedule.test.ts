@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatCalendarDate, formatWeekdays, scheduleInZone, seatsLeft } from "./cohort-schedule";
+import { dateInZone, deadlineFromDate, formatCalendarDate, formatWeekdays, localInstant, planSessions, scheduleInZone, seatsLeft } from "./cohort-schedule";
 import { makeCohort } from "@/mocks/seed-cohorts";
 
 const lagosEvening = { weekdays: ["TUE", "THU"] as const, start_time: "18:00", duration_min: 120, timezone: "Africa/Lagos" };
@@ -66,5 +66,33 @@ describe("demo cohort dates", () => {
     expect(c.session_count).toBe(12);
     expect(c.end_date).toBe("2027-01-04");
     expect(c.enrolment_deadline).toBe("2026-11-22T17:00:00.000Z");
+  });
+});
+
+describe("planSessions and deadlines (COH-1)", () => {
+  const schedule = { weekdays: ["TUE", "THU"] as ("TUE" | "THU")[], start_time: "18:00", duration_min: 120, timezone: "Africa/Lagos" };
+
+  it("counts the scheduled weekdays between two dates, inclusive, and finds the first one", () => {
+    // Mon 11 Jan to Thu 21 Jan 2027: Tue 12, Thu 14, Tue 19, Thu 21
+    expect(planSessions("2027-01-11", "2027-01-21", schedule)).toEqual({ count: 4, firstSessionAt: "2027-01-12T17:00:00.000Z" });
+  });
+
+  it("returns no sessions for an empty or backwards range", () => {
+    expect(planSessions("2027-01-15", "2027-01-18", schedule)).toEqual({ count: 0, firstSessionAt: null }); // Fri to Mon
+    expect(planSessions("2027-01-21", "2027-01-11", schedule).count).toBe(0);
+    expect(planSessions("", "2027-01-11", schedule).count).toBe(0);
+  });
+
+  it("uses the schedule's zone across daylight saving changes", () => {
+    const london = { ...schedule, weekdays: ["SUN"] as "SUN"[], start_time: "09:00", timezone: "Europe/London" };
+    expect(planSessions("2027-03-28", "2027-03-28", london).firstSessionAt).toBe("2027-03-28T08:00:00.000Z"); // BST
+    expect(planSessions("2027-03-21", "2027-03-21", london).firstSessionAt).toBe("2027-03-21T09:00:00.000Z"); // GMT
+  });
+
+  it("closes enrolment at the end of the chosen day in the schedule's zone and reads it back", () => {
+    const deadline = deadlineFromDate("2027-01-10", "Africa/Lagos");
+    expect(deadline).toBe("2027-01-10T22:59:00.000Z");
+    expect(dateInZone(deadline, "Africa/Lagos")).toBe("2027-01-10");
+    expect(localInstant("2027-07-01", "10:30", "America/New_York").toISOString()).toBe("2027-07-01T14:30:00.000Z");
   });
 });

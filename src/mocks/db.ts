@@ -1,6 +1,7 @@
 import type { User } from "@/lib/api/schemas/auth";
 import type { Category, Modality, Training } from "@/lib/api/schemas/catalog";
 import type { Cohort } from "@/lib/api/schemas/cohort";
+import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
 import { seedCohorts } from "./seed-cohorts";
 import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
@@ -43,6 +44,9 @@ type State = {
   onboarding: Record<string, Pick<OnboardingState, "completed_steps" | "sections">>;
   trainings: Training[];
   cohorts: Cohort[];
+  enrolments: Enrolment[];
+  /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
+  payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
   audit: AuditEntry[];
   modalities: Modality[];
@@ -132,6 +136,8 @@ function seed(): State {
     onboarding: {},
     trainings: seedTrainings(),
     cohorts: seedCohorts(),
+    enrolments: [],
+    payments: [],
     pricingRules: seedRules(),
     audit: [],
     tokens: {},
@@ -291,7 +297,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v5";
+const STORE_KEY = "edubridge.mock.db.v6";
 
 function load(): State {
   try {
