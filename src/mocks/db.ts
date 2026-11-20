@@ -2,6 +2,7 @@ import type { User } from "@/lib/api/schemas/auth";
 import type { Category, Modality, Training } from "@/lib/api/schemas/catalog";
 import type { Cohort } from "@/lib/api/schemas/cohort";
 import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
+import type { Notification } from "@/lib/api/schemas/notifications";
 import { seedCohorts, seedLearnerHistory } from "./seed-cohorts";
 import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
@@ -45,6 +46,7 @@ type State = {
   trainings: Training[];
   cohorts: Cohort[];
   enrolments: Enrolment[];
+  notifications: (Notification & { user_id: string })[];
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -67,6 +69,22 @@ const seedUser = (u: Partial<MockUser> & Pick<MockUser, "id" | "role" | "email" 
   password: MOCK_PASSWORD,
   ...u,
 });
+
+/** A few demo notifications so the bell isn't empty: recent ones unread, older ones read. */
+function seedNotifications(): State["notifications"] {
+  const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+  return [
+    { id: "ntf_seed_1", user_id: "usr_learner_1", type: "SESSION_REMINDER", title: "Class soon: ICAN Audit and Assurance", body: "Your Autumn cohort class starts at the usual time. The join link appears on My trainings.", link: "/learn/trainings", created_at: ago(3), read_at: null },
+    { id: "ntf_seed_2", user_id: "usr_learner_1", type: "COHORT_CHANGED", title: "Autumn cohort: room for questions added", body: "Your instructor added 15 minutes of open questions to the end of each class.", link: "/learn/trainings", created_at: ago(30), read_at: null },
+    { id: "ntf_seed_3", user_id: "usr_learner_1", type: "PAYMENT_SUCCEEDED", title: "You're enrolled: ICAN Audit and Assurance (2025 syllabus)", body: "We received $400. Your receipt is in Payments.", link: "/learn/payments", created_at: ago(24 * 31), read_at: ago(24 * 31) },
+    { id: "ntf_seed_4", user_id: "usr_admin_1", type: "INSTRUCTOR_APPLICATION", title: "New instructor application", body: "An instructor finished onboarding and is waiting for approval.", link: "/admin/users?approval=PENDING", created_at: ago(5), read_at: null },
+  ];
+}
+
+/** NTF-1: in-app notification; the backend sends the email version too (the mock logs it in the outbox). */
+export function notify(userId: string, n: Pick<Notification, "type" | "title" | "body" | "link">) {
+  db.notifications.unshift({ ...n, id: newId("ntf"), user_id: userId, created_at: new Date().toISOString(), read_at: null });
+}
 
 function seedHistory() {
   const cohorts = seedCohorts();
@@ -141,6 +159,7 @@ function seed(): State {
     onboarding: {},
     trainings: seedTrainings(),
     ...seedHistory(),
+    notifications: seedNotifications(),
     pricingRules: seedRules(),
     audit: [],
     tokens: {},
@@ -300,7 +319,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v7";
+const STORE_KEY = "edubridge.mock.db.v8";
 
 function load(): State {
   try {

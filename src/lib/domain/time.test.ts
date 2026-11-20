@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatInZone, formatSessionTime, formatTimeRange, isValidTimeZone, minutesUntil, zoneLabel } from "./time";
+import { formatInZone, formatSessionTime, formatTimeRange, isValidTimeZone, minutesUntil, zoneLabel, timeAgo } from "./time";
 
 describe("time zones (SRS §2, OTO-2)", () => {
   const utc = "2026-03-03T13:00:00Z";
@@ -35,5 +35,19 @@ describe("time zones (SRS §2, OTO-2)", () => {
     const now = new Date("2026-03-03T12:00:00Z");
     expect(minutesUntil("2026-03-04T12:00:00Z", now)).toBe(1440);
     expect(minutesUntil("2026-03-03T11:59:00Z", now)).toBe(-1);
+  });
+});
+
+describe("timeAgo", () => {
+  const now = new Date("2026-11-20T12:00:00Z");
+  const before = (s: number) => new Date(now.getTime() - s * 1000).toISOString();
+  it("reads naturally from seconds to a week, then shows the date", () => {
+    expect(timeAgo(before(20), now)).toBe("just now");
+    expect(timeAgo(before(5 * 60), now)).toBe("5 minutes ago");
+    expect(timeAgo(before(3 * 3600), now)).toBe("3 hours ago");
+    expect(timeAgo(before(26 * 3600), now)).toBe("yesterday");
+    expect(timeAgo(before(3 * 86_400), now)).toBe("3 days ago");
+    expect(timeAgo("2026-10-02T12:00:00Z", now)).toBe("2 Oct");
+    expect(timeAgo("2025-10-02T12:00:00Z", now)).toBe("2 Oct 2025");
   });
 });

@@ -89,3 +89,30 @@ export type FileScanStatus = (typeof FILE_SCAN_STATUSES)[number];
 /** PLAN (TRN-1 "level"): SRS names the field, not the values. */
 export const TRAINING_LEVELS = ["BEGINNER", "INTERMEDIATE", "ADVANCED", "ALL_LEVELS"] as const;
 export type TrainingLevel = (typeof TRAINING_LEVELS)[number];
+
+/**
+ * NTF-1 events. The SRS list (booking request, acceptance/decline/expiry, reschedule, reminders,
+ * payment events, new resource, new recording, feedback, new message) plus the account and
+ * cohort events Phase 1 already produces. PLAN: names are ours, for backend review.
+ */
+export const NOTIFICATION_TYPES = [
+  "BOOKING_REQUESTED",
+  "BOOKING_ACCEPTED",
+  "BOOKING_DECLINED",
+  "BOOKING_EXPIRED",
+  "BOOKING_RESCHEDULED",
+  "SESSION_REMINDER",
+  "PAYMENT_SUCCEEDED",
+  "PAYMENT_FAILED",
+  "PAYMENT_REFUNDED",
+  "RESOURCE_ADDED",
+  "RECORDING_ADDED",
+  "FEEDBACK_ADDED",
+  "MESSAGE_RECEIVED",
+  "COHORT_CANCELLED",
+  "COHORT_CHANGED",
+  "INSTRUCTOR_APPLICATION",
+  "INSTRUCTOR_APPROVED",
+  "INSTRUCTOR_REJECTED",
+] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

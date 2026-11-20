@@ -6,7 +6,7 @@ import { seatBreakdown } from "@/lib/domain/checkout";
 import { canEnrol } from "@/lib/domain/cohort-machine";
 import { formatMoney } from "@/lib/domain/money";
 import { resolvePrice } from "@/lib/domain/pricing";
-import { db, findUser, newId, save, sendMail } from "../db";
+import { db, findUser, newId, notify, save, sendMail } from "../db";
 import { VISIBLE_COHORTS, omit, published, toCard, toPublicCohort } from "./catalog";
 import { apiError, requireUser, url } from "./util";
 
@@ -56,6 +56,12 @@ function settle(payment: StoredPayment) {
     payment.status = "FAILED";
     payment.failure_message = "Your card was declined. Nothing was charged.";
     enrolment.status = "CANCELLED";
+    notify(payment.learner_id, {
+      type: "PAYMENT_FAILED",
+      title: "Payment didn't go through",
+      body: `Your card was declined for ${payment.description}. Nothing was charged; you can try again.`,
+      link: `/checkout/cohort/${enrolment.cohort_id}`,
+    });
   } else {
     payment.status = "CAPTURED";
     payment.captured_at = now;
@@ -68,12 +74,24 @@ function settle(payment: StoredPayment) {
       refundPayment(payment, payment.breakdown.total);
       payment.failure_message = "The last seat was taken while you were paying, so we refunded you in full.";
       enrolment.status = "REFUNDED";
+      notify(payment.learner_id, {
+        type: "PAYMENT_REFUNDED",
+        title: "Refunded: the cohort filled up",
+        body: `The last seat in ${payment.description} was taken while you were paying. We refunded you in full.`,
+        link: "/learn/payments",
+      });
     } else {
       enrolment.status = "CONFIRMED";
       enrolment.confirmed_at = now;
       cohort.enrolled_count++;
       if (cohort.enrolled_count >= cohort.capacity) cohort.status = "FULL";
       if (learner) sendMail(learner.email, `You're enrolled: ${payment.description}`, `/checkout/return?payment_id=${payment.id}`);
+      notify(payment.learner_id, {
+        type: "PAYMENT_SUCCEEDED",
+        title: `You're enrolled: ${payment.description}`,
+        body: `We received ${formatMoney({ amount: payment.breakdown.total, currency: payment.breakdown.currency })}. Your receipt is in Payments.`,
+        link: "/learn/trainings",
+      });
     }
   }
   delete payment.mock;

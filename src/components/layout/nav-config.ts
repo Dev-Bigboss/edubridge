@@ -42,7 +42,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/learn/bookings", labelKey: "oneOnOneBookings", icon: CalendarClock, phase: 2, req: "OTO-2..9" },
     { href: "/learn/payments", labelKey: "payments", icon: CreditCard, phase: 1, req: "PAY-6", ready: true },
     { href: "/learn/messages", labelKey: "messages", icon: MessageCircle, phase: 3, req: "MSG-1..6" },
-    { href: "/learn/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1" },
+    { href: "/learn/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
     { href: "/learn/settings", labelKey: "settings", icon: Settings, phase: 1, req: "NTF-2, ONB-2" },
   ],
   INSTRUCTOR: [
@@ -53,6 +53,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/teach/trainings", labelKey: "myTrainings", icon: GraduationCap, phase: 2, req: "COH-1, RES-1" },
     { href: "/teach/earnings", labelKey: "earnings", icon: Wallet, phase: 3, req: "PAY-7" },
     { href: "/teach/messages", labelKey: "messages", icon: MessageCircle, phase: 3, req: "MSG-1..6" },
+    { href: "/teach/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
     { href: "/teach/settings", labelKey: "settings", icon: Settings, phase: 1, req: "ONB-3, NTF-2" },
   ],
   ADMIN: [
@@ -66,6 +67,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/moderation", labelKey: "moderation", icon: ShieldCheck, phase: 3, req: "FDB-4, MSG-6" },
     { href: "/admin/reports", labelKey: "reports", icon: BarChart3, phase: 3, req: "ADM-4" },
     { href: "/admin/audit-log", labelKey: "auditLog", icon: FileClock, phase: 1, req: "ADM-5" },
+    { href: "/admin/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
     { href: "/admin/settings", labelKey: "platformSettings", icon: ClipboardList, phase: 1, req: "ADM-3" },
   ],
 };

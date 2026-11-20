@@ -49,3 +49,15 @@ export function formatTimeRange(startUtc: string, endUtc: string, zone: string):
 export function minutesUntil(utcIso: string, now: Date = new Date()): number {
   return Math.floor((new Date(utcIso).getTime() - now.getTime()) / 60_000);
 }
+
+/** "just now", "5 minutes ago", "yesterday", "3 days ago"; past a week, the date ("12 Jan"). */
+export function timeAgo(utcIso: string, now: Date = new Date(), locale = "en-GB"): string {
+  const seconds = Math.round((new Date(utcIso).getTime() - now.getTime()) / 1000);
+  const abs = Math.abs(seconds);
+  if (abs < 60) return "just now";
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (abs < 3600) return rtf.format(Math.round(seconds / 60), "minute");
+  if (abs < 86_400) return rtf.format(Math.round(seconds / 3600), "hour");
+  if (abs < 7 * 86_400) return rtf.format(Math.round(seconds / 86_400), "day");
+  return new Date(utcIso).toLocaleDateString(locale, { day: "numeric", month: "short", year: new Date(utcIso).getFullYear() === now.getFullYear() ? undefined : "numeric" });
+}

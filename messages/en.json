@@ -953,5 +953,24 @@
       "unavailable": "This receipt isn't available",
       "unavailableBody": "Receipts exist for completed payments only. Your payment history has every receipt you have."
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "intro": "Updates about your trainings, payments and account. We email the important ones too.",
+    "bell": "Notifications",
+    "bellUnread": "Notifications, {count} unread",
+    "loading": "Loading notifications",
+    "markAll": "Mark all as read",
+    "seeAll": "See all notifications",
+    "show": "Show",
+    "allTab": "All",
+    "unreadTab": "Unread ({count})",
+    "more": "Show older",
+    "empty": "No notifications yet",
+    "emptyBody": "When something needs your attention, like a payment or a change to a class, it appears here.",
+    "emptyUnread": "You're all caught up",
+    "emptyUnreadBody": "Nothing unread. Older notifications are under All.",
+    "emptyShort": "No notifications yet",
+    "emptyShortBody": "Updates about classes and payments appear here."
   }
 }

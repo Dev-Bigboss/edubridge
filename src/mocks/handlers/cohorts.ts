@@ -5,7 +5,7 @@ import { COHORT_ACTION_TARGET, canMoveCohort, cohortEditable } from "@/lib/domai
 import { planSessions } from "@/lib/domain/cohort-schedule";
 import { MODALITY } from "@/lib/domain/enums";
 import { formatMoney } from "@/lib/domain/money";
-import { audit, db, findUser, newId, save, sendMail } from "../db";
+import { audit, db, findUser, newId, notify, save, sendMail } from "../db";
 import { refundPayment } from "./checkout";
 import { apiError, requireUser, url, validationError } from "./util";
 
@@ -53,6 +53,14 @@ function cancelCohort(cohort: Cohort, reason: string) {
     e.status = "REFUNDED";
     refunded++;
     const learner = findUser(e.learner_id);
+    if (payment) {
+      notify(e.learner_id, {
+        type: "COHORT_CANCELLED",
+        title: `${cohort.name} is cancelled`,
+        body: `${training?.title ?? "Your training"}: ${reason} You've been refunded ${formatMoney({ amount: payment.breakdown.total, currency: payment.breakdown.currency })} in full.`,
+        link: "/learn/payments",
+      });
+    }
     if (learner && payment) {
       sendMail(
         learner.email,

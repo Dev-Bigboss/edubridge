@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Dialog, DropdownMenu } from "radix-ui";
 import { Suspense, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/spinner";
 import type { User } from "@/lib/api/schemas/auth";
@@ -16,6 +17,8 @@ import type { Role } from "@/lib/domain/enums";
 import { Logo } from "./logo";
 import { navFor, type NavItem } from "./nav-config";
 import { RequireRole } from "./require-role";
+
+const AREA_BASE = { LEARNER: "/learn", INSTRUCTOR: "/teach", ADMIN: "/admin" } as const;
 
 const AREA_KEY: Record<Role, "learner" | "instructor" | "admin"> = {
   LEARNER: "learner",
@@ -79,7 +82,10 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
             {current ? t(`appNav.${current.labelKey}`) : area}
           </p>
         </div>
-        <AccountMenu user={user} />
+        <div className="flex items-center gap-1">
+          <NotificationBell base={AREA_BASE[user.role]} />
+          <AccountMenu user={user} />
+        </div>
       </header>
 
       <main id="main" className="px-4 py-6 lg:px-8 lg:py-8">
