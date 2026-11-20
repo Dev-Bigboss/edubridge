@@ -47,3 +47,12 @@ export type UserAction = (typeof USER_ACTIONS)[number];
 export const NEEDS_REASON: readonly UserAction[] = ["reject", "suspend", "impersonate"];
 
 export type UserFilters = { q?: string; role?: (typeof ROLES)[number]; status?: (typeof USER_STATUSES)[number]; approval?: (typeof APPROVAL_STATUSES)[number] };
+
+export const AuditPage = z.object({
+  items: z.array(AuditEntry),
+  next_cursor: z.string().nullable(),
+  total: z.number().int(),
+  facets: z.object({ actors: z.array(z.object({ id: z.string(), name: z.string() })), target_types: z.array(z.string()) }),
+});
+export type AuditPage = z.infer<typeof AuditPage>;
+export type AuditFilters = { q?: string; actor_id?: string; target_type?: string; from?: string; to?: string };

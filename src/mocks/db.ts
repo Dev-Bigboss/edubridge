@@ -3,6 +3,8 @@ import type { Category, Modality, Training } from "@/lib/api/schemas/catalog";
 import type { Cohort } from "@/lib/api/schemas/cohort";
 import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
 import type { Notification } from "@/lib/api/schemas/notifications";
+import type { PlatformSettings } from "@/lib/api/schemas/settings";
+import { DEFAULT_SETTINGS } from "@/lib/domain/policy";
 import { seedCohorts, seedLearnerHistory } from "./seed-cohorts";
 import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
@@ -56,6 +58,8 @@ type State = {
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
   audit: AuditEntry[];
+  settings: PlatformSettings;
+  settingsHistory: { version: number; updated_at: string; updated_by_name: string; summary: string }[];
   modalities: Modality[];
   tokens: Record<string, Token>;
   outbox: MockEmail[];
@@ -118,6 +122,23 @@ function seedOnboarding(): State["onboarding"] {
       },
     },
   };
+}
+
+/** ADM-5: a believable recent history so the audit log viewer isn't empty in a demo. */
+function seedAudit(): AuditEntry[] {
+  const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+  const e = (n: number, h: number, action: string, target_type: string, target_id: string, summary: string): AuditEntry => ({
+    id: `aud_seed_${n}`, actor_id: "usr_admin_1", actor_name: "Test Admin", action, target_type, target_id, summary, created_at: ago(h),
+  });
+  return [
+    e(1, 2, "cohort.open", "cohort", "coh_mth_sem1", 'Cohort "First semester cohort": DRAFT → OPEN'),
+    e(2, 26, "user.approve", "user", "usr_instructor_3", "Approved instructor Demo Instructor Three"),
+    e(3, 50, "training.updated", "training", "trn_excel_fr", 'Updated training "Excel pour la finance"'),
+    e(4, 51, "training.price_override_changed", "training", "trn_excel_fr", "Excel pour la finance: price override set to $35 per hour"),
+    e(5, 120, "user.suspend", "user", "usr_learner_suspended", "Suspended Demo Suspended Learner. Reason: Repeated chargebacks on two cards."),
+    e(6, 200, "category.updated", "category", "cat_uni_course", 'Category "University Course": changed its fields'),
+    e(7, 480, "pricing_rule.created", "pricing_rule", "rule_c_exam", "Cohort × Professional Exam: $450 per seat now"),
+  ];
 }
 
 /** A few demo notifications so the bell isn't empty: recent ones unread, older ones read. */
@@ -228,7 +249,9 @@ function seed(): State {
     ...seedHistory(),
     notifications: seedNotifications(),
     pricingRules: seedRules(),
-    audit: [],
+    audit: seedAudit(),
+    settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
+    settingsHistory: [{ version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by_name: "System", summary: "Starting values, not yet reviewed" }],
     tokens: {},
     outbox: [],
     session: null,
@@ -387,7 +410,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v9";
+const STORE_KEY = "edubridge.mock.db.v10";
 
 function load(): State {
   try {

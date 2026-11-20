@@ -66,9 +66,9 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/payments", labelKey: "paymentsAndRefunds", icon: CreditCard, phase: 1, req: "PAY-5, PAY-8" },
     { href: "/admin/moderation", labelKey: "moderation", icon: ShieldCheck, phase: 3, req: "FDB-4, MSG-6" },
     { href: "/admin/reports", labelKey: "reports", icon: BarChart3, phase: 3, req: "ADM-4" },
-    { href: "/admin/audit-log", labelKey: "auditLog", icon: FileClock, phase: 1, req: "ADM-5" },
+    { href: "/admin/audit-log", labelKey: "auditLog", icon: FileClock, phase: 1, req: "ADM-5", ready: true },
     { href: "/admin/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
-    { href: "/admin/settings", labelKey: "platformSettings", icon: ClipboardList, phase: 1, req: "ADM-3" },
+    { href: "/admin/settings", labelKey: "platformSettings", icon: ClipboardList, phase: 1, req: "ADM-3", ready: true },
   ],
 };
 

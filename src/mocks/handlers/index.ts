@@ -8,6 +8,7 @@ import { meHandlers } from "./me";
 import { notificationHandlers } from "./notifications";
 import { onboardingHandlers } from "./onboarding";
 import { pricingHandlers } from "./pricing";
+import { settingsHandlers } from "./settings";
 import { uploadHandlers } from "./uploads";
 
 /** One list per module. Each module's handlers implement contracts/openapi/<module>.yaml. */
@@ -17,6 +18,7 @@ export const handlers = [
   ...adminCatalogHandlers,
   ...adminUserHandlers,
   ...pricingHandlers,
+  ...settingsHandlers,
   ...cohortHandlers,
   ...checkoutHandlers,
   ...notificationHandlers,

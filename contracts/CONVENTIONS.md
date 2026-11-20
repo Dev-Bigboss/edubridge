@@ -97,3 +97,6 @@ Every non-2xx response has this body:
 | Notifications | Backend writes title/body per event in the user's language, same event sends the email; types in `enums.ts`; bell polls every 60 s until Phase 3 real-time | `notifications.yaml` |
 | Admin actions on users | Reason required for reject, suspend and view-as; never on your own account; all audited | `admin-users.yaml` |
 | View as (impersonate) | Read-only session as the user, banner on every page, not for admins, start and end audited | `admin-users.yaml`, `auth.yaml` |
+| Platform settings | Versioned like prices; save needs the current version (409 otherwise); a booking keeps the policy in force when it was made | `settings.yaml` |
+| Cancellation policy | Learner: refund tiers by hours of notice (one tier at 0 h, never more refund for later notice). Instructor cancels: one refund %. Values await the PO (plan §8 Q3) | `settings.yaml`, `domain/policy.ts` |
+| Audit log | Append-only, 25 per page, filters by text, admin, type and day | `settings.yaml` |
