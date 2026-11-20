@@ -1,3 +1,4 @@
+import { accountHandlers } from "./account";
 import { adminCatalogHandlers } from "./admin-catalog";
 import { adminPaymentHandlers } from "./admin-payments";
 import { adminUserHandlers } from "./admin-users";
@@ -25,6 +26,7 @@ export const handlers = [
   ...checkoutHandlers,
   ...notificationHandlers,
   ...meHandlers,
+  ...accountHandlers,
   ...onboardingHandlers,
   ...uploadHandlers,
 ];

@@ -101,3 +101,6 @@ Every non-2xx response has this body:
 | Cancellation policy | Learner: refund tiers by hours of notice (one tier at 0 h, never more refund for later notice). Instructor cancels: one refund %. Values await the PO (plan §8 Q3) | `settings.yaml`, `domain/policy.ts` |
 | Audit log | Append-only, 25 per page, filters by text, admin, type and day | `settings.yaml` |
 | Manual refunds | Full or partial, reason required and sent to the learner, Idempotency-Key; cancelling the enrolment (and freeing the seat) only with a full refund | `payments.yaml` |
+| Account settings | `/me/*` for every role; admins' page is `/admin/account` (`/admin/settings` is platform settings); email changes go through support | `account.yaml` |
+| Two-step sign-in | Mandatory for instructors and admins; optional for learners (code to turn on, password to turn off) | `account.yaml` |
+| Notification preferences | 7 groups by role; default on; payments email, cohort-change email and account decisions are locked on | `account.yaml`, `domain/notification-groups.ts` |

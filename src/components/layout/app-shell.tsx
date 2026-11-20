@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, LogOut, Menu, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -17,6 +17,8 @@ import type { Role } from "@/lib/domain/enums";
 import { Logo } from "./logo";
 import { navFor, type NavItem } from "./nav-config";
 import { RequireRole } from "./require-role";
+
+const ACCOUNT_HREF = { LEARNER: "/learn/settings", INSTRUCTOR: "/teach/settings", ADMIN: "/admin/account" } as const;
 
 const AREA_BASE = { LEARNER: "/learn", INSTRUCTOR: "/teach", ADMIN: "/admin" } as const;
 
@@ -179,6 +181,12 @@ function AccountMenu({ user }: { user: User }) {
             <p className="truncate text-sm">{user.email}</p>
           </div>
           <DropdownMenu.Separator className="my-1 h-px bg-border-subtle" />
+          <DropdownMenu.Item asChild className="flex min-h-11 cursor-pointer items-center gap-2 rounded-sm px-3 text-heading outline-none data-[highlighted]:bg-surface-1">
+            <Link href={ACCOUNT_HREF[user.role]}>
+              <Settings aria-hidden="true" className="size-4" />
+              {t("shell.accountSettings")}
+            </Link>
+          </DropdownMenu.Item>
           <DropdownMenu.Item
             disabled={logout.isPending}
             onSelect={signOut}

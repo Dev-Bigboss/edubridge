@@ -5,6 +5,7 @@ import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
 import type { Notification } from "@/lib/api/schemas/notifications";
 import type { PlatformSettings } from "@/lib/api/schemas/settings";
 import { DEFAULT_SETTINGS } from "@/lib/domain/policy";
+import { wants } from "@/lib/domain/notification-groups";
 import { seedCohorts, seedLearnerHistory } from "./seed-cohorts";
 import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
@@ -54,6 +55,10 @@ type State = {
   cohorts: Cohort[];
   enrolments: Enrolment[];
   notifications: (Notification & { user_id: string })[];
+  /** NTF-2: saved channel choices per user and group. Missing means "everything on". */
+  notificationPrefs: Record<string, Record<string, { in_app: boolean; email: boolean }>>;
+  /** MFA set-up in progress: user id → secret shown in the authenticator QR. */
+  mfaSetup: Record<string, string>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -154,6 +159,8 @@ function seedNotifications(): State["notifications"] {
 
 /** NTF-1: in-app notification; the backend sends the email version too (the mock logs it in the outbox). */
 export function notify(userId: string, n: Pick<Notification, "type" | "title" | "body" | "link">) {
+  const user = findUser(userId);
+  if (user && !wants(user.role, db.notificationPrefs[userId], n.type, "in_app")) return;
   db.notifications.unshift({ ...n, id: newId("ntf"), user_id: userId, created_at: new Date().toISOString(), read_at: null });
 }
 
@@ -248,6 +255,8 @@ function seed(): State {
     trainings: seedTrainings(),
     ...seedHistory(),
     notifications: seedNotifications(),
+    notificationPrefs: {},
+    mfaSetup: {},
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -410,7 +419,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v10";
+const STORE_KEY = "edubridge.mock.db.v11";
 
 function load(): State {
   try {

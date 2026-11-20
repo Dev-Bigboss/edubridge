@@ -190,7 +190,8 @@
     "account": "Account menu",
     "goToDashboard": "Go to dashboard",
     "areaNav": "{area} navigation",
-    "signedOut": "You've been signed out."
+    "signedOut": "You've been signed out.",
+    "accountSettings": "Account settings"
   },
   "notFound": {
     "title": "We couldn't find that page",
@@ -218,7 +219,8 @@
     "schedule": "Schedule",
     "settings": "Settings",
     "trainings": "Trainings",
-    "users": "Users"
+    "users": "Users",
+    "myAccount": "My account"
   },
   "dashboard": {
     "greeting": "Welcome back, {name}",
@@ -1232,5 +1234,110 @@
     "text": "You're viewing as {name}. Nothing can be changed. Signed in as {admin}.",
     "end": "Stop viewing and return",
     "endFailed": "We couldn't end the view. Sign out to be safe."
+  },
+  "account": {
+    "title": "Account settings",
+    "intro": "Your profile, how you sign in, and which updates reach you.",
+    "sections": "Settings sections",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Sign-in and security",
+      "notifications": "Notifications"
+    },
+    "profile": {
+      "name": "Full name",
+      "nameRequired": "Enter your full name.",
+      "email": "Email address",
+      "emailHint": "To change your email, contact support so we can confirm it's you.",
+      "timezone": "Time zone",
+      "timezoneHint": "Every class and booking time is shown in this zone.",
+      "country": "Country",
+      "chooseCountry": "Choose your country",
+      "headline": "Headline",
+      "headlineHint": "One line learners see under your name.",
+      "headlineShort": "Write a short headline, at least 10 characters.",
+      "bio": "About you",
+      "bioCount": "{count} characters (at least 80)",
+      "bioShort": "Tell learners a little more: at least 80 characters.",
+      "save": "Save profile",
+      "saved": "Profile saved"
+    },
+    "security": {
+      "password": "Password",
+      "passwordBody": "Changing it signs you out on other devices, and we email you so you know it happened.",
+      "current": "Current password",
+      "new": "New password",
+      "newHint": "At least 10 characters. A short phrase is easier to remember.",
+      "changePassword": "Change password",
+      "passwordChanged": "Password changed",
+      "mfa": "Two-step sign-in",
+      "mfaBody": "After your password, enter a code from an authenticator app. It keeps your account safe even if your password leaks.",
+      "mfaRequiredBody": "Your role can see other people's details or money, so a code from your authenticator app is always needed.",
+      "on": "On",
+      "off": "Off",
+      "requiredForRole": "Required for your role. It stays on.",
+      "turnOn": "Turn on two-step sign-in",
+      "step1": "Open an authenticator app such as Google Authenticator, Microsoft Authenticator or 1Password.",
+      "step2": "Add EduBridge with this key:",
+      "openInApp": "Open in app",
+      "step3": "Enter the 6-digit code it shows.",
+      "code": "6-digit code",
+      "codeFormat": "Enter the 6 digits from your app.",
+      "confirmOn": "Confirm and turn on",
+      "mfaOn": "Two-step sign-in is on",
+      "turnOff": "Turn off",
+      "turnOffTitle": "Turn off two-step sign-in?",
+      "turnOffBody": "Your account will only be protected by your password. Enter it to confirm.",
+      "keepOn": "Keep it on",
+      "mfaOff": "Two-step sign-in is off",
+      "devices": "Other devices",
+      "devicesBody": "Signed in on a shared or lost device? Sign out everywhere except here.",
+      "signOutOthers": "Sign out other devices",
+      "signedOut": "{count, plural, =0 {No other devices were signed in} one {Signed out of # other device} other {Signed out of # other devices}}",
+      "failed": "That didn't work. Please try again."
+    },
+    "notifications": {
+      "intro": "Choose where each kind of update reaches you. Some can't be turned off because missing them could cost you money or access.",
+      "caption": "Notification channels for each kind of update",
+      "event": "Updates about",
+      "inApp": "In app",
+      "email": "Email",
+      "lockedEmail": "Email always on",
+      "lockedBoth": "Always on",
+      "groups": {
+        "bookings": {
+          "label": "One-on-one bookings",
+          "hint": "Requests, confirmations, declines, expiries and reschedules."
+        },
+        "reminders": {
+          "label": "Class reminders",
+          "hint": "Before each live session."
+        },
+        "payments": {
+          "label": "Payments and receipts",
+          "hint": "Payments, failed cards and refunds."
+        },
+        "cohorts": {
+          "label": "Cohort changes",
+          "hint": "Schedule changes and cancellations."
+        },
+        "content": {
+          "label": "New learning material",
+          "hint": "Resources, recordings and feedback from instructors."
+        },
+        "messages": {
+          "label": "Messages",
+          "hint": "New messages from instructors or learners."
+        },
+        "account": {
+          "label": "Account decisions",
+          "hint": "Instructor applications and approval decisions."
+        }
+      },
+      "save": "Save preferences",
+      "discard": "Discard changes",
+      "saved": "Notification preferences saved",
+      "failed": "That didn't save. Please try again."
+    }
   }
 }

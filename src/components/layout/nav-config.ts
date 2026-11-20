@@ -43,7 +43,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/learn/payments", labelKey: "payments", icon: CreditCard, phase: 1, req: "PAY-6", ready: true },
     { href: "/learn/messages", labelKey: "messages", icon: MessageCircle, phase: 3, req: "MSG-1..6" },
     { href: "/learn/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
-    { href: "/learn/settings", labelKey: "settings", icon: Settings, phase: 1, req: "NTF-2, ONB-2" },
+    { href: "/learn/settings", labelKey: "settings", icon: Settings, phase: 1, req: "NTF-2, ONB-2", ready: true },
   ],
   INSTRUCTOR: [
     { href: "/teach", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "OTO-4, PAY-7" },
@@ -54,7 +54,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/teach/earnings", labelKey: "earnings", icon: Wallet, phase: 3, req: "PAY-7" },
     { href: "/teach/messages", labelKey: "messages", icon: MessageCircle, phase: 3, req: "MSG-1..6" },
     { href: "/teach/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
-    { href: "/teach/settings", labelKey: "settings", icon: Settings, phase: 1, req: "ONB-3, NTF-2" },
+    { href: "/teach/settings", labelKey: "settings", icon: Settings, phase: 1, req: "ONB-3, NTF-2", ready: true },
   ],
   ADMIN: [
     { href: "/admin", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "ADM-1" },
@@ -68,6 +68,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/reports", labelKey: "reports", icon: BarChart3, phase: 3, req: "ADM-4" },
     { href: "/admin/audit-log", labelKey: "auditLog", icon: FileClock, phase: 1, req: "ADM-5", ready: true },
     { href: "/admin/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
+    { href: "/admin/account", labelKey: "myAccount", icon: Settings, phase: 1, req: "NFR Security, NTF-2", ready: true },
     { href: "/admin/settings", labelKey: "platformSettings", icon: ClipboardList, phase: 1, req: "ADM-3", ready: true },
   ],
 };
