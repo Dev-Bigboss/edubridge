@@ -7,6 +7,7 @@ import { canEnrol } from "@/lib/domain/cohort-machine";
 import { formatMoney } from "@/lib/domain/money";
 import { resolvePrice } from "@/lib/domain/pricing";
 import { db, findUser, newId, notify, save, sendMail } from "../db";
+import { cancelBookingCheckout, settleBookingPayment } from "./bookings";
 import { VISIBLE_COHORTS, omit, published, toCard, toPublicCohort } from "./catalog";
 import { apiError, blockWhileImpersonating, requireUser, url } from "./util";
 
@@ -46,8 +47,14 @@ export function refundPayment(payment: StoredPayment, amount: number) {
  * webhook arrives, never when the browser comes back (PAY-2). The mock applies it on the first
  * read after the simulated delay.
  */
-function settle(payment: StoredPayment) {
+export function settle(payment: StoredPayment) {
   if (payment.status !== "PENDING" || !payment.mock || new Date(payment.mock.settles_at) > new Date()) return;
+  if (payment.booking_id) {
+    settleBookingPayment(payment, payment.mock.outcome);
+    delete payment.mock;
+    save();
+    return;
+  }
   const enrolment = db.enrolments.find((e) => e.id === payment.enrolment_id)!;
   const cohort = db.cohorts.find((c) => c.id === enrolment.cohort_id)!;
   const learner = findUser(payment.learner_id);
@@ -179,6 +186,7 @@ export const checkoutHandlers = [
       refunded_amount: 0,
       created_at,
       captured_at: null,
+      booking_id: null,
       receipt_number: null,
       receipt_url: null,
       idempotency_key: key,
@@ -197,9 +205,10 @@ export const checkoutHandlers = [
     const payment = db.payments.find((p) => p.id === params.id);
     if (!payment || (payment.learner_id !== user.id && user.role !== "ADMIN")) return apiError(404, "NOT_FOUND", "We couldn't find that payment.");
     settle(payment);
-    const enrolment = db.enrolments.find((e) => e.id === payment.enrolment_id)!;
-    const training = db.trainings.find((t) => t.id === enrolment.training_id)!;
-    return HttpResponse.json({ payment: publicPayment(payment), enrolment, cohort_id: enrolment.cohort_id, training_slug: training.slug });
+    const enrolment = db.enrolments.find((e) => e.id === payment.enrolment_id) ?? null;
+    const booking = db.bookings.find((b) => b.id === payment.booking_id);
+    const training = db.trainings.find((t) => t.id === (enrolment?.training_id ?? booking?.training_id));
+    return HttpResponse.json({ payment: publicPayment(payment), enrolment, cohort_id: enrolment?.cohort_id ?? null, training_slug: training?.slug ?? "" });
   }),
 
   /* ---------- mock gateway (stands in for Stripe's hosted page; mock mode only) ---------- */
@@ -207,10 +216,19 @@ export const checkoutHandlers = [
     await delay(150);
     const payment = db.payments.find((p) => p.id === params.id);
     if (!payment) return apiError(404, "NOT_FOUND", "Unknown checkout session.");
-    const enrolment = db.enrolments.find((e) => e.id === payment.enrolment_id)!;
+    // Like Stripe's success_url and cancel_url, set when the session was created.
+    const booking = db.bookings.find((b) => b.id === payment.booking_id);
+    const enrolment = db.enrolments.find((e) => e.id === payment.enrolment_id);
+    const urls = booking
+      ? {
+          success_url: `/learn/bookings/${booking.id}`,
+          cancel_url: `/learn/book/${db.trainings.find((t) => t.id === booking.training_id)?.slug}?instructor=${booking.instructor_id}&cancelled=1`,
+        }
+      : { success_url: `/checkout/return?payment_id=${payment.id}`, cancel_url: `/checkout/cohort/${enrolment?.cohort_id}?cancelled=1` };
     return HttpResponse.json({
       payment: publicPayment(payment),
-      cohort_id: enrolment.cohort_id,
+      ...urls,
+      authorise_only: !!booking,
       total: formatMoney({ amount: payment.breakdown.total, currency: payment.breakdown.currency }),
     });
   }),
@@ -222,7 +240,8 @@ export const checkoutHandlers = [
     const outcome = params.outcome as string;
     if (outcome === "cancel") {
       payment.status = "VOIDED";
-      db.enrolments.find((e) => e.id === payment.enrolment_id)!.status = "CANCELLED";
+      if (payment.booking_id) cancelBookingCheckout(payment);
+      else db.enrolments.find((e) => e.id === payment.enrolment_id)!.status = "CANCELLED";
     } else if (outcome === "success" || outcome === "decline") {
       payment.mock = { outcome, settles_at: new Date(Date.now() + MOCK_WEBHOOK_DELAY_MS).toISOString() };
     } else return apiError(404, "NOT_FOUND", "Unknown outcome.");

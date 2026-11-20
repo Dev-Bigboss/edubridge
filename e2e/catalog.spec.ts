@@ -98,7 +98,10 @@ test("PRC-3: a one-on-one training lists each instructor's price", async ({ page
   const instructors = page.getByRole("region", { name: "Choose an instructor" });
   await expect(instructors.getByText("Test Instructor")).toBeVisible();
   await expect(instructors.getByText("$75 per hour")).toBeVisible();
-  await expect(instructors.getByRole("button", { name: "Request a session" })).toBeDisabled();
+  await expect(instructors.getByRole("link", { name: "Request a session with Test Instructor" })).toHaveAttribute(
+    "href",
+    "/learn/book/acca-strategic-business-reporting-one-on-one?instructor=usr_instructor_1",
+  );
 });
 
 test("TRN-7: an archived training's address explains it's gone and offers the catalogue", async ({ page }) => {

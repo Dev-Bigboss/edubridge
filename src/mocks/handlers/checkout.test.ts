@@ -54,7 +54,7 @@ describe("cohort checkout mock (payments.yaml, PAY-1/2, COH-2)", () => {
     const done = await payment(p.id);
     expect(done.payment).toMatchObject({ status: "CAPTURED", method: "Visa ending 4242" });
     expect(done.payment.receipt_number).toMatch(/^EB-\d{4}-\d{5}$/);
-    expect(done.enrolment).toMatchObject({ status: "CONFIRMED", price: { amount: 25000 } });
+    expect(done.enrolment!).toMatchObject({ status: "CONFIRMED", price: { amount: 25000 } });
     expect(done.training_slug).toBe("mth-101-elementary-mathematics-i");
     expect(db.cohorts.find((c) => c.id === "coh_mth_sem1")!.enrolled_count).toBe(before + 1);
     expect(db.outbox[0].subject).toContain("You're enrolled");
@@ -67,7 +67,7 @@ describe("cohort checkout mock (payments.yaml, PAY-1/2, COH-2)", () => {
     await pay(p.id, "decline");
     const done = await payment(p.id);
     expect(done.payment).toMatchObject({ status: "FAILED", failure_message: "Your card was declined. Nothing was charged." });
-    expect(done.enrolment.status).toBe("CANCELLED");
+    expect(done.enrolment!.status).toBe("CANCELLED");
     expect((await quote("coh_mth_sem1")).blocked).toBeNull();
   });
 
@@ -87,7 +87,7 @@ describe("cohort checkout mock (payments.yaml, PAY-1/2, COH-2)", () => {
     await pay(first.payment.id, "success");
     const done = await payment(first.payment.id);
     expect(done.payment).toMatchObject({ status: "REFUNDED", refunded_amount: 25000 });
-    expect(done.enrolment.status).toBe("REFUNDED");
+    expect(done.enrolment!.status).toBe("REFUNDED");
   });
 
   it("fills the cohort with the last seat, and only the payer (or an admin) can read a payment", async () => {

@@ -75,7 +75,7 @@ export function CheckoutReturn({ paymentId }: { paymentId: string | null }) {
   const { payment, enrolment, cohort_id, training_slug } = query.data;
   const paid = formatMoney({ amount: payment.breakdown.total, currency: payment.breakdown.currency });
 
-  if (payment.status === "CAPTURED" && enrolment.status === "CONFIRMED") {
+  if (payment.status === "CAPTURED" && enrolment?.status === "CONFIRMED") {
     return (
       <AuthCard icon={CircleCheck} title={t("successTitle")} subtitle={t("successBody", { what: payment.description })}>
         <div className="space-y-5">

@@ -175,19 +175,19 @@ function Detail({ training }: { training: PublicTrainingDetail }) {
                   {!isCohort && (
                     <div className="flex flex-col items-start gap-2 sm:items-end">
                       {i.price && <p className="font-heading text-lg font-semibold text-heading">{formatPriceTag(i.price, i.price.unit)}</p>}
-                      <Button variant="outline" disabled aria-describedby="booking-soon">
-                        {t("detail.requestSession")}
-                      </Button>
+                      {i.price && (
+                        <Button asChild variant="outline">
+                          <Link href={`/learn/book/${training.slug}?instructor=${i.id}`} aria-label={t("detail.requestWith", { name: i.name })}>
+                            {t("detail.requestSession")}
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   )}
                 </li>
               ))}
             </ul>
-            {!isCohort && (
-              <p id="booking-soon" className="mt-4 text-sm">
-                {t("detail.bookingSoon")}
-              </p>
-            )}
+            {!isCohort && <p className="mt-4 text-sm">{t("detail.bookingHow")}</p>}
           </section>
         </div>
 

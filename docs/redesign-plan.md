@@ -222,7 +222,10 @@ Then: account settings for every role (`/learn/settings`, `/teach/settings`, `/a
 Auth (email/password, Google, verify, reset, consent), learner + instructor onboarding with resume, admin catalogue (categories, modalities, trainings, metadata fields), pricing rules + overrides + versions + preview, public catalogue and training detail, cohorts admin, cohort enrolment checkout with breakdown, payment return/history/receipts, basic in-app + email notification centre, admin user management and instructor approval, audit log viewer.
 *Req:* ONB-1..4/6, TRN-1..7, PRC-1..5/7, COH-1..3, PAY-1/2/6, NTF-1, ADM-2/3/5.
 
-### Phase 2: 1:1 and content (L) — SRS phase 2
+### Phase 2: 1:1 and content (L) — SRS phase 2 (in progress)
+**Built so far:** instructor availability (weekly hours, date exceptions, minimum notice) (OTO-1); learner booking page with instructor, length, and free times in the viewer's zone, excluding cohort classes and held requests (OTO-2/10); request with card authorisation through the gateway, 30-min slot hold, expiry with the hold released (OTO-3/5/7, PAY-4); learner sessions list and booking page with countdown and history. Contract: `bookings.yaml`; payments now link to a booking or an enrolment.
+**Next:** instructor requests (accept/decline/propose), counter-proposals, meeting link and .ics; then reschedule/cancel with refund preview; instructor schedule; session join and attendance; recordings; resources.
+
 Availability editor, slot picker, booking request with authorisation, instructor accept/decline/propose with expiry countdown, counter-proposal flow, reschedule/cancel with policy preview, .ics download and reminders display, unified instructor schedule with conflict prevention, session join, attendance, recordings player and management, resources upload/visibility/folders.
 *Req:* OTO-1..10, PAY-4/5, COH-4/5, REC-1..6, RES-1..4, ONB-5.
 

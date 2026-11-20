@@ -104,3 +104,7 @@ Every non-2xx response has this body:
 | Account settings | `/me/*` for every role; admins' page is `/admin/account` (`/admin/settings` is platform settings); email changes go through support | `account.yaml` |
 | Two-step sign-in | Mandatory for instructors and admins; optional for learners (code to turn on, password to turn off) | `account.yaml` |
 | Notification preferences | 7 groups by role; default on; payments email, cohort-change email and account decisions are locked on | `account.yaml`, `domain/notification-groups.ts` |
+| 1:1 availability | Weekly local hours + date overrides (empty = blocked) + minimum notice; 60-day horizon; 30-min steps | `bookings.yaml`, `domain/slots.ts` |
+| 1:1 lengths and price | 1 h to 4 h in 30-min steps; per-hour price × length (rounded to the cent) or flat per session; frozen on the booking | `bookings.yaml`, `domain/checkout.ts` |
+| Slot hold | A DRAFT holds its slot 30 min while the learner authorises; then PENDING_INSTRUCTOR holds it until answered or expired | `bookings.yaml` |
+| Payments ↔ bookings | A payment has either `enrolment_id` (cohort seat) or `booking_id` (1:1), never both | `payments.yaml` |

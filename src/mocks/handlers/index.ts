@@ -3,6 +3,7 @@ import { adminCatalogHandlers } from "./admin-catalog";
 import { adminPaymentHandlers } from "./admin-payments";
 import { adminUserHandlers } from "./admin-users";
 import { authHandlers } from "./auth";
+import { bookingHandlers } from "./bookings";
 import { catalogHandlers } from "./catalog";
 import { checkoutHandlers } from "./checkout";
 import { cohortHandlers } from "./cohorts";
@@ -24,6 +25,7 @@ export const handlers = [
   ...settingsHandlers,
   ...cohortHandlers,
   ...checkoutHandlers,
+  ...bookingHandlers,
   ...notificationHandlers,
   ...meHandlers,
   ...accountHandlers,

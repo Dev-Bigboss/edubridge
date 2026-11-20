@@ -15,6 +15,8 @@ export const PriceBreakdown = z.object({
   currency: z.string().length(3),
   unit_price: PriceSchema,
   quantity: z.number().int().positive(),
+  /** 1:1 sessions priced per hour: the length charged for. Null for seats and per-session prices. */
+  duration_min: z.number().int().positive().nullable(),
   subtotal: Amount,
   discount: Amount,
   tax: Amount,
@@ -53,7 +55,9 @@ export type Enrolment = z.infer<typeof Enrolment>;
 export const Payment = z.object({
   id: z.string(),
   learner_id: z.string(),
-  enrolment_id: z.string(),
+  /** Exactly one of these is set: a cohort seat or a 1:1 booking (SRS §5 Enrolment/Booking ↔ Payment). */
+  enrolment_id: z.string().nullable(),
+  booking_id: z.string().nullable(),
   /** "ICAN Skills: Financial Reporting · Evening cohort" */
   description: z.string(),
   breakdown: PriceBreakdown,
@@ -78,7 +82,13 @@ export const PaymentList = z.object({ items: z.array(Payment) });
 export const CheckoutSession = z.object({ payment: Payment, checkout_url: z.string() });
 
 /** GET /payments/{id}: the payment with its enrolment, polled by the return page (PAY-2). */
-export const PaymentDetail = z.object({ payment: Payment, enrolment: Enrolment, cohort_id: z.string(), training_slug: z.string() });
+export const PaymentDetail = z.object({
+  payment: Payment,
+  /** Cohort payments; null for 1:1 bookings (see booking_id). */
+  enrolment: Enrolment.nullable(),
+  cohort_id: z.string().nullable(),
+  training_slug: z.string(),
+});
 export type PaymentDetail = z.infer<typeof PaymentDetail>;
 
 /** GET /me/enrolments: what the learner has joined, with enough to show it without more calls. */
@@ -101,8 +111,9 @@ export const LearnerEnrolmentList = z.object({ items: z.array(LearnerEnrolment) 
 
 export const AdminPaymentRow = Payment.extend({
   learner: z.object({ id: z.string(), name: z.string(), email: z.string() }),
-  enrolment_status: z.enum(ENROLMENT_STATUSES),
-  cohort_id: z.string(),
+  /** Null for 1:1 bookings. */
+  enrolment_status: z.enum(ENROLMENT_STATUSES).nullable(),
+  cohort_id: z.string().nullable(),
 });
 export type AdminPaymentRow = z.infer<typeof AdminPaymentRow>;
 

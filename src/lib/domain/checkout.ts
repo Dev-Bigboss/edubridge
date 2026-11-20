@@ -9,7 +9,27 @@ export function seatBreakdown(price: Price) {
   const subtotal = price.amount;
   const discount = 0;
   const tax = 0;
-  return { currency: price.currency, unit_price: price, quantity: 1, subtotal, discount, tax, total: subtotal - discount + tax };
+  return { currency: price.currency, unit_price: price, quantity: 1, duration_min: null, subtotal, discount, tax, total: subtotal - discount + tax };
+}
+
+/**
+ * One 1:1 session (OTO-2, PRC-2/3). Per-hour prices are charged for the length chosen, rounded to
+ * the cent; per-session prices are flat. Seats can't be booked 1:1.
+ */
+export function sessionBreakdown(price: Price, durationMin: number) {
+  if (price.unit === "PER_SEAT") throw new Error("A per-seat price can't be used for a 1:1 session.");
+  const hourly = price.unit === "PER_HOUR";
+  const subtotal = hourly ? Math.round((price.amount * durationMin) / 60) : price.amount;
+  return {
+    currency: price.currency,
+    unit_price: price,
+    quantity: 1,
+    duration_min: hourly ? durationMin : null,
+    subtotal,
+    discount: 0,
+    tax: 0,
+    total: subtotal,
+  };
 }
 
 /** PAY-5: how much of a payment can still be refunded. Only money actually taken can go back. */

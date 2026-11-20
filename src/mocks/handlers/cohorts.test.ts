@@ -89,7 +89,7 @@ describe("admin cohorts mock (cohorts.yaml, COH-1/3/5)", () => {
 
   it("COH-5: cancelling needs a reason and refunds every paid seat", async () => {
     db.enrolments.push({ id: "enr_1", learner_id: "usr_learner_1", training_id: "trn_mth101", cohort_id: "coh_mth_sem1", status: "CONFIRMED", price: { amount: 25000, currency: "USD", unit: "PER_SEAT" }, payment_id: "pay_1", created_at: "", confirmed_at: "" });
-    db.payments.push({ id: "pay_1", learner_id: "usr_learner_1", enrolment_id: "enr_1", description: "MTH 101", breakdown: { currency: "USD", unit_price: { amount: 25000, currency: "USD", unit: "PER_SEAT" }, quantity: 1, subtotal: 25000, discount: 0, tax: 0, total: 25000 }, status: "CAPTURED", method: "Visa ending 4242", failure_message: null, refunded_amount: 0, created_at: "", captured_at: "", receipt_number: "EB-2026-09999", receipt_url: null });
+    db.payments.push({ id: "pay_1", learner_id: "usr_learner_1", enrolment_id: "enr_1", booking_id: null, description: "MTH 101", breakdown: { currency: "USD", unit_price: { amount: 25000, currency: "USD", unit: "PER_SEAT" }, quantity: 1, duration_min: null, subtotal: 25000, discount: 0, tax: 0, total: 25000 }, status: "CAPTURED", method: "Visa ending 4242", failure_message: null, refunded_amount: 0, created_at: "", captured_at: "", receipt_number: "EB-2026-09999", receipt_url: null });
     expect((await failure(act("coh_mth_sem1", "cancel", { reason: "" }))).fieldErrors).toHaveProperty("reason");
     const c = await act("coh_mth_sem1", "cancel", { reason: "The instructor is unavailable this semester." });
     expect(c.status).toBe("CANCELLED");

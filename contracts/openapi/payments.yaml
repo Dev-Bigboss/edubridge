@@ -65,8 +65,8 @@ paths:
                 required: [payment, enrolment, cohort_id, training_slug]
                 properties:
                   payment: { $ref: "#/components/schemas/Payment" }
-                  enrolment: { $ref: "#/components/schemas/Enrolment" }
-                  cohort_id: { type: string }
+                  enrolment: { oneOf: [{ $ref: "#/components/schemas/Enrolment" }, { type: "null" }] }
+                  cohort_id: { type: [string, "null"] }
                   training_slug: { type: string }
         "404": { $ref: "#/components/responses/Error" }
   /me/enrolments:
@@ -159,11 +159,12 @@ components:
     PriceBreakdown:
       type: object
       description: PRC-7. Shown as-is; discount and tax stay 0 until PRC-6 (Phase 3). total = subtotal − discount + tax.
-      required: [currency, unit_price, quantity, subtotal, discount, tax, total]
+      required: [currency, unit_price, quantity, duration_min, subtotal, discount, tax, total]
       properties:
         currency: { type: string }
         unit_price: { $ref: "./catalog.yaml#/components/schemas/Price" }
         quantity: { type: integer, minimum: 1 }
+        duration_min: { type: [integer, "null"], description: 1:1 per-hour sessions only; the length charged for }
         subtotal: { type: integer, minimum: 0 }
         discount: { type: integer, minimum: 0 }
         tax: { type: integer, minimum: 0 }
@@ -191,11 +192,12 @@ components:
         confirmed_at: { type: [string, "null"], format: date-time }
     Payment:
       type: object
-      required: [id, learner_id, enrolment_id, description, breakdown, status, method, failure_message, refunded_amount, created_at, captured_at, receipt_number, receipt_url]
+      required: [id, learner_id, enrolment_id, booking_id, description, breakdown, status, method, failure_message, refunded_amount, created_at, captured_at, receipt_number, receipt_url]
       properties:
         id: { type: string }
         learner_id: { type: string }
-        enrolment_id: { type: string }
+        enrolment_id: { type: [string, "null"], description: Cohort seat; exactly one of enrolment_id and booking_id is set }
+        booking_id: { type: [string, "null"], description: 1:1 session (bookings.yaml) }
         description: { type: string, description: "Training title · cohort name" }
         breakdown: { $ref: "#/components/schemas/PriceBreakdown" }
         status: { type: string, enum: [PENDING, AUTHORISED, CAPTURED, VOIDED, FAILED, PARTIALLY_REFUNDED, REFUNDED] }
@@ -228,5 +230,5 @@ components:
           required: [learner, enrolment_status, cohort_id]
           properties:
             learner: { type: object, required: [id, name, email], properties: { id: { type: string }, name: { type: string }, email: { type: string } } }
-            enrolment_status: { type: string, enum: [PENDING_PAYMENT, CONFIRMED, CANCELLED, REFUNDED] }
-            cohort_id: { type: string }
+            enrolment_status: { type: [string, "null"], enum: [PENDING_PAYMENT, CONFIRMED, CANCELLED, REFUNDED, null] }
+            cohort_id: { type: [string, "null"] }

@@ -221,6 +221,6 @@ function Avatar({ user }: { user: User }) {
 /** The most specific nav item matching the path, so /learn/payments doesn't also light up /learn. */
 function activeItem(items: NavItem[], pathname: string): NavItem | undefined {
   return items
-    .filter((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))
+    .filter((i) => [i.href, ...(i.also ?? [])].some((h) => pathname === h || pathname.startsWith(`${h}/`)))
     .sort((a, b) => b.href.length - a.href.length)[0];
 }

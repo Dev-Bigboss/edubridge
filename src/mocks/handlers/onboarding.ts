@@ -101,6 +101,9 @@ export const onboardingHandlers = [
       const parsed = AvailabilityInput.safeParse(body);
       if (!parsed.success) return validationError(parsed.error);
       rec.sections.availability = parsed.data;
+      // One source of truth for booking (OTO-1): date exceptions and notice set later are kept.
+      const current = db.availability[user.id];
+      db.availability[user.id] = { ...parsed.data, overrides: current?.overrides ?? [], notice_hours: current?.notice_hours ?? 12 };
     }
     markDone(user, section);
     save();

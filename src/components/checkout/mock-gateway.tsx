@@ -22,7 +22,7 @@ export function MockGateway({ paymentId }: { paymentId: string }) {
 
   if (session.isError) return <FormError message="This test checkout session doesn't exist." />;
   if (!session.data) return <LoadingState />;
-  const { payment, cohort_id, total } = session.data;
+  const { payment, success_url, cancel_url, authorise_only, total } = session.data;
   const finished = payment.status !== "PENDING";
 
   const go = async (result: "success" | "decline" | "cancel") => {
@@ -31,7 +31,7 @@ export function MockGateway({ paymentId }: { paymentId: string }) {
     try {
       await outcome.mutateAsync(result);
       // Stripe redirects to success_url / cancel_url the same way.
-      router.push(result === "cancel" ? `/checkout/cohort/${cohort_id}?cancelled=1` : `/checkout/return?payment_id=${paymentId}`);
+      router.push(result === "cancel" ? cancel_url : success_url);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");
     }
@@ -46,7 +46,12 @@ export function MockGateway({ paymentId }: { paymentId: string }) {
       <div className="rounded-md border border-border bg-white p-6 md:p-8">
         <h1 className="mb-1 text-[26px]">Test payment</h1>
         <p className="mb-6 leading-relaxed">{payment.description}</p>
-        <p className="mb-6 font-heading text-3xl font-semibold text-heading">{total}</p>
+        <p className="mb-2 font-heading text-3xl font-semibold text-heading">{total}</p>
+        <p className="mb-6 text-[15px] leading-relaxed">
+          {authorise_only
+            ? "Held on your card now and charged only if the instructor accepts. Released if they decline or don't answer."
+            : "Charged now."}
+        </p>
         <div className="mb-6 flex items-center gap-3 rounded-sm border border-border bg-surface-1 px-4 py-3 text-heading">
           <CreditCard aria-hidden="true" className="size-5 text-primary" />
           Test card 4242 4242 4242 4242
@@ -54,7 +59,7 @@ export function MockGateway({ paymentId }: { paymentId: string }) {
         <FormError message={error ?? (finished ? "This checkout session has already finished." : null)} />
         <div className="mt-4 flex flex-col gap-3">
           <Button size="lg" disabled={finished || outcome.isPending} loading={outcome.isPending && choice === "success"} onClick={() => void go("success")}>
-            Pay {total}
+            {authorise_only ? `Authorise ${total}` : `Pay ${total}`}
           </Button>
           <Button variant="outline" disabled={finished || outcome.isPending} loading={outcome.isPending && choice === "decline"} onClick={() => void go("decline")}>
             Simulate a declined card

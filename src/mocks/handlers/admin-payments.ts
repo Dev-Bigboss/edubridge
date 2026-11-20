@@ -18,8 +18,8 @@ function row(p: (typeof db.payments)[number]) {
   return {
     ...omit(omit(p, "mock"), "idempotency_key"),
     learner: { id: p.learner_id, name: learner?.name ?? "Deleted user", email: learner?.email ?? "" },
-    enrolment_status: enrolment?.status ?? "CANCELLED",
-    cohort_id: enrolment?.cohort_id ?? "",
+    enrolment_status: enrolment?.status ?? null,
+    cohort_id: enrolment?.cohort_id ?? null,
   };
 }
 
@@ -76,6 +76,9 @@ export const adminPaymentHandlers = [
       return apiError(422, "VALIDATION_FAILED", `You can refund up to ${max}.`, { amount: [`You can refund up to ${max}.`] });
     }
     const full = amount === left;
+    if (cancel_enrolment && !payment.enrolment_id) {
+      return apiError(422, "VALIDATION_FAILED", "Only cohort seats have an enrolment to cancel.", { cancel_enrolment: ["Only for cohort seats."] });
+    }
     if (cancel_enrolment && !full) {
       return apiError(422, "VALIDATION_FAILED", "Cancel the enrolment only with a full refund.", { cancel_enrolment: ["Only with a full refund."] });
     }

@@ -4,6 +4,8 @@ import type { Cohort } from "@/lib/api/schemas/cohort";
 import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
 import type { Notification } from "@/lib/api/schemas/notifications";
 import type { PlatformSettings } from "@/lib/api/schemas/settings";
+import type { Booking } from "@/lib/api/schemas/bookings";
+import type { Availability } from "@/lib/domain/slots";
 import { DEFAULT_SETTINGS } from "@/lib/domain/policy";
 import { wants } from "@/lib/domain/notification-groups";
 import { seedCohorts, seedLearnerHistory } from "./seed-cohorts";
@@ -22,6 +24,15 @@ export const MOCK_PASSWORD = "Password123!";
 export const MOCK_MFA_CODE = "123456";
 
 export { LEGAL_VERSIONS } from "@/lib/legal/versions";
+
+/** What the backend stores for a 1:1 booking; the API joins in names and the payment status. */
+export type StoredBooking = Omit<Booking, "training" | "instructor" | "learner" | "payment_status"> & {
+  training_id: string;
+  instructor_id: string;
+  learner_id: string;
+  /** DRAFT only: the slot stays held while the learner is on the payment page. */
+  held_until: string | null;
+};
 
 export type MockUser = User & {
   password: string | null;
@@ -59,6 +70,9 @@ type State = {
   notificationPrefs: Record<string, Record<string, { in_app: boolean; email: boolean }>>;
   /** MFA set-up in progress: user id → secret shown in the authenticator QR. */
   mfaSetup: Record<string, string>;
+  /** OTO-1: each instructor's hours, in their own zone. */
+  availability: Record<string, Availability>;
+  bookings: StoredBooking[];
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -144,6 +158,27 @@ function seedAudit(): AuditEntry[] {
     e(6, 200, "category.updated", "category", "cat_uni_course", 'Category "University Course": changed its fields'),
     e(7, 480, "pricing_rule.created", "pricing_rule", "rule_c_exam", "Cohort × Professional Exam: $450 per seat now"),
   ];
+}
+
+/** Demo hours: evenings and Saturday mornings in each instructor's own zone. */
+function seedAvailability(): Record<string, Availability> {
+  const evenings = (timezone: string, extra: Availability["weekly"] = []): Availability => ({
+    timezone,
+    weekly: [
+      { weekday: 1, start: "18:00", end: "21:00" },
+      { weekday: 3, start: "18:00", end: "21:00" },
+      { weekday: 4, start: "18:00", end: "21:00" },
+      { weekday: 6, start: "09:00", end: "13:00" },
+      ...extra,
+    ],
+    overrides: [],
+    notice_hours: 12,
+  });
+  return {
+    usr_instructor_1: evenings("Europe/London", [{ weekday: 2, start: "07:00", end: "09:00" }]),
+    usr_instructor_2: evenings("Africa/Lagos"),
+    usr_instructor_3: evenings("Europe/London"),
+  };
 }
 
 /** A few demo notifications so the bell isn't empty: recent ones unread, older ones read. */
@@ -257,6 +292,8 @@ function seed(): State {
     notifications: seedNotifications(),
     notificationPrefs: {},
     mfaSetup: {},
+    availability: seedAvailability(),
+    bookings: [],
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -419,7 +456,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v11";
+const STORE_KEY = "edubridge.mock.db.v12";
 
 function load(): State {
   try {

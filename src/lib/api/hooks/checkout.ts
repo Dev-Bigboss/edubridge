@@ -43,7 +43,7 @@ export function usePayment(id: string | null) {
 
 /* ---------- mock gateway (mock mode only) ---------- */
 
-const GatewaySession = z.object({ payment: Payment, cohort_id: z.string(), total: z.string() });
+const GatewaySession = z.object({ payment: Payment, success_url: z.string(), cancel_url: z.string(), authorise_only: z.boolean(), total: z.string() });
 
 export function useMockGateway(id: string) {
   return useApiQuery({

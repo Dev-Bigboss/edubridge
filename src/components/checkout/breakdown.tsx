@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { PriceBreakdown } from "@/lib/api/schemas/payments";
-import { formatMoney } from "@/lib/domain/money";
+import { formatDuration, formatMoney, formatPriceTag } from "@/lib/domain/money";
 
 /** PRC-7: the API's lines as they are. Nothing here adds or rounds anything. */
 export function BreakdownLines({ breakdown }: { breakdown: PriceBreakdown }) {
@@ -11,7 +11,13 @@ export function BreakdownLines({ breakdown }: { breakdown: PriceBreakdown }) {
   return (
     <dl className="space-y-2 text-[15px]">
       <div className="flex justify-between gap-4">
-        <dt>{t("seat", { count: breakdown.quantity })}</dt>
+        <dt>
+          {breakdown.unit_price.unit === "PER_SEAT"
+            ? t("seat", { count: breakdown.quantity })
+            : breakdown.duration_min
+              ? t("sessionHourly", { duration: formatDuration(breakdown.duration_min), rate: formatPriceTag(breakdown.unit_price, breakdown.unit_price.unit) })
+              : t("sessionFlat")}
+        </dt>
         <dd className="text-heading">{money(breakdown.subtotal)}</dd>
       </div>
       {breakdown.discount > 0 && (
