@@ -5,6 +5,7 @@ import type { Cohort } from "@/lib/api/schemas/cohort";
 import { searchCatalog } from "@/lib/domain/catalog";
 import { lowestPrice, resolvePrice, type Price } from "@/lib/domain/pricing";
 import { db, findUser } from "../db";
+import { sweepCohorts } from "./cohorts";
 import { apiError, url } from "./util";
 
 /** Cohort states a guest can see (COH-3). Drafts, finished and cancelled cohorts stay hidden. */
@@ -138,6 +139,7 @@ export const catalogHandlers = [
 
   http.get(url("/catalog/trainings/:slug"), async ({ params }) => {
     await delay(200);
+    sweepCohorts();
     const training = published().find((t) => t.slug === params.slug);
     if (!training) return apiError(404, "NOT_FOUND", "That training isn't in the catalogue. It may have been archived or renamed.");
     return HttpResponse.json({ training: toDetail(training, new Date()) });

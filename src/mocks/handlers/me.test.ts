@@ -52,3 +52,25 @@ describe("learner's own enrolments and payments (TRN-7, PAY-6)", () => {
     expect(await enrolments()).toEqual([]);
   });
 });
+
+describe("post-enrolment checklist (ONB-5)", () => {
+  beforeEach(() => {
+    resetDb();
+    mockSession.set("usr_learner_1");
+  });
+  const running = async () => (await enrolments()).find((i) => i.cohort.id === "coh_aa_2025")!;
+
+  it("starts empty on a running cohort, ticks steps, and can be dismissed", async () => {
+    expect((await running()).checklist).toEqual({ join_tested: false, resources_opened: false, met_instructor: false });
+    await api("/me/enrolments/enr_seed_2/checklist", { method: "POST", body: { item: "met_instructor" } });
+    expect((await running()).checklist?.met_instructor).toBe(true);
+    expect((await failure(api("/me/enrolments/enr_seed_2/checklist", { method: "POST", body: { item: "nope" } }))).status).toBe(422);
+    await api("/me/enrolments/enr_seed_2/checklist", { method: "POST", body: { dismiss: true } });
+    expect((await running()).checklist).toBeNull();
+  });
+
+  it("isn't shown for finished cohorts, and only the learner's own enrolments can be ticked", async () => {
+    expect((await enrolments()).find((i) => i.cohort.id === "coh_mth_past")!.checklist).toBeNull();
+    expect((await failure(api("/me/enrolments/enr_roster_1/checklist", { method: "POST", body: { item: "join_tested" } }))).status).toBe(404);
+  });
+});

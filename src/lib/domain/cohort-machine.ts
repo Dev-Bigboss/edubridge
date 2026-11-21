@@ -60,3 +60,14 @@ export function cohortEditable(status: CohortStatus): "ALL" | "SEATS_AND_NAME" |
   if (status === "COMPLETED" || status === "CANCELLED") return "NONE";
   return status === "IN_PROGRESS" ? "SEATS_AND_NAME" : "ALL";
 }
+
+/**
+ * COH-5: how many more seats must sell by the deadline for the cohort to run. 0 when there's no
+ * minimum or it's already met. Below it at the deadline, the cohort is cancelled and refunded.
+ */
+export function minimumShortfall(c: { min_enrolment: number | null; enrolled_count: number }): number {
+  return c.min_enrolment === null ? 0 : Math.max(0, c.min_enrolment - c.enrolled_count);
+}
+
+/** Cohorts the deadline check applies to: still taking or holding enrolments, not started. */
+export const AUTO_CANCEL_STATUSES: readonly CohortStatus[] = ["OPEN", "FULL", "CLOSED"];

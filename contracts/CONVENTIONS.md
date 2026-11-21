@@ -116,3 +116,5 @@ Every non-2xx response has this body:
 | Sessions and attendance | Cohort classes are dated sessions with their own join link; attendance PRESENT/LATE/ABSENT from the start; for a 1:1, absent = no-show, present/late = completed | `sessions.yaml` |
 | Recordings | Automatic, linked to the session; visible to that session's people (admins for moderation); signed 1-hour links, no downloads; instructor hides/trims/deletes; retention in months is a platform setting (12 until the PO decides) | `recordings.yaml` |
 | Resources | File or link; audience = whole training, one cohort, one class, or one 1:1 learner of that instructor; folders + ordering by buttons; files 100 MB, scanned, downloadable | `resources.yaml` |
+| Post-enrolment checklist | Three steps per cohort seat (test join link, open resources, meet the instructor), ticked by doing them, dismissible | `payments.yaml` |
+| Below-minimum cohorts | Auto-cancelled at the enrolment deadline with full refunds; admins see "needs N more by date" before that | `cohorts.yaml` |

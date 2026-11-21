@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LoadError } from "@/components/admin/catalog-admin";
 import { joinState } from "@/components/booking/calendar-button";
+import { EnrolmentChecklist } from "./enrolment-checklist";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -95,6 +96,8 @@ function EnrolmentCard({ item, zone, now, phase }: { item: LearnerEnrolment; zon
           </span>
         )}
       </div>
+
+      {(phase === "UPCOMING" || phase === "IN_PROGRESS") && <EnrolmentChecklist item={item} />}
 
       {phase === "CANCELLED" ? (
         <p className="mb-4 leading-relaxed text-heading">{t("cancelledNote", { amount: formatMoney(enrolment.price) })}</p>

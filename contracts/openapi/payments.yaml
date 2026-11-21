@@ -81,6 +81,24 @@ paths:
           content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/LearnerEnrolment" } } } } } }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
+  /me/enrolments/{id}/checklist:
+    post:
+      summary: "ONB-5: tick a step ({ item }) or hide the checklist ({ dismiss: true }); own enrolments only"
+      description: Steps are ticked when the learner does them (opens the join test, opens resources, opens the instructor intro). Accepted and ignored while an admin views as the learner.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                item: { type: string, enum: [join_tested, resources_opened, met_instructor] }
+                dismiss: { type: boolean }
+      responses:
+        "204": { description: Saved }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
   /me/payments:
     get:
       summary: The signed-in LEARNER's payments, newest first, without VOIDED (abandoned) attempts (PAY-6)
@@ -210,8 +228,18 @@ components:
         receipt_url: { type: [string, "null"], description: Signed URL of the emailed PDF receipt }
     LearnerEnrolment:
       type: object
-      required: [enrolment, training, cohort, next_session]
+      required: [enrolment, training, cohort, next_session, checklist]
       properties:
+        checklist:
+          description: "ONB-5: steps done; null once dismissed, for refunded seats, or after the cohort ends"
+          oneOf:
+            - { type: "null" }
+            - type: object
+              required: [join_tested, resources_opened, met_instructor]
+              properties:
+                join_tested: { type: boolean }
+                resources_opened: { type: boolean }
+                met_instructor: { type: boolean }
         next_session:
           description: COH-4, the next class with its join link; null once the cohort is over or cancelled
           oneOf:

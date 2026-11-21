@@ -103,6 +103,8 @@ type State = {
   recordingProgress: Record<string, Record<string, number>>;
   /** RES-1..3: training materials. */
   resources: StoredResource[];
+  /** ONB-5: enrolment id → steps done, plus whether the learner dismissed it. */
+  checklists: Record<string, { join_tested: boolean; resources_opened: boolean; met_instructor: boolean; dismissed: boolean }>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -382,6 +384,7 @@ function seed(): State {
     recordings: seedRecordings(),
     recordingProgress: {},
     resources: seedResources(),
+    checklists: {},
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -544,7 +547,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v15";
+const STORE_KEY = "edubridge.mock.db.v16";
 
 function load(): State {
   try {

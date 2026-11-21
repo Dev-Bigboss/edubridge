@@ -11,7 +11,7 @@ test("RES-2/3: a learner sees the materials shared with them, by folder", async 
   await signIn(page, "learner@example.com");
   await expect(page).toHaveURL(/\/learn$/);
   await page.goto("/learn/trainings");
-  await page.getByRole("article", { name: "ICAN Audit and Assurance (2025 syllabus)" }).getByRole("link", { name: "Resources" }).click();
+  await page.getByRole("article", { name: "ICAN Audit and Assurance (2025 syllabus)" }).getByRole("link", { name: "Resources", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Resources", level: 1 })).toBeVisible();
   const week1 = page.getByRole("region", { name: "Week 1" });
   await expect(week1.getByText("Audit planning: summary notes")).toBeVisible();

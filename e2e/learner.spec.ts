@@ -61,3 +61,26 @@ test("learner pages never scroll sideways at 320 px", async ({ page }) => {
     expect(overflow, `${path} is wider than the screen`).toBeLessThanOrEqual(0);
   }
 });
+
+test("ONB-5: the getting-ready checklist ticks itself as the learner goes", async ({ page }) => {
+  await page.goto("/learn/trainings");
+  const card = page.getByRole("article", { name: "ICAN Audit and Assurance (2025 syllabus)" });
+  const checklist = card.getByRole("region", { name: "Get ready for your classes" });
+  await expect(checklist.getByText("0 of 3 done")).toBeVisible();
+  await expectNoA11yViolations(page);
+
+  await checklist.getByRole("button", { name: "Say hello" }).click();
+  await expect(page.getByRole("dialog", { name: "Meet Test Instructor" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(checklist.getByText("1 of 3 done")).toBeVisible();
+
+  const saved = page.waitForResponse((r) => r.url().includes("/checklist") && r.request().method() === "POST");
+  await checklist.getByRole("link", { name: "Open resources" }).click();
+  await saved;
+  await expect(page.getByRole("heading", { name: "Resources", level: 1 })).toBeVisible();
+  await page.goto("/learn/trainings");
+  await expect(checklist.getByText("2 of 3 done")).toBeVisible();
+
+  await checklist.getByRole("button", { name: "Hide this checklist" }).click();
+  await expect(checklist).toHaveCount(0);
+});

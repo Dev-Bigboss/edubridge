@@ -647,7 +647,7 @@
       "actions": "Actions",
       "sessions": "{count, plural, one {# session} other {# sessions}}",
       "seatsValue": "{enrolled} of {capacity} taken",
-      "belowMinimum": "Below the minimum of {min}",
+      "belowMinimum": "{count, plural, one {Needs # more} other {Needs # more}} by {date}, or it's cancelled automatically and everyone refunded",
       "finished": "No changes",
       "manage": "Manage {name}",
       "manageShort": "Manage",
@@ -1220,6 +1220,22 @@
       "footer": "Thank you for learning with EduBridge. A copy of this receipt was emailed to you. Questions about a payment? Reply to that email.",
       "unavailable": "This receipt isn't available",
       "unavailableBody": "Receipts exist for completed payments only. Your payment history has every receipt you have."
+    },
+    "checklist": {
+      "title": "Get ready for your classes",
+      "progress": "{done} of {total} done",
+      "join": "Test your join link, camera and microphone",
+      "joinCta": "Test now",
+      "resources": "Download the course materials",
+      "resourcesCta": "Open resources",
+      "instructor": "Meet {name}, your instructor",
+      "instructorCta": "Say hello",
+      "hide": "Hide this checklist",
+      "doneHide": "All done. Hide this checklist",
+      "doneLabel": "done",
+      "todoLabel": "to do",
+      "meetTitle": "Meet {name}",
+      "meetBody": "You'll see them in every {cohort} class. Bring your questions: classes leave time for them."
     }
   },
   "notifications": {

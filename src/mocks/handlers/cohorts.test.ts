@@ -3,6 +3,7 @@ import { ApiError, api } from "@/lib/api/client";
 import { AdminCohortList, CohortResponse, type CohortInput } from "@/lib/api/schemas/cohort";
 import { deadlineFromDate } from "@/lib/domain/cohort-schedule";
 import { db, mockSession, resetDb } from "../db";
+import { sweepCohorts } from "./cohorts";
 
 const failure = (p: Promise<unknown>) =>
   p.then(
@@ -97,5 +98,36 @@ describe("admin cohorts mock (cohorts.yaml, COH-1/3/5)", () => {
     expect(db.enrolments.find((e) => e.id === "enr_1")!.status).toBe("REFUNDED");
     expect(db.outbox[0]).toMatchObject({ to: "learner@example.com" });
     expect(db.outbox[0].subject).toContain("$250 refunded");
+  });
+});
+
+describe("automatic cancellation below the minimum (COH-5)", () => {
+  beforeEach(() => resetDb());
+
+  it("at the deadline, a cohort short of its minimum is cancelled, refunded and everyone told", async () => {
+    const c = db.cohorts.find((x) => x.id === "coh_mth_sem1")!;
+    c.enrolled_count = 2; // minimum is 5
+    db.enrolments.push({ id: "enr_auto", learner_id: "usr_learner_1", training_id: c.training_id, cohort_id: c.id, status: "CONFIRMED", price: { amount: 25000, currency: "USD", unit: "PER_SEAT" }, payment_id: "pay_auto", created_at: "", confirmed_at: "" });
+    db.payments.push({ id: "pay_auto", learner_id: "usr_learner_1", enrolment_id: "enr_auto", booking_id: null, description: "MTH 101", breakdown: { currency: "USD", unit_price: { amount: 25000, currency: "USD", unit: "PER_SEAT" }, quantity: 1, duration_min: null, subtotal: 25000, discount: 0, tax: 0, total: 25000 }, status: "CAPTURED", method: "Visa ending 4242", failure_message: null, refunded_amount: 0, created_at: "", captured_at: "", receipt_number: "EB-2026-00099", receipt_url: null });
+
+    sweepCohorts(); // deadline not reached yet
+    expect(c.status).toBe("OPEN");
+
+    c.enrolment_deadline = new Date(Date.now() - 60_000).toISOString();
+    sweepCohorts();
+    expect(c.status).toBe("CANCELLED");
+    expect(db.payments.find((p) => p.id === "pay_auto")!.status).toBe("REFUNDED");
+    expect(db.notifications.map((n) => [n.user_id, n.type]).slice(0, 2)).toEqual([
+      ["usr_instructor_2", "COHORT_CANCELLED"],
+      ["usr_learner_1", "COHORT_CANCELLED"],
+    ]);
+    expect(db.audit[0]).toMatchObject({ actor_name: "System", action: "cohort.auto_cancel", target_id: c.id });
+  });
+
+  it("leaves cohorts that met their minimum, have none, or already started", () => {
+    for (const c of db.cohorts) c.enrolment_deadline = new Date(Date.now() - 60_000).toISOString();
+    const before = db.cohorts.map((c) => c.status);
+    sweepCohorts();
+    expect(db.cohorts.map((c) => c.status)).toEqual(before); // every seeded cohort meets its minimum
   });
 });

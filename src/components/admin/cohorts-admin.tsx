@@ -21,8 +21,8 @@ import { useAdminTrainings } from "@/lib/api/hooks/admin-catalog";
 import { useModalities } from "@/lib/api/hooks/catalog";
 import { useAdminCohorts, useCohortAction, type CohortFilters } from "@/lib/api/hooks/cohorts";
 import type { AdminCohort } from "@/lib/api/schemas/cohort";
-import { cohortActions, cohortEditable, type CohortActionName } from "@/lib/domain/cohort-machine";
-import { formatCalendarDate } from "@/lib/domain/cohort-schedule";
+import { AUTO_CANCEL_STATUSES, cohortActions, cohortEditable, minimumShortfall, type CohortActionName } from "@/lib/domain/cohort-machine";
+import { dateInZone, formatCalendarDate } from "@/lib/domain/cohort-schedule";
 import { COHORT_STATUSES, MODALITY } from "@/lib/domain/enums";
 import { LoadError } from "./catalog-admin";
 import { CohortDialog } from "./cohort-dialog";
@@ -134,8 +134,10 @@ export function CohortsAdmin() {
                   </td>
                   <td className={`${td} whitespace-nowrap`}>
                     {t("seatsValue", { enrolled: c.enrolled_count, capacity: c.capacity })}
-                    {c.min_enrolment !== null && c.enrolled_count < c.min_enrolment && !["COMPLETED", "CANCELLED"].includes(c.status) && (
-                      <p className="text-sm text-warning">{t("belowMinimum", { min: c.min_enrolment })}</p>
+                    {minimumShortfall(c) > 0 && AUTO_CANCEL_STATUSES.includes(c.status) && (
+                      <p className="max-w-[220px] text-sm whitespace-normal text-warning">
+                        {t("belowMinimum", { count: minimumShortfall(c), date: formatCalendarDate(dateInZone(c.enrolment_deadline, c.schedule.timezone)) })}
+                      </p>
                     )}
                   </td>
                   <td className={td}>

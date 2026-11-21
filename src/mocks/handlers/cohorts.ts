@@ -1,7 +1,7 @@
 import { delay } from "msw";
 import { http, HttpResponse } from "msw/http";
 import { COHORT_ACTIONS, CohortInput, type Cohort, type CohortAction } from "@/lib/api/schemas/cohort";
-import { COHORT_ACTION_TARGET, canMoveCohort, cohortEditable } from "@/lib/domain/cohort-machine";
+import { AUTO_CANCEL_STATUSES, COHORT_ACTION_TARGET, canMoveCohort, cohortEditable, minimumShortfall } from "@/lib/domain/cohort-machine";
 import { planSessions } from "@/lib/domain/cohort-schedule";
 import { MODALITY } from "@/lib/domain/enums";
 import { formatMoney } from "@/lib/domain/money";
@@ -73,11 +73,45 @@ function cancelCohort(cohort: Cohort, reason: string) {
   return { refunded, reason };
 }
 
+export const AUTO_CANCEL_REASON = "Not enough learners enrolled by the deadline for this cohort to go ahead.";
+
+/**
+ * COH-5: at the enrolment deadline, a cohort below its minimum is cancelled and everyone refunded.
+ * The backend runs this on a schedule; the mock runs it before answering about cohorts.
+ */
+export function sweepCohorts(now = Date.now()) {
+  let changed = false;
+  for (const c of db.cohorts) {
+    if (!AUTO_CANCEL_STATUSES.includes(c.status) || Date.parse(c.enrolment_deadline) > now || minimumShortfall(c) === 0) continue;
+    const { refunded } = cancelCohort(c, AUTO_CANCEL_REASON);
+    c.status = "CANCELLED";
+    notify(c.instructor_id, {
+      type: "COHORT_CANCELLED",
+      title: `${c.name} didn't reach its minimum`,
+      body: `It was cancelled automatically at the enrolment deadline and ${refunded} learner${refunded === 1 ? " was" : "s were"} refunded.`,
+      link: "/teach/schedule",
+    });
+    db.audit.unshift({
+      id: newId("aud"),
+      actor_id: "system",
+      actor_name: "System",
+      action: "cohort.auto_cancel",
+      target_type: "cohort",
+      target_id: c.id,
+      summary: `Cohort "${c.name}" cancelled automatically below its minimum of ${c.min_enrolment}, ${refunded} refunded.`,
+      created_at: new Date(now).toISOString(),
+    });
+    changed = true;
+  }
+  if (changed) save();
+}
+
 export const cohortHandlers = [
   http.get(url("/admin/cohorts"), async ({ request }) => {
     await delay(250);
     const user = admin();
     if (user instanceof Response) return user;
+    sweepCohorts();
     const p = new URL(request.url).searchParams;
     const items = db.cohorts
       .filter((c) => !p.get("training_id") || c.training_id === p.get("training_id"))

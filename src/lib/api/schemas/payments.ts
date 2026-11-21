@@ -105,6 +105,10 @@ export const LearnerEnrolment = z.object({
   cohort: PublicCohort,
   /** COH-4: the next class with its join link (null once the cohort is over). */
   next_session: z.object({ id: z.string(), start_utc: z.string(), end_utc: z.string(), join_url: z.string() }).nullable(),
+  /** ONB-5: getting ready for the first class. Null once dismissed or the cohort is over. */
+  checklist: z
+    .object({ join_tested: z.boolean(), resources_opened: z.boolean(), met_instructor: z.boolean() })
+    .nullable(),
 });
 export type LearnerEnrolment = z.infer<typeof LearnerEnrolment>;
 export const LearnerEnrolmentList = z.object({ items: z.array(LearnerEnrolment) });
@@ -137,3 +141,6 @@ export const RefundRequest = z.object({
 export type RefundRequest = z.infer<typeof RefundRequest>;
 
 export type AdminPaymentFilters = { q?: string; status?: string; from?: string; to?: string };
+
+export const CHECKLIST_ITEMS = ["join_tested", "resources_opened", "met_instructor"] as const;
+export type ChecklistItem = (typeof CHECKLIST_ITEMS)[number];

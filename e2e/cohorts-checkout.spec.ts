@@ -135,3 +135,15 @@ test.describe("admin cohorts (COH-1/3/5)", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 });
+
+test("COH-5: an admin sees which cohorts are short of their minimum and by when", async ({ page }) => {
+  await signIn(page, "admin@example.com", { mfa: true });
+  await expect(page).toHaveURL(/\/admin$/);
+  // Open the draft spring cohort (0 of 20, minimum 6) so the warning applies.
+  await page.goto("/admin/cohorts");
+  await page.getByRole("button", { name: "Manage Spring evening cohort" }).click();
+  await page.getByRole("menuitem", { name: "Open for enrolment" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Open for enrolment" }).click();
+  const row = page.getByRole("row", { name: /^Spring evening cohort/ });
+  await expect(row.getByText(/Needs 6 more by .+, or it's cancelled automatically and everyone refunded/)).toBeVisible();
+});

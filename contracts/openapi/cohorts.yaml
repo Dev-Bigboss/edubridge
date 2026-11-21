@@ -79,8 +79,10 @@ paths:
         cancel needs body { reason } (≥ 5 chars, 422 reason). It refunds every CONFIRMED enrolment in full to the
         original payment method, marks enrolments REFUNDED, sets enrolled_count 0, and emails each learner the
         reason and amount (COH-5, PAY-5). Must be safe to retry: a second cancel returns 409, never a second refund.
-        COH-5 also asks for automatic cancellation below min_enrolment at the deadline: a scheduled backend job,
-        same effects as cancel with a standard reason.
+        COH-5 automatic cancellation (scheduled job): at enrolment_deadline, an OPEN, FULL or CLOSED cohort with
+        enrolled_count < min_enrolment is cancelled with the reason "Not enough learners enrolled by the deadline for this
+        cohort to go ahead.", same effects as cancel; the instructor is notified and the audit entry's actor is "System"
+        (action cohort.auto_cancel). Mirrors minimumShortfall() in src/lib/domain/cohort-machine.ts.
       parameters:
         - { name: id, in: path, required: true, schema: { type: string } }
         - { name: action, in: path, required: true, schema: { type: string, enum: [open, close, start, complete, cancel] } }
