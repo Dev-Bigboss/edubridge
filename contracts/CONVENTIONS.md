@@ -118,3 +118,9 @@ Every non-2xx response has this body:
 | Resources | File or link; audience = whole training, one cohort, one class, or one 1:1 learner of that instructor; folders + ordering by buttons; files 100 MB, scanned, downloadable | `resources.yaml` |
 | Post-enrolment checklist | Three steps per cohort seat (test join link, open resources, meet the instructor), ticked by doing them, dismissible | `payments.yaml` |
 | Below-minimum cohorts | Auto-cancelled at the enrolment deadline with full refunds; admins see "needs N more by date" before that | `cohorts.yaml` |
+| Who can message whom | Learner ↔ instructor only, once a seat (CONFIRMED) or a 1:1 booking past DRAFT links them, or the learner asks about one of the instructor's published trainings (enquiry); one conversation per pair; admins don't take part (BR-6, MSG-1) | `messages.yaml` |
+| Cohort channels | One per cohort past DRAFT: instructor + confirmed learners; only the instructor can post announcements (pinned); read-only once the cohort is completed or cancelled (MSG-2) | `messages.yaml` |
+| Real-time delivery | WebSocket `/api/v1/realtime` pushes `message.created`, `conversation.read`, `unread.changed`; the UI polls (list 15 s, open conversation 5 s, badge 30 s) when the socket is down (MSG-3, plan D7) | `messages.yaml`, `hooks/messages.ts` |
+| Read receipts and unread | Per person `last_read_at`; unread = others' messages after it; "Seen" shown in one-to-one chats only | `messages.yaml`, `domain/messages.ts` |
+| Message limits | 1–4000 characters, up to 5 attachments (MESSAGE_ATTACHMENT: same types, 100 MB and scan as resources); `client_id` makes a retried send post once | `messages.yaml`, `uploads.yaml` |
+| New-message alerts | Not in the notification bell (it would flood it); the sidebar shows unread messages; the email after a delay comes with MSG-5 | `messages.yaml` |

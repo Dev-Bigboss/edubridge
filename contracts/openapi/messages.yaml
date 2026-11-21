@@ -1,0 +1,205 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Messages"
+  version: 0.1.0
+  description: |
+    Messaging (MSG-1..4). Zod mirror: src/lib/api/schemas/messages.ts. Mock: src/mocks/handlers/messages.ts.
+    Rules mirrored in src/lib/domain/messages.ts.
+
+    - MSG-1 / BR-6: a DIRECT conversation joins one learner and one instructor. Either may open it when a relationship exists:
+        ENROLMENT  the learner has a CONFIRMED seat in one of the instructor's cohorts
+        BOOKING    a 1:1 booking between them that got past DRAFT
+        ENQUIRY    the learner asks a question before buying: `training_id` names a published training the instructor teaches
+      Otherwise 403 MESSAGING_NOT_ALLOWED. Instructors can't start enquiries. Admins don't take part (they can read
+      reported conversations in moderation, Phase 3 part 2). One DIRECT conversation per pair; opening it again returns it.
+      A conversation with no messages yet only shows in the list of the person who opened it.
+    - MSG-2: every cohort past DRAFT has one COHORT channel: its instructor plus learners with a CONFIRMED seat. The
+      instructor may flag a message `announcement: true` (shown pinned and highlighted); learners can't. A COMPLETED or
+      CANCELLED cohort's channel stays readable but `can_post` is false.
+    - MSG-3: history is paged newest first by cursor (`before` = a message id). `unread_count` counts others' messages
+      after my `last_read_at`. `POST /conversations/{id}/read` moves it. DIRECT conversations carry the other person's
+      `last_read_at` so the sender sees "Seen". Delivery is real time over WebSocket (below); the frontend falls back to
+      polling these endpoints (list 15 s, open conversation 5 s, unread count 30 s) when the socket is down.
+    - MSG-4: attachments are uploads with purpose MESSAGE_ATTACHMENT (uploads.yaml: same types, 100 MB limit and virus
+      scan as resources). At most 5 per message; only CLEAN files can be attached; signed URLs as for resources.
+    - Messages are 1 to 4000 characters after trimming (or empty with at least one attachment). `client_id` (UUID) makes a
+      retried send return the original message instead of posting twice.
+    - New messages do not fill the notification bell; the Messages item in the sidebar shows the unread total. MSG-5
+      (email after a delay when still unread) and MSG-6 (report, block, contact-detail filter) come in part 2.
+    - Writes are refused while an admin views as the user.
+
+    WebSocket (not describable in OpenAPI): `GET /api/v1/realtime` upgrades with the session cookie. Server → client events,
+    JSON `{ "type": ..., "data": ... }`:
+      message.created        data: Message                                  (to every member but the sender's other tabs too)
+      conversation.read      data: { conversation_id, user_id, last_read_at }
+      unread.changed         data: { unread_count }
+    The client sends nothing but pings; all writes go through REST.
+servers:
+  - url: /api/v1
+paths:
+  /me/conversations:
+    get:
+      summary: My conversations, most recent message first, empty ones last (DIRECT and COHORT)
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Conversation" } } } } } }
+    post:
+      summary: Open (or get) the DIRECT conversation with a person (BR-6). 200 if it existed, 201 if new
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: { type: string }
+                training_id: { type: [string, "null"], description: "Needed for an ENQUIRY: the training the question is about" }
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "201": { $ref: "#/components/responses/ConversationResponse" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /me/conversations/unread-count:
+    get:
+      summary: Unread messages across my conversations (sidebar badge)
+      responses:
+        "200":
+          description: Count
+          content: { application/json: { schema: { type: object, required: [unread_count], properties: { unread_count: { type: integer, minimum: 0 } } } } }
+  /me/contacts:
+    get:
+      summary: People I may message (BR-6), with why
+      responses:
+        "200":
+          description: Contacts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Contact" } }
+  /conversations/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: One conversation I'm in (404 otherwise)
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/messages:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: History, newest page first; items within a page oldest → newest
+      parameters:
+        - { name: before, in: query, schema: { type: string }, description: "Cursor: return messages older than this message id" }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 30 } }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Message" } }
+                  next_cursor: { type: [string, "null"], description: "Pass as `before` for older messages" }
+        "404": { $ref: "#/components/responses/Error" }
+    post:
+      summary: Send a message (MSG-3/4)
+      parameters: [{ name: Idempotency-Key, in: header, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body, attachment_ids, announcement, client_id]
+              properties:
+                body: { type: string, maxLength: 4000 }
+                attachment_ids: { type: array, maxItems: 5, items: { type: string } }
+                announcement: { type: boolean, description: "COHORT channel, instructor only" }
+                client_id: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Sent (200 with the original when client_id repeats)
+          content: { application/json: { schema: { type: object, required: [message], properties: { message: { $ref: "#/components/schemas/Message" } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/read:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Mark everything up to now as read
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    ConversationResponse:
+      description: Conversation
+      content: { application/json: { schema: { type: object, required: [conversation], properties: { conversation: { $ref: "#/components/schemas/Conversation" } } } } }
+  schemas:
+    Person:
+      type: object
+      required: [id, name, role, avatar_url]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [LEARNER, INSTRUCTOR, ADMIN] }
+        avatar_url: { type: [string, "null"] }
+    Contact:
+      allOf:
+        - { $ref: "#/components/schemas/Person" }
+        - type: object
+          required: [context, context_label, conversation_id]
+          properties:
+            context: { type: string, enum: [ENROLMENT, BOOKING, ENQUIRY] }
+            context_label: { type: string, description: "e.g. 'Your instructor, ICAN Audit and Assurance'" }
+            conversation_id: { type: [string, "null"], description: "Existing DIRECT conversation, if any" }
+    Conversation:
+      type: object
+      required: [id, kind, title, subtitle, context, training_id, cohort_id, participants, member_count, last_message, unread_count, last_read_at, other_last_read_at, can_post, can_announce, updated_at]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [DIRECT, COHORT] }
+        title: { type: string, description: "DIRECT: the other person's name. COHORT: the cohort name" }
+        subtitle: { type: string, description: "The training, or 'Question about <training>' for an enquiry" }
+        context: { type: string, enum: [ENROLMENT, BOOKING, ENQUIRY, COHORT] }
+        training_id: { type: [string, "null"] }
+        cohort_id: { type: [string, "null"] }
+        participants: { type: array, description: "Everyone but me", items: { $ref: "#/components/schemas/Person" } }
+        member_count: { type: integer }
+        last_message:
+          oneOf:
+            - type: object
+              required: [preview, sender_name, mine, created_at]
+              properties:
+                preview: { type: string, description: "First 120 characters, or 'Sent a file'" }
+                sender_name: { type: string }
+                mine: { type: boolean }
+                created_at: { type: string, format: date-time }
+            - { type: "null" }
+        unread_count: { type: integer, minimum: 0 }
+        last_read_at: { type: [string, "null"], format: date-time }
+        other_last_read_at: { type: [string, "null"], format: date-time, description: "DIRECT only: read receipt" }
+        can_post: { type: boolean }
+        can_announce: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    Message:
+      type: object
+      required: [id, conversation_id, sender, body, attachments, announcement, client_id, created_at]
+      properties:
+        id: { type: string }
+        conversation_id: { type: string }
+        sender: { $ref: "#/components/schemas/Person" }
+        body: { type: string }
+        attachments: { type: array, items: { $ref: "./uploads.yaml#/components/schemas/StoredFile" } }
+        announcement: { type: boolean }
+        client_id: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }

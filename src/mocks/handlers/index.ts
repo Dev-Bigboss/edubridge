@@ -8,6 +8,7 @@ import { catalogHandlers } from "./catalog";
 import { checkoutHandlers } from "./checkout";
 import { cohortHandlers } from "./cohorts";
 import { meHandlers } from "./me";
+import { messageHandlers } from "./messages";
 import { notificationHandlers } from "./notifications";
 import { onboardingHandlers } from "./onboarding";
 import { pricingHandlers } from "./pricing";
@@ -32,6 +33,7 @@ export const handlers = [
   ...sessionHandlers,
   ...recordingHandlers,
   ...resourceHandlers,
+  ...messageHandlers,
   ...notificationHandlers,
   ...meHandlers,
   ...accountHandlers,

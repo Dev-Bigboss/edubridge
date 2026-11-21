@@ -2,6 +2,7 @@
 
 import { CalendarCheck, Clock, Inbox, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { MessageButton } from "@/components/messages/message-button";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { LoadError } from "@/components/admin/catalog-admin";
@@ -83,6 +84,7 @@ export function Requests() {
 
 function RequestCard({ booking: b, user }: { booking: Booking; user: User }) {
   const t = useTranslations("teach.requests");
+  const ti = useTranslations("inbox");
   const zone = user.timezone;
   const countdown = useCountdown(b.status === "PENDING_INSTRUCTOR" || b.status === "COUNTER_PROPOSED" ? b.expires_at : null);
   const [dialog, setDialog] = useState<"decline" | "propose" | "reschedule" | "cancel" | null>(null);
@@ -108,6 +110,9 @@ function RequestCard({ booking: b, user }: { booking: Booking; user: User }) {
             {b.learner.name}
           </h3>
           <p className="text-[15px]">{b.training.title}</p>
+          <MessageButton role="INSTRUCTOR" userId={b.learner.id} variant="link">
+            {ti("messageLearner", { name: b.learner.name })}
+          </MessageButton>
         </div>
         {countdown && (
           <p className="flex items-center gap-1.5 rounded-full bg-warning-soft px-3 py-1 text-sm font-medium text-warning">

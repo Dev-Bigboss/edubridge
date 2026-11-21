@@ -3,6 +3,7 @@
 import { ArrowLeft, CalendarX, Clock, LoaderCircle, Video } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { MessageButton } from "@/components/messages/message-button";
 import { useEffect, useState } from "react";
 import { LoadError } from "@/components/admin/catalog-admin";
 import { PersonAvatar } from "@/components/catalog/bits";
@@ -60,6 +61,7 @@ export function BookingDetail({ id, user }: { id: string; user: User }) {
 
 function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
   const t = useTranslations("booking.detail");
+  const ti = useTranslations("inbox");
   const countdown = useCountdown(b.status === "PENDING_INSTRUCTOR" || b.status === "COUNTER_PROPOSED" ? b.expires_at : null);
   const action = useBookingAction(b.id);
   const join = joinState(b);
@@ -206,6 +208,13 @@ function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
                 <PersonAvatar name={b.instructor.name} url={b.instructor.avatar_url} size="sm" />
                 {b.instructor.name}
               </dd>
+              {b.status !== "DRAFT" && (
+                <dd className="mt-1">
+                  <MessageButton role="LEARNER" userId={b.instructor.id} variant="link">
+                    {ti("messageInstructor", { name: b.instructor.name })}
+                  </MessageButton>
+                </dd>
+              )}
             </div>
             {b.note && (
               <div>

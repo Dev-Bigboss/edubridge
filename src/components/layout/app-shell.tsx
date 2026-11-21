@@ -8,6 +8,7 @@ import { Dialog, DropdownMenu } from "radix-ui";
 import { Suspense, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { useUnreadMessages } from "@/lib/api/hooks/messages";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/spinner";
 import type { User } from "@/lib/api/schemas/auth";
@@ -56,7 +57,7 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
     <div className="min-h-dvh bg-white lg:pl-[240px]">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] flex-col border-r border-border-subtle bg-white lg:flex">
-        <SidebarContent items={items} pathname={pathname} area={area} />
+        <SidebarContent items={items} pathname={pathname} area={area} role={user.role} />
       </aside>
 
       {/* Mobile sidebar */}
@@ -70,7 +71,7 @@ function Shell({ user, children }: { user: User; children: ReactNode }) {
                 <X aria-hidden="true" className="size-5" />
               </Button>
             </Dialog.Close>
-            <SidebarContent items={items} pathname={pathname} area={area} onNavigate={() => setOpen(false)} />
+            <SidebarContent items={items} pathname={pathname} area={area} role={user.role} onNavigate={() => setOpen(false)} />
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
@@ -101,15 +102,19 @@ function SidebarContent({
   items,
   pathname,
   area,
+  role,
   onNavigate,
 }: {
   items: NavItem[];
   pathname: string;
   area: string;
+  role: Role;
   onNavigate?: () => void;
 }) {
   const t = useTranslations();
   const active = activeItem(items, pathname);
+  // MSG-3: unread messages on the Messages item (admins don't take part in conversations).
+  const unread = useUnreadMessages(role !== "ADMIN").data ?? 0;
   return (
     <>
       <div className="flex h-16 shrink-0 items-center gap-2 px-5">
@@ -132,7 +137,18 @@ function SidebarContent({
                   )}
                 >
                   <item.icon aria-hidden="true" className="size-[18px] shrink-0" />
-                  {t(`appNav.${item.labelKey}`)}
+                  <span className="flex-1">{t(`appNav.${item.labelKey}`)}</span>
+                  {item.labelKey === "messages" && unread > 0 && (
+                    <span
+                      className={cn(
+                        "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                        isActive ? "bg-white text-primary" : "bg-primary text-white",
+                      )}
+                    >
+                      {unread > 99 ? "99+" : unread}
+                      <span className="sr-only"> {t("inbox.unread")}</span>
+                    </span>
+                  )}
                 </Link>
               </li>
             );

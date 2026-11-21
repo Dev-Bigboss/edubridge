@@ -6,6 +6,7 @@ import type { Notification } from "@/lib/api/schemas/notifications";
 import type { PlatformSettings } from "@/lib/api/schemas/settings";
 import type { Booking } from "@/lib/api/schemas/bookings";
 import type { Resource } from "@/lib/api/schemas/resources";
+import type { StoredFile } from "@/lib/api/schemas/uploads";
 import type { Availability } from "@/lib/domain/slots";
 import { DEFAULT_SETTINGS } from "@/lib/domain/policy";
 import { wants } from "@/lib/domain/notification-groups";
@@ -57,6 +58,33 @@ export type StoredRecording = {
 
 export type StoredResource = Omit<Resource, "audience_label"> & { owner_id: string };
 
+/** MSG-1/2: a DIRECT pair or a cohort's channel (members come from the cohort's seats). */
+export type StoredConversation = {
+  id: string;
+  kind: "DIRECT" | "COHORT";
+  context: "ENROLMENT" | "BOOKING" | "ENQUIRY" | "COHORT";
+  /** DIRECT: [learner, instructor]. COHORT: empty, members are worked out from the cohort. */
+  member_ids: string[];
+  training_id: string | null;
+  cohort_id: string | null;
+  /** Who opened it: an empty DIRECT conversation only shows for them. */
+  created_by: string | null;
+  created_at: string;
+  /** MSG-3: user id → when they last read it. */
+  reads: Record<string, string>;
+};
+
+export type StoredMessage = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  attachments: StoredFile[];
+  announcement: boolean;
+  client_id: string | null;
+  created_at: string;
+};
+
 export type MockUser = User & {
   password: string | null;
   headline?: string | null;
@@ -105,6 +133,9 @@ type State = {
   resources: StoredResource[];
   /** ONB-5: enrolment id → steps done, plus whether the learner dismissed it. */
   checklists: Record<string, { join_tested: boolean; resources_opened: boolean; met_instructor: boolean; dismissed: boolean }>;
+  /** MSG-1..4 */
+  conversations: StoredConversation[];
+  messages: StoredMessage[];
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -256,6 +287,38 @@ function seedResources(): StoredResource[] {
   ];
 }
 
+/** A chat with the Autumn cohort's instructor (last reply unread) and the cohort's channel. */
+function seedMessages(): Pick<State, "conversations" | "messages"> {
+  const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
+  const msg = (n: number, conversation_id: string, sender_id: string, minutesAgo: number, body: string, announcement = false): StoredMessage => ({
+    id: `msg_seed_${n}`, conversation_id, sender_id, body, attachments: [], announcement, client_id: null, created_at: ago(minutesAgo),
+  });
+  const direct = "cnv_seed_direct";
+  const channel = "cnv_seed_coh_aa_2025";
+  return {
+    conversations: [
+      {
+        id: direct, kind: "DIRECT", context: "ENROLMENT", member_ids: ["usr_learner_1", "usr_instructor_1"], training_id: "trn_ican_aa_2025",
+        cohort_id: null, created_by: "usr_learner_1", created_at: ago(60 * 50), reads: { usr_learner_1: ago(60 * 26), usr_instructor_1: ago(60 * 3) },
+      },
+      {
+        id: channel, kind: "COHORT", context: "COHORT", member_ids: [], training_id: "trn_ican_aa_2025", cohort_id: "coh_aa_2025",
+        created_by: null, created_at: ago(60 * 24 * 20), reads: { usr_learner_1: ago(60 * 24 * 2), usr_instructor_1: ago(30) },
+      },
+    ],
+    messages: [
+      msg(1, direct, "usr_learner_1", 60 * 48, "Good evening. Should I read the whole of chapter 3 before Thursday, or is the summary in Resources enough?"),
+      msg(2, direct, "usr_instructor_1", 60 * 47, "The summary is enough for Thursday. Read 3.4 on materiality in full though, we'll work through an example on it."),
+      msg(3, direct, "usr_learner_1", 60 * 27, "Thank you. I've done 3.4 now."),
+      msg(4, direct, "usr_instructor_1", 60 * 2, "Great. Bring one question about it to class and we'll start there."),
+      msg(5, channel, "usr_instructor_1", 60 * 24 * 6, "Welcome to the Autumn cohort channel. Use it for questions between classes; I usually answer within a day.", true),
+      msg(6, channel, "usr_roster_1", 60 * 24 * 3, "Does anyone have the page number for the audit risk model diagram?"),
+      msg(7, channel, "usr_roster_2", 60 * 24 * 3 - 20, "Page 112 in the study text."),
+      msg(8, channel, "usr_instructor_1", 60 * 20, "Reminder: Thursday's class starts 15 minutes early to make room for the mock exam review.", true),
+    ],
+  };
+}
+
 /** A few demo notifications so the bell isn't empty: recent ones unread, older ones read. */
 function seedNotifications(): State["notifications"] {
   const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
@@ -385,6 +448,7 @@ function seed(): State {
     recordingProgress: {},
     resources: seedResources(),
     checklists: {},
+    ...seedMessages(),
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -547,7 +611,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v16";
+const STORE_KEY = "edubridge.mock.db.v17";
 
 function load(): State {
   try {

@@ -17,6 +17,7 @@ import { browserTimeZone } from "@/lib/domain/time";
 import { languageName } from "@/lib/domain/training";
 import { PersonAvatar, TrainingImage } from "./bits";
 import { CohortCard } from "./cohort-card";
+import { MessageButton } from "@/components/messages/message-button";
 
 /** /trainings/[slug]: what it is, who teaches it, and the ways to join (TRN-1/4, COH-2, PRC-7). */
 export function TrainingDetail({ slug }: { slug: string }) {
@@ -56,6 +57,7 @@ export function TrainingDetail({ slug }: { slug: string }) {
 
 function Detail({ training }: { training: PublicTrainingDetail }) {
   const t = useTranslations("catalog");
+  const ti = useTranslations("inbox");
   const { data: user } = useSession();
   const zone = useMemo(() => user?.timezone ?? browserTimeZone(), [user?.timezone]);
   const isCohort = training.modality.code === MODALITY.COHORT;
@@ -172,6 +174,22 @@ function Detail({ training }: { training: PublicTrainingDetail }) {
                     <h3 className="text-lg">{i.name}</h3>
                     {i.headline && <p className="text-[15px]">{i.headline}</p>}
                   </div>
+                  {/* MSG-1: a pre-sale question. Guests sign in first and come back here. */}
+                  {(!user || user.role === "LEARNER") && (
+                    <div className="w-full sm:w-auto">
+                      {user ? (
+                        <MessageButton role="LEARNER" userId={i.id} trainingId={training.id} variant="link" ariaLabel={ti("askQuestionLabel", { name: i.name })}>
+                          {ti("askQuestion")}
+                        </MessageButton>
+                      ) : (
+                        <Button asChild variant="link">
+                          <Link href={`/login?next=${encodeURIComponent(`/trainings/${training.slug}#instructors`)}`} aria-label={ti("askQuestionLabel", { name: i.name })}>
+                            {ti("askQuestion")}
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {!isCohort && (
                     <div className="flex flex-col items-start gap-2 sm:items-end">
                       {i.price && <p className="font-heading text-lg font-semibold text-heading">{formatPriceTag(i.price, i.price.unit)}</p>}

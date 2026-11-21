@@ -235,7 +235,9 @@ Then: post-enrolment checklist on My trainings (ONB-5); cohorts below their mini
 Availability editor, slot picker, booking request with authorisation, instructor accept/decline/propose with expiry countdown, counter-proposal flow, reschedule/cancel with policy preview, .ics download and reminders display, unified instructor schedule with conflict prevention, session join, attendance, recordings player and management, resources upload/visibility/folders.
 *Req:* OTO-1..10, PAY-4/5, COH-4/5, REC-1..6, RES-1..4, ONB-5.
 
-### Phase 3: Engagement and money out (M–L) — SRS phase 3
+### Phase 3: Engagement and money out (M–L) — SRS phase 3 (in progress)
+**Built so far:** messaging (MSG-1..4): one-to-one conversations between a learner and an instructor once a seat or booking links them, or as a pre-sale question from the training page (BR-6); a channel per cohort with instructor announcements, read-only after the cohort ends; unread counts on the sidebar, read receipts, history paging, attachments (scanned, 100 MB), drafts kept for a week; entry points on the training page, booking pages, instructor requests and the getting-ready checklist. Contract: `messages.yaml`; WebSocket events described there, polling fallback in the UI. Next: report/block, contact-detail filter, admin review of reported messages (MSG-6) and the unread-message email (MSG-5).
+
 Messaging (WebSocket, unread, receipts, attachments, report/block, cohort channels), tutor feedback with rubric and progress history, reviews + moderation, instructor earnings ledger and payouts, admin dashboard metrics, reports and CSV exports, reconciliation, notification preferences, discounts/tax/multi-currency.
 *Req:* MSG-1..6, FDB-1..5, PAY-7/8, ADM-1/4, NTF-2, PRC-6, COH-6.
 

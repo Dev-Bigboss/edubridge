@@ -7,6 +7,7 @@ import { useState, type ReactNode } from "react";
 import { PersonAvatar } from "@/components/catalog/bits";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { MessageButton } from "@/components/messages/message-button";
 import { useChecklist } from "@/lib/api/hooks/me";
 import type { LearnerEnrolment } from "@/lib/api/schemas/payments";
 import { cn } from "@/lib/cn";
@@ -20,6 +21,7 @@ const JOIN_TEST_URL = "https://meet.example.com/test";
 /** ONB-5: getting ready for the first class. Each step ticks itself when the learner does it. */
 export function EnrolmentChecklist({ item }: { item: LearnerEnrolment }) {
   const t = useTranslations("learner.checklist");
+  const ti = useTranslations("inbox");
   const step = useChecklist(item.enrolment.id);
   const [meeting, setMeeting] = useState(false);
   const c = item.checklist;
@@ -63,6 +65,11 @@ export function EnrolmentChecklist({ item }: { item: LearnerEnrolment }) {
               <p className="font-heading text-lg font-semibold text-heading">{instructor.name}</p>
               {instructor.headline && <p className="leading-relaxed">{instructor.headline}</p>}
               <p className="mt-3 text-[15px] leading-relaxed">{t("meetBody", { cohort: item.cohort.name })}</p>
+              <div className="mt-4">
+                <MessageButton role="LEARNER" userId={instructor.id}>
+                  {ti("messageInstructor", { name: instructor.name })}
+                </MessageButton>
+              </div>
             </div>
           </div>
         </Dialog>
