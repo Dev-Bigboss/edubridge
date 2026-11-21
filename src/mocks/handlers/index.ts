@@ -11,6 +11,7 @@ import { meHandlers } from "./me";
 import { notificationHandlers } from "./notifications";
 import { onboardingHandlers } from "./onboarding";
 import { pricingHandlers } from "./pricing";
+import { recordingHandlers } from "./recordings";
 import { sessionHandlers } from "./sessions";
 import { settingsHandlers } from "./settings";
 import { uploadHandlers } from "./uploads";
@@ -28,6 +29,7 @@ export const handlers = [
   ...checkoutHandlers,
   ...bookingHandlers,
   ...sessionHandlers,
+  ...recordingHandlers,
   ...notificationHandlers,
   ...meHandlers,
   ...accountHandlers,

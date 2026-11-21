@@ -8,6 +8,7 @@ import type { Booking } from "@/lib/api/schemas/bookings";
 import type { Availability } from "@/lib/domain/slots";
 import { DEFAULT_SETTINGS } from "@/lib/domain/policy";
 import { wants } from "@/lib/domain/notification-groups";
+import { cohortSessions } from "@/lib/domain/cohort-schedule";
 import { seedCohorts, seedLearnerHistory } from "./seed-cohorts";
 import type { PricingRuleDto } from "@/lib/api/schemas/pricing";
 import type { OnboardingState } from "@/lib/api/schemas/onboarding";
@@ -32,6 +33,25 @@ export type StoredBooking = Omit<Booking, "training" | "instructor" | "learner" 
   learner_id: string;
   /** DRAFT only: the slot stays held while the learner is on the payment page. */
   held_until: string | null;
+};
+
+/** REC-2: a recording the video provider delivered for a session. */
+export type StoredRecording = {
+  id: string;
+  session_id: string;
+  kind: "COHORT" | "ONE_ON_ONE";
+  training_id: string;
+  cohort_id: string | null;
+  booking_id: string | null;
+  instructor_id: string;
+  recorded_at: string;
+  duration_sec: number;
+  status: "PROCESSING" | "READY" | "FAILED";
+  /** Mock only: when the provider finishes processing. */
+  ready_at: string | null;
+  hidden: boolean;
+  trim: { start_sec: number; end_sec: number } | null;
+  has_captions: boolean;
 };
 
 export type MockUser = User & {
@@ -75,6 +95,9 @@ type State = {
   bookings: StoredBooking[];
   /** COH-4: marks per session id, then learner id. */
   attendance: Record<string, Record<string, "PRESENT" | "LATE" | "ABSENT">>;
+  recordings: StoredRecording[];
+  /** REC-4: user id → recording id → seconds watched. */
+  recordingProgress: Record<string, Record<string, number>>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -181,6 +204,32 @@ function seedAvailability(): Record<string, Availability> {
     usr_instructor_2: evenings("Africa/Lagos"),
     usr_instructor_3: evenings("Europe/London"),
   };
+}
+
+/**
+ * Recordings of the running Autumn cohort's past classes. Every one plays the same 20-second demo
+ * clip (public/demo), so its length is 20 s; real lengths come from the video provider. The latest
+ * is still processing and becomes ready a couple of minutes after the demo starts (REC-2).
+ */
+function seedRecordings(): StoredRecording[] {
+  const cohort = seedCohorts().find((c) => c.id === "coh_aa_2025")!;
+  const past = cohortSessions(cohort).filter((s) => Date.parse(s.end_utc) < Date.now());
+  return past.map((s, i) => ({
+    id: `rec_${s.id.replace(/[:-]/g, "_")}`,
+    session_id: s.id,
+    kind: "COHORT",
+    training_id: cohort.training_id,
+    cohort_id: cohort.id,
+    booking_id: null,
+    instructor_id: cohort.instructor_id,
+    recorded_at: s.start_utc,
+    duration_sec: 20,
+    status: i === past.length - 1 ? "PROCESSING" : "READY",
+    ready_at: i === past.length - 1 ? new Date(Date.now() + 2 * 60_000).toISOString() : null,
+    hidden: false,
+    trim: null,
+    has_captions: true,
+  }));
 }
 
 /** A few demo notifications so the bell isn't empty: recent ones unread, older ones read. */
@@ -308,6 +357,8 @@ function seed(): State {
     availability: seedAvailability(),
     bookings: [],
     attendance: {},
+    recordings: seedRecordings(),
+    recordingProgress: {},
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -470,7 +521,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v13";
+const STORE_KEY = "edubridge.mock.db.v14";
 
 function load(): State {
   try {

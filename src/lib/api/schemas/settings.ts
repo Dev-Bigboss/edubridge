@@ -18,6 +18,8 @@ export const SettingsInput = z.object({
   learner_cancellation: z.object({ tiers: z.array(RefundTier).min(1).max(6) }),
   /** When the instructor cancels, the learner gets this share back (plan Q3: "depends who cancels"). */
   instructor_cancellation: z.object({ refund_percent: z.number().int().min(0).max(100) }),
+  /** REC-5: recordings are deleted this many months after the session (plan §8 Q6 open). */
+  recording_retention_months: z.number().int().min(1).max(60),
 });
 export type SettingsInput = z.infer<typeof SettingsInput>;
 

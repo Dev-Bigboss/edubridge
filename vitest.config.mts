@@ -8,6 +8,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}", "contracts/**/*.test.ts"],
+    // Booking-flow tests walk several simulated API calls (each with a realistic delay); 15 s
+    // leaves room for a busy machine without hiding a real hang.
+    testTimeout: 15_000,
     coverage: {
       // Unit-coverage gate (SRS NFR Maintainability: >= 80% on core logic). React hooks and
       // components are covered by the Playwright suite instead.

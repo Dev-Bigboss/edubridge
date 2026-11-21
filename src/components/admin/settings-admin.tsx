@@ -48,6 +48,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
     booking_expiry_hours: settings.booking_expiry_hours,
     learner_cancellation: settings.learner_cancellation,
     instructor_cancellation: settings.instructor_cancellation,
+    recording_retention_months: settings.recording_retention_months,
   };
   const form = useForm<SettingsInput>({ resolver: zodResolver(FormSchema), defaultValues: defaults });
   const tiers = useFieldArray({ control: form.control, name: "learner_cancellation.tiers" });
@@ -72,6 +73,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
         booking_expiry_hours: res.settings.booking_expiry_hours,
         learner_cancellation: res.settings.learner_cancellation,
         instructor_cancellation: res.settings.instructor_cancellation,
+        recording_retention_months: res.settings.recording_retention_months,
       });
       toast.success(t("saved", { version: res.settings.version }));
     } catch (err) {
@@ -158,6 +160,12 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
         <Section title={t("instructorCancel")} description={t("instructorCancelBody")}>
           <Field label={t("instructorRefund")} error={errors.instructor_cancellation?.refund_percent?.message}>
             {(a) => <Suffixed suffix="%"><Input {...a} type="number" inputMode="numeric" min={0} max={100} className="pr-10" {...form.register("instructor_cancellation.refund_percent", { valueAsNumber: true })} /></Suffixed>}
+          </Field>
+        </Section>
+
+        <Section title={t("retention")} description={t("retentionBody")}>
+          <Field label={t("retentionLabel")} error={errors.recording_retention_months?.message}>
+            {(a) => <Suffixed suffix={t("months")}><Input {...a} type="number" inputMode="numeric" min={1} max={60} className="pr-24" {...form.register("recording_retention_months", { valueAsNumber: true })} /></Suffixed>}
           </Field>
         </Section>
 

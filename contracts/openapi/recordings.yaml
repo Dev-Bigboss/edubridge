@@ -1,0 +1,124 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Recordings"
+  version: 0.1.0
+  description: |
+    Session recordings (REC-1..6). Zod mirror: src/lib/api/schemas/recordings.ts. Mock: src/mocks/handlers/recordings.ts.
+    Playback rules mirrored in src/lib/domain/recordings.ts.
+
+    - REC-1: every live session is recorded by the video provider (Zoom, plan §8 Q1); the app tells participants on every
+      join point. The provider's webhook delivers the file; the backend stores it and links it to the session (REC-2): status
+      PROCESSING → READY (or FAILED). On READY, learners of that session get RECORDING_ADDED.
+    - REC-3 access: cohort recordings → CONFIRMED learners of the cohort and its instructor; 1:1 → that learner and instructor;
+      ADMIN → all (moderation). Learners never see PROCESSING, FAILED or hidden recordings. Anyone else gets 404.
+    - REC-6: playback is a signed URL valid for about an hour, created per request. Downloads are off by default
+      (no download link; the player sets controlsList=nodownload; storage should send Content-Disposition: inline).
+    - REC-4: speed control and captions (WebVTT) in the player; resume position stored per viewer.
+    - REC-5: the instructor (or an admin) hides/shows, trims (start/end, at least 10 s, within the length; the backend cuts
+      the file or serves the range) or deletes. Recordings are deleted automatically `recording_retention_months` after the
+      session (settings.yaml; plan §8 Q6 open). Writes are refused while an admin views as the instructor; saving a resume
+      position while viewing-as is accepted and ignored.
+servers:
+  - url: /api/v1
+paths:
+  /me/recordings:
+    get:
+      summary: Recordings I can watch (LEARNER), newest first
+      parameters: [{ name: training_id, in: query, schema: { type: string } }]
+      responses:
+        "200": { $ref: "#/components/responses/RecordingList" }
+  /teach/recordings:
+    get:
+      summary: Recordings of my sessions (INSTRUCTOR), any status, newest first
+      responses:
+        "200": { $ref: "#/components/responses/RecordingList" }
+        "403": { $ref: "#/components/responses/Error" }
+  /recordings/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: One recording (access rules above)
+      responses:
+        "200": { $ref: "#/components/responses/RecordingResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      summary: Hide/show or trim (instructor of the session, or ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hidden: { type: boolean }
+                trim:
+                  oneOf:
+                    - { type: "null" }
+                    - { type: object, required: [start_sec, end_sec], properties: { start_sec: { type: integer, minimum: 0 }, end_sec: { type: integer, minimum: 1 } } }
+      responses:
+        "200": { $ref: "#/components/responses/RecordingResponse" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+    delete:
+      summary: Delete for everyone (instructor of the session, or ADMIN)
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/Error" }
+  /recordings/{id}/playback:
+    get:
+      summary: A fresh signed URL to stream it (REC-6); 409 NOT_READY while processing
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Playback
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, captions_url, expires_at]
+                properties:
+                  url: { type: string }
+                  captions_url: { type: [string, "null"] }
+                  expires_at: { type: string, format: date-time }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /recordings/{id}/progress:
+    put:
+      summary: Save where I stopped (REC-4)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [position_sec], properties: { position_sec: { type: number, minimum: 0 } } } } } }
+      responses:
+        "204": { description: Saved }
+        "404": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    RecordingList:
+      description: List
+      content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Recording" } } } } } }
+    RecordingResponse:
+      description: Recording
+      content: { application/json: { schema: { type: object, required: [recording], properties: { recording: { $ref: "#/components/schemas/Recording" } } } } }
+  schemas:
+    Recording:
+      type: object
+      required: [id, session_id, kind, training, subtitle, recorded_at, duration_sec, status, hidden, trim, has_captions, delete_at, resume_sec]
+      properties:
+        id: { type: string }
+        session_id: { type: string, description: "sessions.yaml id: cohort class (cohort:date) or booking id" }
+        kind: { type: string, enum: [COHORT, ONE_ON_ONE] }
+        training: { type: object, required: [id, title], properties: { id: { type: string }, title: { type: string } } }
+        subtitle: { type: string, description: Cohort name, or the other person's name for a 1:1 }
+        recorded_at: { type: string, format: date-time }
+        duration_sec: { type: integer }
+        status: { type: string, enum: [PROCESSING, READY, FAILED] }
+        hidden: { type: boolean }
+        trim:
+          oneOf:
+            - { type: "null" }
+            - { type: object, required: [start_sec, end_sec], properties: { start_sec: { type: integer }, end_sec: { type: integer } } }
+        has_captions: { type: boolean }
+        delete_at: { type: string, format: date-time, description: Retention deadline }
+        resume_sec: { type: integer, description: This viewer's saved position }

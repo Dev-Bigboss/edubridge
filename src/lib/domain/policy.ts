@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
     ],
   },
   instructor_cancellation: { refund_percent: 100 },
+  recording_retention_months: 12,
 };
 
 export const sortTiers = (tiers: RefundTier[]) => [...tiers].sort((a, b) => b.min_hours_before - a.min_hours_before);
@@ -73,6 +74,9 @@ export function diffSettings(a: SettingsInput, b: SettingsInput): string {
   }
   if (a.instructor_cancellation.refund_percent !== b.instructor_cancellation.refund_percent) {
     parts.push(`Instructor cancellation refund ${a.instructor_cancellation.refund_percent}% → ${b.instructor_cancellation.refund_percent}%`);
+  }
+  if (a.recording_retention_months !== b.recording_retention_months) {
+    parts.push(`Recordings kept ${a.recording_retention_months} → ${b.recording_retention_months} months`);
   }
   return parts.join(". ") || "No changes";
 }

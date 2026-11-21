@@ -104,7 +104,7 @@ components:
         refund_percent: { type: integer, minimum: 0, maximum: 100 }
     SettingsInput:
       type: object
-      required: [commission_percent, booking_expiry_hours, learner_cancellation, instructor_cancellation]
+      required: [commission_percent, booking_expiry_hours, learner_cancellation, instructor_cancellation, recording_retention_months]
       properties:
         commission_percent: { type: number, minimum: 0, maximum: 50, description: PAY-7 }
         booking_expiry_hours: { type: integer, minimum: 1, maximum: 168, description: "OTO-5, SRS default 24" }
@@ -116,6 +116,7 @@ components:
           type: object
           required: [refund_percent]
           properties: { refund_percent: { type: integer, minimum: 0, maximum: 100 } }
+        recording_retention_months: { type: integer, minimum: 1, maximum: 60, description: "REC-5; placeholder 12 until plan §8 Q6 is answered" }
     PlatformSettings:
       allOf:
         - { $ref: "#/components/schemas/SettingsInput" }

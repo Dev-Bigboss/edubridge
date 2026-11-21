@@ -114,3 +114,4 @@ Every non-2xx response has this body:
 | Reschedule | Either side asks for one of the instructor's free slots; only the other side answers; unanswered by the earlier of 48 h or the start → original time stands | `bookings.yaml` |
 | Cancellation | Either side, before the start, with a reason; refund from the booking's policy snapshot (learner tiers or instructor share); preview shown before confirming | `bookings.yaml`, `domain/policy.ts` |
 | Sessions and attendance | Cohort classes are dated sessions with their own join link; attendance PRESENT/LATE/ABSENT from the start; for a 1:1, absent = no-show, present/late = completed | `sessions.yaml` |
+| Recordings | Automatic, linked to the session; visible to that session's people (admins for moderation); signed 1-hour links, no downloads; instructor hides/trims/deletes; retention in months is a platform setting (12 until the PO decides) | `recordings.yaml` |

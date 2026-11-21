@@ -220,7 +220,8 @@
     "settings": "Settings",
     "trainings": "Trainings",
     "users": "Users",
-    "myAccount": "My account"
+    "myAccount": "My account",
+    "recordings": "Recordings"
   },
   "dashboard": {
     "greeting": "Welcome back, {name}",
@@ -896,7 +897,11 @@
       "saved": "Settings saved as version {version}",
       "versions": "Versions",
       "current": "Version {version} is in force.",
-      "version": "Version {version}"
+      "version": "Version {version}",
+      "retention": "Recording retention",
+      "retentionBody": "Session recordings are deleted automatically this long after the session. Instructors can delete theirs sooner.",
+      "retentionLabel": "Keep recordings for (months)",
+      "months": "months"
     },
     "audit": {
       "title": "Audit log",
@@ -1179,9 +1184,10 @@
       "dateRange": "{start} to {end}",
       "schedule": "Schedule",
       "paid": "Paid {amount} on {date}",
-      "joinSoon": "Join opens 15 minutes before each class",
+      "joinSoon": "Join opens 15 minutes before each class. Classes are recorded for this cohort.",
       "receipt": "Receipt",
-      "joinClass": "Join class"
+      "joinClass": "Join class",
+      "recordings": "Recordings"
     },
     "payments": {
       "title": "Payments",
@@ -1418,7 +1424,7 @@
     },
     "schedule": {
       "title": "Schedule",
-      "intro": "Everything you teach, cohort classes and one-on-one sessions together. Times are in {zone}.",
+      "intro": "Everything you teach, cohort classes and one-on-one sessions together. Times are in {zone}. Sessions are recorded automatically and shared only with the people in them.",
       "empty": "Nothing scheduled",
       "emptyBody": "Cohort classes you're assigned to and one-on-one sessions you accept appear here.",
       "needsAttendance": "{count, plural, one {# session needs attendance} other {# sessions need attendance}}",
@@ -1508,7 +1514,7 @@
       "waiting": "Waiting for {name} to accept. They have {countdown} left to answer (until {when}). Your card is held, not charged.",
       "expired": "{name} didn't answer in time, so the request expired. Nothing was charged and the hold is released.",
       "bookAgain": "Pick another time",
-      "confirmed": "Confirmed and paid. The join button appears here 15 minutes before the start.",
+      "confirmed": "Confirmed and paid. The join button appears here 15 minutes before the start. The session is recorded and only you and your instructor can watch it.",
       "session": "Session",
       "when": "When",
       "length": "Length",
@@ -1590,6 +1596,64 @@
       "keepOriginal": "Keep original time",
       "moved": "Session moved. Your calendar invite is updated.",
       "kept": "The original time stands."
+    }
+  },
+  "recordings": {
+    "title": "Recordings",
+    "titleFor": "Recordings: {training}",
+    "intro": "Recordings of your live sessions. Only the people in each session can watch them.",
+    "empty": "No recordings yet",
+    "emptyBody": "Recordings appear here a few minutes after each class or session ends.",
+    "toTrainings": "My trainings",
+    "watched": "{percent}% watched",
+    "back": "All recordings",
+    "notFound": "This recording isn't available",
+    "notFoundBody": "It may have been removed by the instructor, or it isn't from one of your sessions.",
+    "recordedOn": "Recorded {when}",
+    "processing": "This recording is still processing. It's usually ready a few minutes after the session ends.",
+    "failed": "This recording couldn't be processed. Your instructor has been told.",
+    "videoLabel": "Recording of {title}",
+    "speed": "Playback speed",
+    "captions": "Captions",
+    "resuming": "Picking up where you left off ({at})",
+    "privacyCohort": "Only this cohort's learners and instructor can watch this recording. Please don't share it.",
+    "privacyOneOnOne": "Only you and the other person in this session can watch this recording.",
+    "teach": {
+      "title": "Recordings",
+      "intro": "Recordings of your sessions arrive here automatically. Hide one, trim the start or end, or delete it. Learners only see visible ones.",
+      "empty": "No recordings yet",
+      "emptyBody": "Each live session is recorded automatically and appears here once it's processed.",
+      "session": "Session",
+      "length": "Length",
+      "status": "Status",
+      "deletes": "Deleted on",
+      "actions": "Actions",
+      "trimmed": "Trimmed to {start}–{end}",
+      "processing": "Processing",
+      "failedBadge": "Failed",
+      "hidden": "Hidden",
+      "visible": "Visible to learners",
+      "showLabel": "Show the recording from {when}",
+      "hideLabel": "Hide the recording from {when}",
+      "trimLabel": "Trim the recording from {when}",
+      "deleteLabel": "Delete the recording from {when}",
+      "shown": "Learners can see it again",
+      "hiddenToast": "Hidden from learners",
+      "failed": "That didn't work. Please try again.",
+      "trimTitle": "Trim recording",
+      "trimBody": "Keep only the part between these times. The full recording is {length} long.",
+      "from": "Keep from",
+      "to": "Until",
+      "clockHint": "Minutes and seconds, like 1:30",
+      "clockFormat": "Use minutes and seconds, like 1:30.",
+      "undoTrim": "Keep the whole recording",
+      "saveTrim": "Save trim",
+      "trimSaved": "Trim saved",
+      "goBack": "Go back",
+      "deleteTitle": "Delete this recording?",
+      "deleteBody": "The recording from {when} is removed for everyone. This can't be undone.",
+      "deleteCta": "Delete recording",
+      "deleted": "Recording deleted"
     }
   }
 }
