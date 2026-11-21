@@ -228,7 +228,8 @@ Then: instructor requests page with countdowns (OTO-4/5); accept captures the ca
 Then: reschedule (either side proposes a free slot, the other accepts or the original stands) and cancel with a refund preview from the cancellation policy snapshotted at booking (OTO-9, PAY-5).
 Then: instructor schedule with cohort classes and 1:1 sessions together (OTO-10), attendance still to take first; dated cohort sessions with join links; attendance sheet (present/late/absent) that completes or marks a 1:1 as no-show (COH-4); learners get "Join class" on My trainings. Contract: `sessions.yaml`.
 Then: recordings (REC-1..6): recording notice at every join point; learners' recordings list per training and a player with speed, captions, resume and no download over signed links; instructors hide, trim or delete; retention period added to platform settings. Contract: `recordings.yaml`. Demo media in `public/demo/` (a 20 s WebM test clip and captions).
-**Next:** resources (RES-1..4); post-enrolment checklist (ONB-5); cohort cancellation by minimum enrolment (COH-5 job).
+Then: resources (RES-1..4): instructors add files (100 MB, virus-scanned) or links per training, cohort, class or 1:1 learner, in folders with up/down ordering; learners see and download what's shared with them and are notified. Contract: `resources.yaml`.
+**Still open in Phase 2:** post-enrolment checklist (ONB-5); cohort auto-cancellation below minimum enrolment (COH-5, a backend job; the admin cancel already refunds).
 
 Availability editor, slot picker, booking request with authorisation, instructor accept/decline/propose with expiry countdown, counter-proposal flow, reschedule/cancel with policy preview, .ics download and reminders display, unified instructor schedule with conflict prevention, session join, attendance, recordings player and management, resources upload/visibility/folders.
 *Req:* OTO-1..10, PAY-4/5, COH-4/5, REC-1..6, RES-1..4, ONB-5.

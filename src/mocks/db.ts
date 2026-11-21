@@ -5,6 +5,7 @@ import type { Enrolment, Payment } from "@/lib/api/schemas/payments";
 import type { Notification } from "@/lib/api/schemas/notifications";
 import type { PlatformSettings } from "@/lib/api/schemas/settings";
 import type { Booking } from "@/lib/api/schemas/bookings";
+import type { Resource } from "@/lib/api/schemas/resources";
 import type { Availability } from "@/lib/domain/slots";
 import { DEFAULT_SETTINGS } from "@/lib/domain/policy";
 import { wants } from "@/lib/domain/notification-groups";
@@ -54,6 +55,8 @@ export type StoredRecording = {
   has_captions: boolean;
 };
 
+export type StoredResource = Omit<Resource, "audience_label"> & { owner_id: string };
+
 export type MockUser = User & {
   password: string | null;
   headline?: string | null;
@@ -98,6 +101,8 @@ type State = {
   recordings: StoredRecording[];
   /** REC-4: user id → recording id → seconds watched. */
   recordingProgress: Record<string, Record<string, number>>;
+  /** RES-1..3: training materials. */
+  resources: StoredResource[];
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -232,6 +237,23 @@ function seedRecordings(): StoredRecording[] {
   }));
 }
 
+/** Materials for the running Autumn cohort's training, one per kind of audience and folder. */
+function seedResources(): StoredResource[] {
+  const cohort = seedCohorts().find((c) => c.id === "coh_aa_2025")!;
+  const firstClass = cohortSessions(cohort)[0];
+  const at = "2026-10-26T09:00:00.000Z";
+  const pdf = (id: string, name: string, size: number) => ({
+    id, purpose: "RESOURCE" as const, name, content_type: "application/pdf", size_bytes: size, scan_status: "CLEAN" as const, url: `/demo/${name}`,
+  });
+  const base = { training_id: cohort.training_id, owner_id: cohort.instructor_id, created_at: at, description: null, cohort_id: null, session_id: null, learner_id: null };
+  return [
+    { ...base, id: "res_seed_1", kind: "FILE", title: "Audit planning: summary notes", folder: "Week 1", position: 0, scope: "TRAINING", file: pdf("file_seed_1", "audit-planning-summary.pdf", 910), link_url: null, description: "Read before the first class." },
+    { ...base, id: "res_seed_2", kind: "LINK", title: "ICAN study text (official site)", folder: "Week 1", position: 1, scope: "TRAINING", file: null, link_url: "https://icanig.org/" },
+    { ...base, id: "res_seed_3", kind: "FILE", title: "Practice questions", folder: "Past papers", position: 2, scope: "COHORT", cohort_id: cohort.id, file: pdf("file_seed_3", "past-paper-practice.pdf", 839), link_url: null },
+    { ...base, id: "res_seed_4", kind: "LINK", title: "Whiteboard from the first class", folder: null, position: 3, scope: "SESSION", cohort_id: cohort.id, session_id: firstClass.id, file: null, link_url: "https://example.com/whiteboard/autumn-1" },
+  ];
+}
+
 /** A few demo notifications so the bell isn't empty: recent ones unread, older ones read. */
 function seedNotifications(): State["notifications"] {
   const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
@@ -359,6 +381,7 @@ function seed(): State {
     attendance: {},
     recordings: seedRecordings(),
     recordingProgress: {},
+    resources: seedResources(),
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -521,7 +544,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v14";
+const STORE_KEY = "edubridge.mock.db.v15";
 
 function load(): State {
   try {

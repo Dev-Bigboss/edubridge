@@ -115,3 +115,4 @@ Every non-2xx response has this body:
 | Cancellation | Either side, before the start, with a reason; refund from the booking's policy snapshot (learner tiers or instructor share); preview shown before confirming | `bookings.yaml`, `domain/policy.ts` |
 | Sessions and attendance | Cohort classes are dated sessions with their own join link; attendance PRESENT/LATE/ABSENT from the start; for a 1:1, absent = no-show, present/late = completed | `sessions.yaml` |
 | Recordings | Automatic, linked to the session; visible to that session's people (admins for moderation); signed 1-hour links, no downloads; instructor hides/trims/deletes; retention in months is a platform setting (12 until the PO decides) | `recordings.yaml` |
+| Resources | File or link; audience = whole training, one cohort, one class, or one 1:1 learner of that instructor; folders + ordering by buttons; files 100 MB, scanned, downloadable | `resources.yaml` |

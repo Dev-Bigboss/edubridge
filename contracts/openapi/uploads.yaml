@@ -14,6 +14,7 @@ info:
     | ID_DOCUMENT | jpeg, png, webp, pdf      | 10 MB | owner and admins only          |
     | CREDENTIAL  | jpeg, png, webp, pdf      | 10 MB | owner and admins only          |
     | THUMBNAIL   | jpeg, png, webp           | 5 MB  | anyone (training card image)   |
+    | RESOURCE    | pdf, docx, pptx, xlsx, jpeg, png, webp | 100 MB | per resource visibility (resources.yaml), RES-4 |
 servers:
   - url: /api/v1
 paths:
@@ -92,7 +93,7 @@ components:
         field_errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
     UploadPurpose:
       type: string
-      enum: [AVATAR, ID_DOCUMENT, CREDENTIAL, THUMBNAIL]
+      enum: [AVATAR, ID_DOCUMENT, CREDENTIAL, THUMBNAIL, RESOURCE]
     StoredFile:
       type: object
       required: [id, purpose, name, content_type, size_bytes, scan_status, url]

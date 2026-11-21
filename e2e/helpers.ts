@@ -19,6 +19,8 @@ export async function signIn(page: Page, email: string, opts: { next?: string; m
 export async function expectNoA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    // Toasts fade in and out; mid-fade their text is semi-transparent and fails contrast for a moment.
+    .exclude("[data-sonner-toaster]")
     .analyze();
   expect(results.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`)).toEqual([]);
 }

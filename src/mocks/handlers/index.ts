@@ -12,6 +12,7 @@ import { notificationHandlers } from "./notifications";
 import { onboardingHandlers } from "./onboarding";
 import { pricingHandlers } from "./pricing";
 import { recordingHandlers } from "./recordings";
+import { resourceHandlers } from "./resources";
 import { sessionHandlers } from "./sessions";
 import { settingsHandlers } from "./settings";
 import { uploadHandlers } from "./uploads";
@@ -30,6 +31,7 @@ export const handlers = [
   ...bookingHandlers,
   ...sessionHandlers,
   ...recordingHandlers,
+  ...resourceHandlers,
   ...notificationHandlers,
   ...meHandlers,
   ...accountHandlers,

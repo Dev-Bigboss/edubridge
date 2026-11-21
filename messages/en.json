@@ -221,7 +221,8 @@
     "trainings": "Trainings",
     "users": "Users",
     "myAccount": "My account",
-    "recordings": "Recordings"
+    "recordings": "Recordings",
+    "resources": "Resources"
   },
   "dashboard": {
     "greeting": "Welcome back, {name}",
@@ -1187,7 +1188,8 @@
       "joinSoon": "Join opens 15 minutes before each class. Classes are recorded for this cohort.",
       "receipt": "Receipt",
       "joinClass": "Join class",
-      "recordings": "Recordings"
+      "recordings": "Recordings",
+      "resources": "Resources"
     },
     "payments": {
       "title": "Payments",
@@ -1654,6 +1656,84 @@
       "deleteBody": "The recording from {when} is removed for everyone. This can't be undone.",
       "deleteCta": "Delete recording",
       "deleted": "Recording deleted"
+    }
+  },
+  "resources": {
+    "title": "Resources",
+    "intro": "Files and links your instructors have shared with you.",
+    "empty": "No resources yet",
+    "emptyBody": "When an instructor shares notes, slides or links with you, they appear here.",
+    "toTrainings": "My trainings",
+    "other": "Other materials",
+    "download": "Download",
+    "downloadLabel": "Download {title}",
+    "open": "Open link",
+    "openLabel": "Open link: {title}, opens in a new tab",
+    "teach": {
+      "title": "Resources",
+      "intro": "Share files and links with your learners. Organise them in folders and choose exactly who sees each one.",
+      "add": "Add material",
+      "noTrainings": "You're not teaching any trainings yet",
+      "noTrainingsBody": "Once an admin assigns you to a training, you can share materials with its learners here.",
+      "training": "Training",
+      "empty": "No materials for this training",
+      "emptyBody": "Add notes, slides, past papers or useful links. Learners are told when something new arrives.",
+      "noFolder": "Not in a folder",
+      "scan": {
+        "SCANNING": "Being scanned",
+        "INFECTED": "Blocked: failed virus scan"
+      },
+      "moveUp": "Move {title} up",
+      "moveDown": "Move {title} down",
+      "edit": "Edit {title}",
+      "delete": "Delete {title}",
+      "failed": "That didn't work. Please try again.",
+      "addTitle": "Add material",
+      "editTitle": "Edit material",
+      "kind": "Type",
+      "kinds": {
+        "FILE": "File",
+        "LINK": "Link"
+      },
+      "file": "File",
+      "fileHint": "Files are virus-scanned before learners can open them.",
+      "fileFixed": "File: {name}. To replace it, delete this and add the new file.",
+      "fileRequired": "Upload the file first.",
+      "link": "Web address",
+      "linkHint": "The full address, starting with https://",
+      "linkRequired": "Enter a full web address starting with https://",
+      "titleLabel": "Title",
+      "titleRequired": "Give it a title learners will recognise.",
+      "description": "Note for learners (optional)",
+      "folder": "Folder (optional)",
+      "folderHint": "For example, Week 1 or Past papers. Type a new name or pick an existing one.",
+      "audience": "Who can see it",
+      "scopes": {
+        "TRAINING": "Everyone in this training",
+        "COHORT": "One cohort",
+        "SESSION": "Learners of one class",
+        "LEARNER": "One one-on-one learner"
+      },
+      "unavailable": {
+        "COHORT": "You don't teach a cohort of this training.",
+        "SESSION": "You don't teach a cohort of this training.",
+        "LEARNER": "You have no one-on-one learners on this training yet."
+      },
+      "cohort": "Cohort",
+      "chooseCohort": "Choose a cohort",
+      "session": "Class",
+      "chooseSession": "Choose a class",
+      "learner": "Learner",
+      "chooseLearner": "Choose a learner",
+      "goBack": "Go back",
+      "save": "Save changes",
+      "addCta": "Add and notify learners",
+      "saved": "Saved",
+      "added": "Added. The learners who can see it have been told.",
+      "deleteTitle": "Delete this material?",
+      "deleteBody": "“{title}” is removed for: {who}.",
+      "deleteCta": "Delete",
+      "deleted": "Deleted"
     }
   }
 }

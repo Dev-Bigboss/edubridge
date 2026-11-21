@@ -8,6 +8,7 @@ import {
   ClipboardList,
   CreditCard,
   FileClock,
+  FolderOpen,
   GraduationCap,
   Inbox,
   LayoutDashboard,
@@ -41,7 +42,7 @@ export type NavItem = {
 export const NAV: Record<Role, NavItem[]> = {
   LEARNER: [
     { href: "/learn", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "NTF-1" },
-    { href: "/learn/trainings", labelKey: "myTrainings", icon: BookOpen, phase: 1, req: "TRN-7, COH-4", ready: true, also: ["/learn/recordings"] },
+    { href: "/learn/trainings", labelKey: "myTrainings", icon: BookOpen, phase: 1, req: "TRN-7, COH-4", ready: true, also: ["/learn/recordings", "/learn/resources"] },
     { href: "/learn/bookings", labelKey: "oneOnOneBookings", icon: CalendarClock, phase: 2, req: "OTO-2..9", ready: true, also: ["/learn/book"] },
     { href: "/learn/payments", labelKey: "payments", icon: CreditCard, phase: 1, req: "PAY-6", ready: true },
     { href: "/learn/messages", labelKey: "messages", icon: MessageCircle, phase: 3, req: "MSG-1..6" },
@@ -53,6 +54,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/teach/requests", labelKey: "requests", icon: Inbox, phase: 2, req: "OTO-4..6", ready: true },
     { href: "/teach/schedule", labelKey: "schedule", icon: CalendarCheck, phase: 2, req: "OTO-10", ready: true, also: ["/teach/sessions"] },
     { href: "/teach/recordings", labelKey: "recordings", icon: Video, phase: 2, req: "REC-2..5", ready: true },
+    { href: "/teach/resources", labelKey: "resources", icon: FolderOpen, phase: 2, req: "RES-1..4", ready: true },
     { href: "/teach/availability", labelKey: "availability", icon: CalendarClock, phase: 2, req: "OTO-1", ready: true },
     { href: "/teach/trainings", labelKey: "myTrainings", icon: GraduationCap, phase: 2, req: "COH-1, RES-1" },
     { href: "/teach/earnings", labelKey: "earnings", icon: Wallet, phase: 3, req: "PAY-7" },

@@ -2,11 +2,18 @@
  * Upload rules by purpose. The backend enforces the same limits; checking here first saves people
  * a slow upload that would be rejected. RES-4 sets 100 MB as the default ceiling for resources.
  */
-export const UPLOAD_PURPOSES = ["AVATAR", "ID_DOCUMENT", "CREDENTIAL", "THUMBNAIL"] as const;
+export const UPLOAD_PURPOSES = ["AVATAR", "ID_DOCUMENT", "CREDENTIAL", "THUMBNAIL", "RESOURCE"] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
 const MB = 1024 * 1024;
 const IMAGES = ["image/jpeg", "image/png", "image/webp"];
+/** RES-1: PDF, Word, PowerPoint and Excel (current formats), plus images. */
+const OFFICE = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
 
 export const UPLOAD_RULES: Record<UploadPurpose, { types: string[]; maxBytes: number; accept: string; label: string }> = {
   AVATAR: { types: IMAGES, maxBytes: 5 * MB, accept: IMAGES.join(","), label: "JPG, PNG or WebP, up to 5 MB" },
@@ -22,6 +29,12 @@ export const UPLOAD_RULES: Record<UploadPurpose, { types: string[]; maxBytes: nu
     maxBytes: 10 * MB,
     accept: [...IMAGES, "application/pdf"].join(","),
     label: "PDF, JPG or PNG, up to 10 MB",
+  },
+  RESOURCE: {
+    types: [...OFFICE, ...IMAGES],
+    maxBytes: 100 * MB,
+    accept: [...OFFICE, ...IMAGES, ".pdf", ".docx", ".pptx", ".xlsx"].join(","),
+    label: "PDF, Word, PowerPoint, Excel or an image, up to 100 MB",
   },
 };
 
