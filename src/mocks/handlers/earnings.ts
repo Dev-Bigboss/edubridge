@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw/http";
 import { ScheduleInput, type AdminPayout, type EarningsSummary, type LedgerEntry, type Payout, type Reconciliation } from "@/lib/api/schemas/earnings";
 import { availableAt, MIN_PAYOUT_CENTS, nextPayoutRun, payoutProblem, refundShare, splitCommission } from "@/lib/domain/earnings";
 import { audit, db, findUser, newId, notify, save, type MockUser, type StoredLedgerEntry, type StoredPayout } from "../db";
+import { toCsv } from "@/lib/domain/reports";
 import { apiError, blockWhileImpersonating, requireUser, url } from "./util";
 
 const CAPTURED = new Set(["CAPTURED", "PARTIALLY_REFUNDED", "REFUNDED"]);
@@ -242,16 +243,16 @@ export const earningsHandlers = [
     const report = reconciliation(from, to);
     if (q.get("format") === "csv") {
       const t = report.totals;
-      const lines = [
-        "section,name,earned_usd,refunded_usd,paid_out_usd,balance_usd",
-        ...report.instructors.map((i) => `instructor,"${i.name.replaceAll('"', '""')}",${money(i.earned)},${money(i.refunded)},${money(i.paid_out)},${money(i.balance)}`),
-        "",
-        "total,captured_usd,refunded_usd,net_revenue_usd,commission_usd,instructor_earnings_usd,paid_out_usd,owed_to_instructors_usd",
-        `total,${money(t.captured)},${money(t.refunded)},${money(t.net_revenue)},${money(t.commission)},${money(t.instructor_earnings)},${money(t.paid_out)},${money(t.owed_to_instructors)}`,
-      ];
+      const csv = toCsv([
+        ["section", "name", "earned_usd", "refunded_usd", "paid_out_usd", "balance_usd"],
+        ...report.instructors.map((i) => ["instructor", i.name, money(i.earned), money(i.refunded), money(i.paid_out), money(i.balance)]),
+        [],
+        ["total", "captured_usd", "refunded_usd", "net_revenue_usd", "commission_usd", "instructor_earnings_usd", "paid_out_usd", "owed_to_instructors_usd"],
+        ["total", money(t.captured), money(t.refunded), money(t.net_revenue), money(t.commission), money(t.instructor_earnings), money(t.paid_out), money(t.owed_to_instructors)],
+      ]);
       audit(admin, "report.exported", "report", `reconciliation:${from}:${to}`, `Exported reconciliation ${from} to ${to}`);
       save();
-      return new HttpResponse(lines.join("\n"), { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="reconciliation-${from}-to-${to}.csv"` } });
+      return new HttpResponse(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="reconciliation-${from}-to-${to}.csv"` } });
     }
     return HttpResponse.json(report);
   }),

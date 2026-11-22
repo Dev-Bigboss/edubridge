@@ -90,8 +90,8 @@ describe("earnings and payouts (PAY-7/8)", () => {
       ["Test Instructor", 12000],
     ]);
     const csv = await fetch(`${API_BASE_URL}/admin/reconciliation?from=2020-01-01&to=${today}&format=csv`, { credentials: "include" }).then((x) => x.text());
-    expect(csv.split("\n")[0]).toBe("section,name,earned_usd,refunded_usd,paid_out_usd,balance_usd");
-    expect(csv).toContain('instructor,"Test Instructor",320.00,0.00,200.00,120.00');
+    expect(csv.split("\r\n")[0]).toBe("section,name,earned_usd,refunded_usd,paid_out_usd,balance_usd");
+    expect(csv).toContain("instructor,Test Instructor,320.00,0.00,200.00,120.00");
     expect(db.audit[0].action).toBe("report.exported");
     expect((await failure(api("/admin/reconciliation", { query: { from: today, to: "2020-01-01" } }))).status).toBe(422);
     mockSession.set("usr_instructor_1");

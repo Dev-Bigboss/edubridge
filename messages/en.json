@@ -243,7 +243,7 @@
       "emptyCta": "Set your availability"
     },
     "admin": {
-      "intro": "Users, enrolments, revenue, active cohorts and pending one-on-one requests will show here.",
+      "intro": "How EduBridge is doing, and what needs you today.",
       "emptyTitle": "Nothing to report yet",
       "emptyBody": "Start by creating the catalogue: categories, then trainings and their pricing rules. Metrics appear as soon as learners enrol.",
       "emptyCta": "Create a training"
@@ -1170,6 +1170,86 @@
       "noReference": "None yet",
       "empty": "No payouts yet",
       "emptyBody": "Instructors' payouts appear here as soon as they're requested or scheduled."
+    },
+    "dashboard": {
+      "overview": "Overview",
+      "period": "Period",
+      "days": "{days} days",
+      "revenue": "Revenue",
+      "revenueNote": "{refunded} refunded · {commission} commission",
+      "enrolments": "New enrolments",
+      "enrolmentsNote": "{count, plural, one {# active learner} other {# active learners}}",
+      "learners": "Learners",
+      "learnersNote": "{instructors} instructors · {fresh} new accounts",
+      "cohorts": "Active cohorts",
+      "cohortsNote": "{soon} starting this week · {below} below minimum",
+      "attention": "Needs attention",
+      "nothing": "Nothing needs you right now.",
+      "attentionItems": {
+        "EXPIRING_REQUESTS": "{count, plural, one {# one-on-one request expires} other {# one-on-one requests expire}} within 6 hours without an answer",
+        "FAILED_PAYOUTS": "{count, plural, one {# payout failed} other {# payouts failed}}",
+        "APPLICATIONS": "{count, plural, one {# instructor application is} other {# instructor applications are}} waiting for review",
+        "MESSAGE_REPORTS": "{count, plural, one {# reported message is} other {# reported messages are}} waiting for review",
+        "BELOW_MINIMUM": "{count, plural, one {# cohort is} other {# cohorts are}} below the minimum and will cancel at the deadline"
+      },
+      "attentionCta": {
+        "FAILED_PAYOUTS": "See payouts",
+        "APPLICATIONS": "Review",
+        "MESSAGE_REPORTS": "Review",
+        "BELOW_MINIMUM": "See cohorts",
+        "EXPIRING_REQUESTS": ""
+      },
+      "chartDaily": "Revenue per day",
+      "chartWeekly": "Revenue per week",
+      "showTable": "Show as table",
+      "showChart": "Show as chart",
+      "chartTable": "Revenue by period",
+      "weekOf": "Week of",
+      "day": "Day",
+      "captured": "Learners paid",
+      "weekOfDate": "Week of {date}",
+      "chartLabel": "Bar chart of revenue over the last {days} days, {total} in total. Use Show as table for the values.",
+      "noRevenue": "No payments in this period.",
+      "responseTitle": "Instructor response times",
+      "responseIntro": "How long instructors take to answer one-on-one requests, from when the learner's card is held.",
+      "noResponses": "No one-on-one requests reached instructors in this period.",
+      "responseSummary": "Median first answer: {median} · {answered} answered · {expired} expired without an answer",
+      "instructor": "Instructor",
+      "median": "Median answer",
+      "answered": "Answered",
+      "expired": "Expired",
+      "toReports": "Download reports",
+      "toPayouts": "Payouts and reconciliation"
+    },
+    "reports": {
+      "title": "Reports",
+      "intro": "Download CSV files for your accountant or a spreadsheet. Choose the dates once; they apply to every report.",
+      "from": "From",
+      "to": "To",
+      "rangeError": "Choose a start date on or before the end date.",
+      "download": "Download CSV",
+      "downloadLabel": "Download CSV: {name}",
+      "failed": "The report didn't download. Try again.",
+      "downloaded": "{name} downloaded ({count, plural, one {# row} other {# rows}}).",
+      "types": {
+        "revenue": {
+          "name": "Revenue",
+          "body": "Every payment received: receipt, learner, training, instructor, amount, commission and the instructor's share."
+        },
+        "refunds": {
+          "name": "Refunds",
+          "body": "Every refund: who got it back, how much, and how it split between the instructor and the platform."
+        },
+        "payouts": {
+          "name": "Payouts",
+          "body": "Every payout to instructors: amount, status, dates and the Stripe reference."
+        },
+        "attendance": {
+          "name": "Attendance",
+          "body": "Every learner at every class and one-on-one session: present, late, absent or not taken yet."
+        }
+      },
+      "note": "Dates are in UTC. Money is in US dollars. Each download is recorded in the audit log."
     }
   },
   "catalog": {

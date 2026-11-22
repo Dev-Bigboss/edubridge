@@ -75,7 +75,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/rubrics", labelKey: "rubrics", icon: ClipboardCheck, phase: 3, req: "FDB-1", ready: true },
     { href: "/admin/payouts", labelKey: "payouts", icon: Landmark, phase: 3, req: "PAY-7, PAY-8", ready: true },
     { href: "/admin/moderation", labelKey: "moderation", icon: ShieldCheck, phase: 3, req: "FDB-4, MSG-6", ready: true },
-    { href: "/admin/reports", labelKey: "reports", icon: BarChart3, phase: 3, req: "ADM-4" },
+    { href: "/admin/reports", labelKey: "reports", icon: BarChart3, phase: 3, req: "ADM-4", ready: true },
     { href: "/admin/audit-log", labelKey: "auditLog", icon: FileClock, phase: 1, req: "ADM-5", ready: true },
     { href: "/admin/notifications", labelKey: "notifications", icon: Bell, phase: 1, req: "NTF-1", ready: true },
     { href: "/admin/account", labelKey: "myAccount", icon: Settings, phase: 1, req: "NFR Security, NTF-2", ready: true },
