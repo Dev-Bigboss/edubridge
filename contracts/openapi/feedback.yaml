@@ -1,0 +1,193 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Feedback"
+  version: 0.1.0
+  description: |
+    Tutor feedback (FDB-1..3, FDB-5). Zod mirror: src/lib/api/schemas/feedback.ts. Mock: src/mocks/handlers/feedback.ts.
+    Rules mirrored in src/lib/domain/feedback.ts. Reviews (FDB-4) are a separate module.
+
+    - Rubrics (FDB-1 "configurable"): admins keep a list. Exactly one is the default; others name the categories they
+      apply to, and a category belongs to at most one live rubric. A training uses its category's rubric, else the
+      default. 2 to 8 criteria; every criterion is scored on four levels, 1 Needs work, 2 Developing, 3 Good,
+      4 Excellent (no neutral middle). Criterion keys are kept when a rubric is edited so progress still lines up.
+      The default can't be archived or lose its default flag without another taking it. All changes audited.
+    - FDB-1: the instructor of a session writes feedback for each learner on it (cohort seat or the 1:1 learner) once
+      the session has started (409 SESSION_NOT_STARTED before). One feedback per session and learner; PUT writes or
+      edits it. The rubric is copied into the feedback when first written, so later rubric edits don't change it.
+      Required: a level for every criterion, a comment (10+ characters) and a next step (5+). The learner gets
+      FEEDBACK_ADDED the first time (not on edits).
+    - FDB-3: optional `assignment_title` and one attachment (upload purpose FEEDBACK_ATTACHMENT, uploads.yaml).
+    - FDB-2: learners list their own feedback, newest first, optionally per training; the app works out progress per
+      criterion (first and latest level) from the list.
+    - FDB-5: only the learner, the instructor who wrote it, and admins can read feedback. Admins read it per user.
+    - Writes are refused while an admin views as the instructor.
+servers:
+  - url: /api/v1
+paths:
+  /admin/rubrics:
+    get:
+      summary: All rubrics (ADMIN), default first
+      responses:
+        "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Rubric" } } } } } } }
+    post:
+      summary: Add a rubric
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RubricInput" } } } }
+      responses:
+        "201": { $ref: "#/components/responses/RubricResponse" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/rubrics/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    put:
+      summary: Replace name, criteria, categories and default flag (making it default unsets the old one)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RubricInput" } } } }
+      responses:
+        "200": { $ref: "#/components/responses/RubricResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/rubrics/{id}/archive:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Archive (409 DEFAULT_RUBRIC for the default)
+      responses:
+        "200": { $ref: "#/components/responses/RubricResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+  /admin/rubrics/{id}/restore:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Restore (409 CATEGORY_TAKEN if one of its categories now has another rubric)
+      responses:
+        "200": { $ref: "#/components/responses/RubricResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+  /sessions/{id}/feedback:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string }, description: "sessions.yaml id" }]
+    get:
+      summary: The rubric that applies and the feedback I've written for this session (INSTRUCTOR of the session)
+      responses:
+        "200":
+          description: Rubric and feedback
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rubric, items]
+                properties:
+                  rubric: { oneOf: [{ $ref: "#/components/schemas/Rubric" }, { type: "null" }] }
+                  items: { type: array, items: { $ref: "#/components/schemas/Feedback" } }
+        "404": { $ref: "#/components/responses/Error" }
+  /sessions/{id}/feedback/{learner_id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: learner_id, in: path, required: true, schema: { type: string } }
+    put:
+      summary: Write (201) or edit (200) one learner's feedback for this session
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/FeedbackInput" } } } }
+      responses:
+        "200": { $ref: "#/components/responses/FeedbackResponse" }
+        "201": { $ref: "#/components/responses/FeedbackResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /me/feedback:
+    get:
+      summary: Feedback I've received (LEARNER), newest first
+      parameters: [{ name: training_id, in: query, schema: { type: string } }]
+      responses:
+        "200": { $ref: "#/components/responses/FeedbackList" }
+  /admin/users/{id}/feedback:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: Feedback a user received or wrote (ADMIN, FDB-5)
+      responses:
+        "200": { $ref: "#/components/responses/FeedbackList" }
+        "404": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    RubricResponse:
+      description: Rubric
+      content: { application/json: { schema: { type: object, required: [rubric], properties: { rubric: { $ref: "#/components/schemas/Rubric" } } } } }
+    FeedbackResponse:
+      description: Feedback
+      content: { application/json: { schema: { type: object, required: [feedback], properties: { feedback: { $ref: "#/components/schemas/Feedback" } } } } }
+    FeedbackList:
+      description: List
+      content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Feedback" } } } } } }
+  schemas:
+    Criterion:
+      type: object
+      required: [key, label, description]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        description: { type: [string, "null"] }
+    Rubric:
+      type: object
+      required: [id, name, criteria, category_ids, is_default, archived, updated_at]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        criteria: { type: array, minItems: 2, maxItems: 8, items: { $ref: "#/components/schemas/Criterion" } }
+        category_ids: { type: array, items: { type: string }, description: "Empty for the default" }
+        is_default: { type: boolean }
+        archived: { type: boolean }
+        updated_at: { type: string, format: date-time }
+    RubricInput:
+      type: object
+      required: [name, criteria, category_ids, is_default]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 80 }
+        criteria:
+          type: array
+          minItems: 2
+          maxItems: 8
+          items:
+            type: object
+            required: [key, label, description]
+            properties:
+              key: { type: [string, "null"], description: "Existing key to keep; null for a new criterion" }
+              label: { type: string, minLength: 1, maxLength: 60 }
+              description: { type: [string, "null"], maxLength: 200 }
+        category_ids: { type: array, items: { type: string } }
+        is_default: { type: boolean }
+    Feedback:
+      type: object
+      required: [id, session_id, session_start_utc, session_kind, training_id, training_title, instructor, learner, rubric, scores, comment, strengths, improvements, next_steps, assignment_title, attachment, created_at, updated_at]
+      properties:
+        id: { type: string }
+        session_id: { type: string }
+        session_start_utc: { type: string, format: date-time }
+        session_kind: { type: string, enum: [COHORT, ONE_ON_ONE] }
+        training_id: { type: string }
+        training_title: { type: string }
+        instructor: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
+        learner: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
+        rubric:
+          type: object
+          description: Copy of the rubric when first written
+          required: [id, name, criteria]
+          properties:
+            id: { type: string }
+            name: { type: string }
+            criteria: { type: array, items: { $ref: "#/components/schemas/Criterion" } }
+        scores: { type: object, additionalProperties: { type: integer, minimum: 1, maximum: 4 }, description: "criterion key → level" }
+        comment: { type: string }
+        strengths: { type: string }
+        improvements: { type: string }
+        next_steps: { type: string }
+        assignment_title: { type: [string, "null"] }
+        attachment: { oneOf: [{ $ref: "./uploads.yaml#/components/schemas/StoredFile" }, { type: "null" }] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    FeedbackInput:
+      type: object
+      required: [scores, comment, strengths, improvements, next_steps, assignment_title, attachment_id]
+      properties:
+        scores: { type: object, additionalProperties: { type: integer, minimum: 1, maximum: 4 } }
+        comment: { type: string, minLength: 10, maxLength: 2000 }
+        strengths: { type: string, maxLength: 1000 }
+        improvements: { type: string, maxLength: 1000 }
+        next_steps: { type: string, minLength: 5, maxLength: 1000 }
+        assignment_title: { type: [string, "null"], maxLength: 120 }
+        attachment_id: { type: [string, "null"], description: "Upload with purpose FEEDBACK_ATTACHMENT; send the current id to keep it" }

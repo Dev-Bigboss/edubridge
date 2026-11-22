@@ -1,6 +1,7 @@
 "use client";
 
-import { Archive, BookOpen, CalendarDays, Clock, FolderOpen, PlayCircle, ReceiptText } from "lucide-react";
+import { Archive, BookOpen, CalendarDays, Clock, FolderOpen, MessageSquareText,
+  PlayCircle, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LoadError } from "@/components/admin/catalog-admin";
@@ -149,6 +150,12 @@ function EnrolmentCard({ item, zone, now, phase }: { item: LearnerEnrolment; zon
             <Link href={`/learn/recordings?training=${training.id}`} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">
               <PlayCircle aria-hidden="true" className="size-4" />
               {t("recordings")}
+            </Link>
+          )}
+          {(phase === "IN_PROGRESS" || phase === "FINISHED") && (
+            <Link href={`/learn/feedback?training=${training.id}`} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">
+              <MessageSquareText aria-hidden="true" className="size-4" />
+              {t("feedback")}
             </Link>
           )}
           <Link href={`/receipts/${enrolment.payment_id}`} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">

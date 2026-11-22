@@ -68,7 +68,7 @@ export function scheduleFor(instructorId: string, from: number, to: number): Sch
 }
 
 /** Finds a session by id for its instructor: a cohort class (`cohort:date`) or a 1:1 booking. */
-function findSession(id: string, instructorId: string) {
+export function findSession(id: string, instructorId: string) {
   if (id.includes(":")) {
     const [cohortId] = id.split(":");
     const c = db.cohorts.find((x) => x.id === cohortId && x.instructor_id === instructorId);
@@ -77,6 +77,13 @@ function findSession(id: string, instructorId: string) {
   }
   const b = db.bookings.find((x) => x.id === id && x.instructor_id === instructorId && LISTED_BOOKINGS.has(x.status));
   return b ? { kind: "ONE_ON_ONE" as const, booking: b } : null;
+}
+
+/** The session's start and the learners on it (cohort seats, or the 1:1 learner). */
+export function sessionFacts(found: NonNullable<ReturnType<typeof findSession>>) {
+  return found.kind === "COHORT"
+    ? { start_utc: found.session.start_utc, kind: found.kind, training_id: found.cohort.training_id, learners: rosterOf(found.cohort.id) }
+    : { start_utc: found.booking.start_utc, kind: found.kind, training_id: found.booking.training_id, learners: [found.booking.learner_id] };
 }
 
 function detail(found: NonNullable<ReturnType<typeof findSession>>) {

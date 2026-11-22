@@ -2,7 +2,7 @@
  * Upload rules by purpose. The backend enforces the same limits; checking here first saves people
  * a slow upload that would be rejected. RES-4 sets 100 MB as the default ceiling for resources.
  */
-export const UPLOAD_PURPOSES = ["AVATAR", "ID_DOCUMENT", "CREDENTIAL", "THUMBNAIL", "RESOURCE", "MESSAGE_ATTACHMENT"] as const;
+export const UPLOAD_PURPOSES = ["AVATAR", "ID_DOCUMENT", "CREDENTIAL", "THUMBNAIL", "RESOURCE", "MESSAGE_ATTACHMENT", "FEEDBACK_ATTACHMENT"] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 
 const MB = 1024 * 1024;
@@ -40,6 +40,8 @@ export const UPLOAD_RULES: Record<UploadPurpose, { types: string[]; maxBytes: nu
   RESOURCE: RESOURCE_RULE,
   /** MSG-4: the same limits and scan as resources. */
   MESSAGE_ATTACHMENT: RESOURCE_RULE,
+  /** FDB-3: marked work or an exercise sheet with feedback. */
+  FEEDBACK_ATTACHMENT: RESOURCE_RULE,
 };
 
 export function formatBytes(bytes: number): string {

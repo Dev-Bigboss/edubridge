@@ -5,6 +5,7 @@ import {
   BookOpen,
   CalendarCheck,
   CalendarClock,
+  ClipboardCheck,
   ClipboardList,
   CreditCard,
   FileClock,
@@ -42,7 +43,7 @@ export type NavItem = {
 export const NAV: Record<Role, NavItem[]> = {
   LEARNER: [
     { href: "/learn", labelKey: "dashboard", icon: LayoutDashboard, phase: 0, req: "NTF-1" },
-    { href: "/learn/trainings", labelKey: "myTrainings", icon: BookOpen, phase: 1, req: "TRN-7, COH-4", ready: true, also: ["/learn/recordings", "/learn/resources"] },
+    { href: "/learn/trainings", labelKey: "myTrainings", icon: BookOpen, phase: 1, req: "TRN-7, COH-4", ready: true, also: ["/learn/recordings", "/learn/resources", "/learn/feedback"] },
     { href: "/learn/bookings", labelKey: "oneOnOneBookings", icon: CalendarClock, phase: 2, req: "OTO-2..9", ready: true, also: ["/learn/book"] },
     { href: "/learn/payments", labelKey: "payments", icon: CreditCard, phase: 1, req: "PAY-6", ready: true },
     { href: "/learn/messages", labelKey: "messages", icon: MessageCircle, phase: 3, req: "MSG-1..6", ready: true },
@@ -70,6 +71,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/pricing", labelKey: "pricing", icon: BadgeDollarSign, phase: 1, req: "PRC-1..5", ready: true },
     { href: "/admin/users", labelKey: "users", icon: Users, phase: 1, req: "ADM-2, ONB-3", ready: true },
     { href: "/admin/payments", labelKey: "paymentsAndRefunds", icon: CreditCard, phase: 1, req: "PAY-5, PAY-8", ready: true },
+    { href: "/admin/rubrics", labelKey: "rubrics", icon: ClipboardCheck, phase: 3, req: "FDB-1", ready: true },
     { href: "/admin/moderation", labelKey: "moderation", icon: ShieldCheck, phase: 3, req: "FDB-4, MSG-6", ready: true },
     { href: "/admin/reports", labelKey: "reports", icon: BarChart3, phase: 3, req: "ADM-4" },
     { href: "/admin/audit-log", labelKey: "auditLog", icon: FileClock, phase: 1, req: "ADM-5", ready: true },

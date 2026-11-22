@@ -16,6 +16,7 @@ info:
     | THUMBNAIL   | jpeg, png, webp           | 5 MB  | anyone (training card image)   |
     | RESOURCE    | pdf, docx, pptx, xlsx, jpeg, png, webp | 100 MB | per resource visibility (resources.yaml), RES-4 |
     | MESSAGE_ATTACHMENT | as RESOURCE        | 100 MB | members of the conversation (messages.yaml), MSG-4 |
+    | FEEDBACK_ATTACHMENT | as RESOURCE       | 100 MB | the learner, the instructor who wrote it, admins (feedback.yaml), FDB-3/5 |
 servers:
   - url: /api/v1
 paths:
@@ -94,7 +95,7 @@ components:
         field_errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
     UploadPurpose:
       type: string
-      enum: [AVATAR, ID_DOCUMENT, CREDENTIAL, THUMBNAIL, RESOURCE, MESSAGE_ATTACHMENT]
+      enum: [AVATAR, ID_DOCUMENT, CREDENTIAL, THUMBNAIL, RESOURCE, MESSAGE_ATTACHMENT, FEEDBACK_ATTACHMENT]
     StoredFile:
       type: object
       required: [id, purpose, name, content_type, size_bytes, scan_status, url]

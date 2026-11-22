@@ -7,6 +7,7 @@ import type { PlatformSettings } from "@/lib/api/schemas/settings";
 import type { Booking } from "@/lib/api/schemas/bookings";
 import type { Resource } from "@/lib/api/schemas/resources";
 import type { StoredFile } from "@/lib/api/schemas/uploads";
+import type { Feedback, Rubric } from "@/lib/api/schemas/feedback";
 import type { Availability } from "@/lib/domain/slots";
 import { DEFAULT_SETTINGS } from "@/lib/domain/policy";
 import { wants } from "@/lib/domain/notification-groups";
@@ -91,6 +92,12 @@ export type StoredMessage = {
   created_at: string;
 };
 
+/** FDB-1: what the backend stores; names and titles are joined in by the API. */
+export type StoredFeedback = Omit<Feedback, "training_title" | "instructor" | "learner" | "session_start_utc" | "session_kind"> & {
+  instructor_id: string;
+  learner_id: string;
+};
+
 /** MSG-6: a report on a message or a whole conversation, for admins to review. */
 export type StoredMessageReport = {
   id: string;
@@ -156,6 +163,9 @@ type State = {
   conversations: StoredConversation[];
   messages: StoredMessage[];
   messageReports: StoredMessageReport[];
+  /** FDB-1: admin-configured rubrics and the feedback written with them. */
+  rubrics: Rubric[];
+  feedback: StoredFeedback[];
   /** MSG-5: `conversation:user` → newest message already emailed about, so each unread batch emails once. */
   messageEmails: Record<string, string>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
@@ -307,6 +317,51 @@ function seedResources(): StoredResource[] {
     { ...base, id: "res_seed_3", kind: "FILE", title: "Practice questions", folder: "Past papers", position: 2, scope: "COHORT", cohort_id: cohort.id, file: pdf("file_seed_3", "past-paper-practice.pdf", 839), link_url: null },
     { ...base, id: "res_seed_4", kind: "LINK", title: "Whiteboard from the first class", folder: null, position: 3, scope: "SESSION", cohort_id: cohort.id, session_id: firstClass.id, file: null, link_url: "https://example.com/whiteboard/autumn-1" },
   ];
+}
+
+/** A default rubric, one for professional exams, and two rounds of feedback on the Autumn cohort so progress shows. */
+function seedFeedback(): Pick<State, "rubrics" | "feedback"> {
+  const at = "2026-11-01T00:00:00.000Z";
+  const c = (key: string, label: string, description: string | null = null) => ({ key, label, description });
+  const general: Rubric = {
+    id: "rub_general", name: "General progress", is_default: true, archived: false, category_ids: [], updated_at: at,
+    criteria: [c("understanding", "Understanding of the topic"), c("problem_solving", "Problem solving"), c("participation", "Participation"), c("preparation", "Preparation")],
+  };
+  const exam: Rubric = {
+    id: "rub_exam", name: "Professional exam readiness", is_default: false, archived: false, category_ids: ["cat_prof_exam"], updated_at: at,
+    criteria: [
+      c("technical", "Technical knowledge", "Knows the standards and terms the paper tests."),
+      c("application", "Applying it to scenarios", "Uses the facts of the case, not a memorised answer."),
+      c("technique", "Exam technique", "Structure, headings, answering the requirement."),
+      c("timing", "Time management", "Finishes within the time allowed per mark."),
+    ],
+  };
+  const cohort = seedCohorts().find((x) => x.id === "coh_aa_2025")!;
+  const past = cohortSessions(cohort).filter((s) => Date.parse(s.end_utc) < Date.now());
+  const snapshot = { id: exam.id, name: exam.name, criteria: exam.criteria };
+  const base = { training_id: cohort.training_id, instructor_id: cohort.instructor_id, learner_id: "usr_learner_1", rubric: snapshot, assignment_title: null, attachment: null };
+  const written = (i: number) => new Date(Date.parse(past[i].end_utc) + 3 * 3_600_000).toISOString();
+  const feedback: StoredFeedback[] = past.length < 2 ? [] : [
+    {
+      ...base, id: "fbk_seed_1", session_id: past[0].id, created_at: written(0), updated_at: written(0),
+      scores: { technical: 2, application: 2, technique: 1, timing: 2 },
+      comment: "A solid start. You know the audit risk model well, but your answers describe it rather than apply it to the client in the question.",
+      strengths: "Clear definitions and good use of the standards' terms.",
+      improvements: "Use the case facts: name the specific risk and why it matters for this client.",
+      next_steps: "Rewrite answer 2 from the practice paper using one paragraph per risk: risk, why, audit response.",
+    },
+    {
+      ...base, id: "fbk_seed_2", session_id: past[1].id, created_at: written(1), updated_at: written(1),
+      scores: { technical: 3, application: 3, technique: 2, timing: 2 },
+      comment: "Real progress on applying the model to the scenario. Your rewritten answer 2 would score well. Timing is now the main thing holding marks back.",
+      strengths: "Each risk now ties back to the client's facts.",
+      improvements: "You spent 25 minutes on a 10-mark part. Watch the clock: about 1.8 minutes per mark.",
+      next_steps: "Do question 3 under timed conditions and note where the time goes.",
+      assignment_title: "Practice paper, question 2 (rewritten)",
+      attachment: { id: "file_seed_fb", purpose: "FEEDBACK_ATTACHMENT", name: "q2-marked.pdf", content_type: "application/pdf", size_bytes: 839, scan_status: "CLEAN", url: "/demo/past-paper-practice.pdf" },
+    },
+  ];
+  return { rubrics: [general, exam], feedback };
 }
 
 /** A chat with the Autumn cohort's instructor (last reply unread) and the cohort's channel. */
@@ -480,6 +535,7 @@ function seed(): State {
     resources: seedResources(),
     checklists: {},
     ...seedMessages(),
+    ...seedFeedback(),
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -642,7 +698,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v18";
+const STORE_KEY = "edubridge.mock.db.v19";
 
 function load(): State {
   try {

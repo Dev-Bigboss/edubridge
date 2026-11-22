@@ -16,6 +16,7 @@ import { ApiError } from "@/lib/api/client";
 import { useSaveAttendance, useTeachingSession } from "@/lib/api/hooks/sessions";
 import { ATTENDANCE, type Attendance, type SessionDetail } from "@/lib/api/schemas/sessions";
 import { useSession } from "@/lib/auth/session";
+import { SessionFeedback } from "./session-feedback";
 import { cn } from "@/lib/cn";
 import { formatInZone, formatTimeRange } from "@/lib/domain/time";
 
@@ -150,6 +151,7 @@ function Sheet({ data, zone }: { data: SessionDetail; zone: string }) {
           </div>
         </section>
       )}
+      {started && <SessionFeedback sessionId={s.id} roster={roster} />}
     </div>
   );
 }
