@@ -126,3 +126,27 @@ export const ResolveReportInput = z.object({
   note: z.string().trim().min(5, { error: "Add a short note for the record." }).max(500),
 });
 export type ResolveReportInput = z.infer<typeof ResolveReportInput>;
+
+/* ---------- COH-6: cohort space (roster + announcements feed) ---------- */
+
+export const CohortSpace = z.object({
+  cohort: z.object({
+    id: z.string(),
+    name: z.string(),
+    status: z.string(),
+    training_id: z.string(),
+    training_title: z.string(),
+    start_date: z.string(),
+    end_date: z.string(),
+    next_session: z.object({ id: z.string(), start_utc: z.string(), end_utc: z.string(), join_url: z.string() }).nullable(),
+  }),
+  instructor: Person,
+  /** Learners with a confirmed seat, by name. Names and photos only, never contact details. */
+  learners: z.array(Person),
+  /** The cohort channel: post announcements there with `announcement: true`. */
+  channel_id: z.string(),
+  can_announce: z.boolean(),
+  /** Newest first, up to 20. */
+  announcements: z.array(Message),
+});
+export type CohortSpace = z.infer<typeof CohortSpace>;

@@ -78,7 +78,13 @@ function Sheet({ data, zone }: { data: SessionDetail; zone: string }) {
         <p className="text-sm font-medium text-primary">{s.kind === "COHORT" ? t("cohortClass") : t("oneOnOne")}</p>
         <h1 className="text-[28px] leading-tight">{s.training_title}</h1>
         <p className="mt-1 flex flex-wrap items-center gap-x-3 text-[15px]">
-          <span>{s.subtitle}</span>
+          {s.kind === "COHORT" ? (
+            <Link href={`/teach/cohorts/${s.id.split(":")[0]}`} className="font-medium text-primary underline-offset-4 hover:underline">
+              {s.subtitle}
+            </Link>
+          ) : (
+            <span>{s.subtitle}</span>
+          )}
           <span className="flex items-center gap-1.5">
             <Clock aria-hidden="true" className="size-4" />
             {formatInZone(s.start_utc, zone, "EEEE d MMMM")}, {formatTimeRange(s.start_utc, s.end_utc, zone)}

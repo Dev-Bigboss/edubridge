@@ -1453,7 +1453,8 @@
       "joinClass": "Join class",
       "recordings": "Recordings",
       "resources": "Resources",
-      "feedback": "Feedback"
+      "feedback": "Feedback",
+      "cohortPage": "Cohort"
     },
     "payments": {
       "title": "Payments",
@@ -2253,5 +2254,33 @@
     "count": "{count, plural, one {# review} other {# reviews}}",
     "editedLabel": "edited",
     "instructorWas": "Instructor {name}:"
+  },
+  "cohortSpace": {
+    "notFound": "This cohort isn't available",
+    "notFoundBody": "It may have been cancelled, or you're not one of its members.",
+    "backLearn": "Back to my trainings",
+    "backTeach": "Back to schedule",
+    "runs": "Runs {from} to {to}",
+    "nextClass": "Next class",
+    "join": "Join class",
+    "shortcuts": "Cohort shortcuts",
+    "channel": "Cohort channel",
+    "resources": "Resources",
+    "recordings": "Recordings",
+    "announcements": "Announcements",
+    "noAnnouncements": "No announcements yet",
+    "noAnnouncementsLearner": "Your instructor's updates about classes, homework and changes will appear here, and you'll be notified.",
+    "noAnnouncementsInstructor": "Post updates about classes, homework or changes. Everyone in the cohort sees them here and in the channel.",
+    "announcementFrom": "Announcement from {name}, {date}",
+    "roster": "{count, plural, one {# person} other {# people}}",
+    "instructor": "Instructor",
+    "you": "you",
+    "rosterPrivacy": "Only names and photos are shown. Message classmates in the cohort channel.",
+    "newAnnouncement": "New announcement",
+    "announceHint": "{count, plural, one {Your # learner sees it} other {All # learners see it}} here and pinned in the channel.",
+    "post": "Post announcement",
+    "posted": "Announcement posted.",
+    "tooShort": "Write the announcement first.",
+    "failed": "That didn't post. Try again; your text is still here."
   }
 }

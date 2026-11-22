@@ -6,6 +6,7 @@ import { useApiReady } from "@/components/providers";
 import { api } from "@/lib/api/client";
 import { useApiQuery } from "@/lib/api/query";
 import {
+  CohortSpace,
   ContactList,
   Conversation,
   ConversationList,
@@ -172,4 +173,9 @@ export function useResolveReport(id: string) {
     mutationFn: (body: ResolveReportInput) => api(`/admin/message-reports/${id}/resolve`, { method: "POST", body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ADMIN_KEY }),
   });
+}
+
+/** COH-6: a cohort's roster and announcements. */
+export function useCohortSpace(id: string) {
+  return useApiQuery({ queryKey: ["cohort-space", id], refetchInterval: POLL.list, queryFn: ({ signal }) => api(`/cohorts/${id}/space`, { schema: CohortSpace, signal }) });
 }

@@ -39,6 +39,11 @@ info:
       MESSAGE_REPORTED (notifications.yaml). Admins see a report with up to 5 messages either side (never the whole inbox),
       then REMOVE_MESSAGE (body and files cleared for everyone, `removed: true`) or DISMISS, with a note; audited
       (`message.removed`, `message_report.dismissed`). Removing settles other open reports on the same message.
+    - COH-6 cohort page: GET /cohorts/{id}/space gives a cohort's members (its instructor and learners with a CONFIRMED
+      seat) the roster (names and photos only, never contact details), the next class with its join link, and the
+      latest 20 announcements from the cohort channel, newest first. Admins can read it; anyone else gets 404. The
+      instructor posts announcements through POST /conversations/{channel_id}/messages with announcement: true.
+      Each announcement notifies every other member (COHORT_CHANGED, linking to the cohort page).
     - Writes are refused while an admin views as the user.
 
     WebSocket (not describable in OpenAPI): `GET /api/v1/realtime` upgrades with the session cookie. Server → client events,
@@ -148,6 +153,13 @@ paths:
       summary: Mark everything up to now as read
       responses:
         "200": { $ref: "#/components/responses/ConversationResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+  /cohorts/{id}/space:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: Cohort roster and announcements feed for its members (COH-6); ADMIN read-only
+      responses:
+        "200": { description: Cohort space, content: { application/json: { schema: { $ref: "#/components/schemas/CohortSpace" } } } }
         "404": { $ref: "#/components/responses/Error" }
   /conversations/{id}/block:
     parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
@@ -294,6 +306,30 @@ components:
         filtered: { type: boolean, description: "MSG-6: contact details were masked on send" }
         removed: { type: boolean, description: "MSG-6: removed by an admin; body is empty and attachments []" }
         created_at: { type: string, format: date-time }
+    CohortSpace:
+      type: object
+      required: [cohort, instructor, learners, channel_id, can_announce, announcements]
+      properties:
+        cohort:
+          type: object
+          required: [id, name, status, training_id, training_title, start_date, end_date, next_session]
+          properties:
+            id: { type: string }
+            name: { type: string }
+            status: { type: string }
+            training_id: { type: string }
+            training_title: { type: string }
+            start_date: { type: string, format: date }
+            end_date: { type: string, format: date }
+            next_session:
+              oneOf:
+                - { type: object, required: [id, start_utc, end_utc, join_url], properties: { id: { type: string }, start_utc: { type: string, format: date-time }, end_utc: { type: string, format: date-time }, join_url: { type: string } } }
+                - { type: "null" }
+        instructor: { $ref: "#/components/schemas/Person" }
+        learners: { type: array, items: { $ref: "#/components/schemas/Person" } }
+        channel_id: { type: string }
+        can_announce: { type: boolean }
+        announcements: { type: array, items: { $ref: "#/components/schemas/Message" } }
     ReportReason:
       type: string
       enum: [SPAM, HARASSMENT, OFF_PLATFORM_PAYMENT, OTHER]

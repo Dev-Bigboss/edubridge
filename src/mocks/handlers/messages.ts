@@ -5,6 +5,7 @@ import { maskContactDetails } from "@/lib/domain/contact-filter";
 import { wants } from "@/lib/domain/notification-groups";
 import { countUnread, messagePreview } from "@/lib/domain/messages";
 import { audit, db, findUser, newId, notify, save, sendMail, type MockUser, type StoredConversation, type StoredMessage, type StoredMessageReport } from "../db";
+import { nextCohortSession } from "./sessions";
 import { getUploadedFile } from "./uploads";
 import { apiError, blockWhileImpersonating, requireUser, url, validationError } from "./util";
 
@@ -330,6 +331,13 @@ export const messageHandlers = [
     };
     db.messages.push(m);
     c.reads[user.id] = now;
+    // COH-6: announcements reach every member through the bell (and email, per their preferences).
+    if (m.announcement) {
+      const cohort = db.cohorts.find((x) => x.id === c.cohort_id);
+      for (const memberId of membersOf(c).filter((id) => id !== user.id)) {
+        notify(memberId, { type: "COHORT_CHANGED", title: `New announcement: ${cohort?.name ?? "your cohort"}`, body: messagePreview(m.body, 0), link: `/learn/cohorts/${c.cohort_id}` });
+      }
+    }
     save();
     return HttpResponse.json({ message: toMessage(m) }, { status: 201 });
   }),
@@ -347,6 +355,34 @@ export const messageHandlers = [
     }
     return HttpResponse.json({ conversation: toConversation(c, user) });
   }),
+  /** COH-6: the cohort's page for its members (and admins, read-only): roster and announcements. */
+  http.get(url("/cohorts/:id/space"), async ({ params }) => {
+    await delay(200);
+    const user = requireUser();
+    if (user instanceof Response) return user;
+    ensureCohortChannels();
+    const cohort = db.cohorts.find((c) => c.id === params.id && c.status !== "DRAFT");
+    const channel = cohort && db.conversations.find((c) => c.kind === "COHORT" && c.cohort_id === cohort.id);
+    if (!cohort || !channel || (user.role !== "ADMIN" && !membersOf(channel).includes(user.id))) {
+      return apiError(404, "NOT_FOUND", "That cohort doesn't exist or you're not in it.");
+    }
+    const people = (ids: string[]) => ids.map(findUser).filter((u): u is MockUser => !!u).map(toPerson);
+    const learners = people(membersOf(channel).filter((id) => id !== cohort.instructor_id)).sort((a, b) => a.name.localeCompare(b.name));
+    const instructor = findUser(cohort.instructor_id);
+    const announcements = messagesIn(channel.id).filter((m) => m.announcement && !m.removed_at).reverse().slice(0, 20).map(toMessage);
+    return HttpResponse.json({
+      cohort: {
+        id: cohort.id, name: cohort.name, status: cohort.status, training_id: cohort.training_id, training_title: trainingTitle(cohort.training_id),
+        start_date: cohort.start_date, end_date: cohort.end_date, next_session: nextCohortSession(cohort),
+      },
+      instructor: instructor ? toPerson(instructor) : { id: cohort.instructor_id, name: "Instructor", role: "INSTRUCTOR", avatar_url: null },
+      learners,
+      channel_id: channel.id,
+      can_announce: user.role !== "ADMIN" && canAnnounce(channel, user),
+      announcements,
+    });
+  }),
+
   /** MSG-6: block the other person in a one-to-one chat. Bookings and classes are unaffected. */
   http.post(url("/conversations/:id/block"), async ({ params }) => {
     await delay(200);

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ApiError, api } from "@/lib/api/client";
 import { uploadFile } from "@/lib/api/hooks/uploads";
-import { ContactList, ConversationList, ConversationResponse, MessagePage, MessageReportDetail, MessageReportList, MessageResponse, UnreadMessages } from "@/lib/api/schemas/messages";
+import { ContactList, ConversationList, ConversationResponse, MessagePage, CohortSpace, MessageReportDetail, MessageReportList, MessageResponse, UnreadMessages } from "@/lib/api/schemas/messages";
 import { db, mockSession, resetDb } from "../db";
 
 const failure = (p: Promise<unknown>) =>
@@ -73,6 +73,7 @@ describe("messages (MSG-1..4)", () => {
     mockSession.set("usr_instructor_1");
     const m = await send(CHANNEL, "No class next Monday.", { announcement: true });
     expect(m.announcement).toBe(true);
+    expect(db.notifications.filter((n) => n.title === "New announcement: Autumn cohort").map((n) => n.user_id).sort()).toEqual(["usr_learner_1", "usr_roster_1", "usr_roster_2", "usr_roster_3"]);
   });
 
   it("BR-6: contacts and opening conversations need a booking, a seat or an enquiry", async () => {
@@ -184,5 +185,24 @@ describe("messages (MSG-1..4)", () => {
     mockSession.set("usr_learner_1");
     await list();
     expect(toLearner()).toHaveLength(2);
+  });
+
+  it("COH-6: members see the cohort's roster and announcements; the instructor can announce; others get 404", async () => {
+    const space = await api("/cohorts/coh_aa_2025/space", { schema: CohortSpace });
+    expect(space.instructor.name).toBe("Test Instructor");
+    expect(space.learners.map((p) => p.name)).toEqual(["Ada Demo", "Chidi Demo", "Fola Demo", "Test Learner"]);
+    expect(space.announcements.map((m) => m.id)).toEqual(["msg_seed_8", "msg_seed_5"]);
+    expect(space).toMatchObject({ channel_id: CHANNEL, can_announce: false });
+    expect(space.cohort.next_session?.join_url).toMatch(/^https:/);
+    expect(JSON.stringify(space)).not.toContain("@example.com");
+
+    mockSession.set("usr_instructor_1");
+    expect((await api("/cohorts/coh_aa_2025/space", { schema: CohortSpace })).can_announce).toBe(true);
+    mockSession.set("usr_admin_1");
+    expect((await api("/cohorts/coh_aa_2025/space", { schema: CohortSpace })).can_announce).toBe(false);
+    mockSession.set("usr_instructor_2");
+    expect((await failure(api("/cohorts/coh_aa_2025/space"))).status).toBe(404);
+    mockSession.set("usr_learner_1");
+    expect((await failure(api("/cohorts/coh_mth_sem1/space"))).status).toBe(404); // not enrolled there
   });
 });

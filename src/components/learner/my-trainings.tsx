@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, BookOpen, CalendarDays, Clock, FolderOpen, MessageSquareText,
+import { Archive, BookOpen, CalendarDays, Clock, FolderOpen, MessageSquareText, Users,
   PlayCircle, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -141,6 +141,12 @@ function EnrolmentCard({ item, zone, now, phase }: { item: LearnerEnrolment; zon
             ) : (
               <span className="text-heading">{t("joinSoon")}</span>
             ))}
+          {phase !== "CANCELLED" && (
+            <Link href={`/learn/cohorts/${item.cohort.id}`} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">
+              <Users aria-hidden="true" className="size-4" />
+              {t("cohortPage")}
+            </Link>
+          )}
           {phase !== "CANCELLED" && (
             <Link href={`/learn/resources?training=${training.id}`} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">
               <FolderOpen aria-hidden="true" className="size-4" />
