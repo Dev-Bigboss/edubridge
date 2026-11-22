@@ -72,6 +72,8 @@ export type StoredConversation = {
   created_at: string;
   /** MSG-3: user id → when they last read it. */
   reads: Record<string, string>;
+  /** MSG-6, DIRECT only: the member who blocked the other. */
+  blocked_by: string | null;
 };
 
 export type StoredMessage = {
@@ -82,6 +84,23 @@ export type StoredMessage = {
   attachments: StoredFile[];
   announcement: boolean;
   client_id: string | null;
+  /** MSG-6: contact details were masked on send. */
+  filtered: boolean;
+  /** MSG-6: removed by an admin after a report. */
+  removed_at: string | null;
+  created_at: string;
+};
+
+/** MSG-6: a report on a message or a whole conversation, for admins to review. */
+export type StoredMessageReport = {
+  id: string;
+  conversation_id: string;
+  message_id: string | null;
+  reporter_id: string;
+  reason: "SPAM" | "HARASSMENT" | "OFF_PLATFORM_PAYMENT" | "OTHER";
+  details: string;
+  status: "OPEN" | "RESOLVED";
+  resolution: { action: "REMOVE_MESSAGE" | "DISMISS"; note: string; by_name: string; at: string } | null;
   created_at: string;
 };
 
@@ -136,6 +155,9 @@ type State = {
   /** MSG-1..4 */
   conversations: StoredConversation[];
   messages: StoredMessage[];
+  messageReports: StoredMessageReport[];
+  /** MSG-5: `conversation:user` → newest message already emailed about, so each unread batch emails once. */
+  messageEmails: Record<string, string>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
   payments: (Payment & { mock?: { outcome: "success" | "decline"; settles_at: string } ; idempotency_key?: string })[];
   pricingRules: PricingRuleDto[];
@@ -288,10 +310,10 @@ function seedResources(): StoredResource[] {
 }
 
 /** A chat with the Autumn cohort's instructor (last reply unread) and the cohort's channel. */
-function seedMessages(): Pick<State, "conversations" | "messages"> {
+function seedMessages(): Pick<State, "conversations" | "messages" | "messageReports" | "messageEmails"> {
   const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString();
   const msg = (n: number, conversation_id: string, sender_id: string, minutesAgo: number, body: string, announcement = false): StoredMessage => ({
-    id: `msg_seed_${n}`, conversation_id, sender_id, body, attachments: [], announcement, client_id: null, created_at: ago(minutesAgo),
+    id: `msg_seed_${n}`, conversation_id, sender_id, body, attachments: [], announcement, client_id: null, filtered: false, removed_at: null, created_at: ago(minutesAgo),
   });
   const direct = "cnv_seed_direct";
   const channel = "cnv_seed_coh_aa_2025";
@@ -299,11 +321,11 @@ function seedMessages(): Pick<State, "conversations" | "messages"> {
     conversations: [
       {
         id: direct, kind: "DIRECT", context: "ENROLMENT", member_ids: ["usr_learner_1", "usr_instructor_1"], training_id: "trn_ican_aa_2025",
-        cohort_id: null, created_by: "usr_learner_1", created_at: ago(60 * 50), reads: { usr_learner_1: ago(60 * 26), usr_instructor_1: ago(60 * 3) },
+        cohort_id: null, created_by: "usr_learner_1", created_at: ago(60 * 50), reads: { usr_learner_1: ago(60 * 26), usr_instructor_1: ago(60 * 3) }, blocked_by: null,
       },
       {
         id: channel, kind: "COHORT", context: "COHORT", member_ids: [], training_id: "trn_ican_aa_2025", cohort_id: "coh_aa_2025",
-        created_by: null, created_at: ago(60 * 24 * 20), reads: { usr_learner_1: ago(60 * 24 * 2), usr_instructor_1: ago(30) },
+        created_by: null, created_at: ago(60 * 24 * 20), reads: { usr_learner_1: ago(60 * 24 * 2), usr_instructor_1: ago(30) }, blocked_by: null,
       },
     ],
     messages: [
@@ -315,7 +337,16 @@ function seedMessages(): Pick<State, "conversations" | "messages"> {
       msg(6, channel, "usr_roster_1", 60 * 24 * 3, "Does anyone have the page number for the audit risk model diagram?"),
       msg(7, channel, "usr_roster_2", 60 * 24 * 3 - 20, "Page 112 in the study text."),
       msg(8, channel, "usr_instructor_1", 60 * 20, "Reminder: Thursday's class starts 15 minutes early to make room for the mock exam review.", true),
+      { ...msg(9, channel, "usr_roster_3", 60 * 24 * 2 + 60, "I tutor this privately for half the price. Pay me directly and message me on [contact details hidden]"), filtered: true },
     ],
+    // A classmate reported the off-platform offer, so the moderation queue has something to review.
+    messageReports: [
+      {
+        id: "rpt_seed_1", conversation_id: channel, message_id: "msg_seed_9", reporter_id: "usr_roster_1", reason: "OFF_PLATFORM_PAYMENT",
+        details: "Offering lessons outside EduBridge for cash.", status: "OPEN", resolution: null, created_at: ago(60 * 24 * 2 - 30),
+      },
+    ],
+    messageEmails: {},
   };
 }
 
@@ -611,7 +642,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v17";
+const STORE_KEY = "edubridge.mock.db.v18";
 
 function load(): State {
   try {

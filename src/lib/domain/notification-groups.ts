@@ -5,7 +5,7 @@ import type { NotificationType, Role } from "./enums";
  * locked on because missing them costs money or access (receipts, refunds, approval decisions).
  */
 export type NotificationGroup = {
-  key: "bookings" | "reminders" | "payments" | "content" | "messages" | "cohorts" | "account";
+  key: "bookings" | "reminders" | "payments" | "content" | "messages" | "cohorts" | "account" | "moderation";
   types: NotificationType[];
   roles: Role[];
   /** Channels that can't be turned off for this group. */
@@ -20,6 +20,7 @@ export const NOTIFICATION_GROUPS: NotificationGroup[] = [
   { key: "content", types: ["RESOURCE_ADDED", "RECORDING_ADDED", "FEEDBACK_ADDED"], roles: ["LEARNER"], locked: [] },
   { key: "messages", types: ["MESSAGE_RECEIVED"], roles: ["LEARNER", "INSTRUCTOR"], locked: [] },
   { key: "account", types: ["INSTRUCTOR_APPLICATION", "INSTRUCTOR_APPROVED", "INSTRUCTOR_REJECTED"], roles: ["INSTRUCTOR", "ADMIN"], locked: ["in_app", "email"] },
+  { key: "moderation", types: ["MESSAGE_REPORTED"], roles: ["ADMIN"], locked: [] },
 ];
 
 export type Preference = { group: NotificationGroup["key"]; in_app: boolean; email: boolean };

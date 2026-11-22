@@ -144,6 +144,6 @@ components:
       type: object
       required: [group, in_app, email]
       properties:
-        group: { type: string, enum: [bookings, reminders, payments, content, messages, cohorts, account] }
+        group: { type: string, enum: [bookings, reminders, payments, content, messages, cohorts, account, moderation] }
         in_app: { type: boolean }
         email: { type: boolean }

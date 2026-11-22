@@ -119,3 +119,65 @@ test("messages fit a 320 px screen: list, then the conversation, then back", asy
   await page.getByRole("link", { name: "Back to conversations" }).click();
   await expect(list(page).getByRole("link", { name: /^Autumn cohort/ })).toBeVisible();
 });
+
+test("MSG-6: a phone number gets a warning first; the sender can still send it", async ({ page }) => {
+  await signIn(page, "learner@example.com");
+  await expect(page).toHaveURL(/\/learn$/);
+  await page.goto("/learn/messages?c=cnv_seed_direct");
+  const box = page.getByLabel("Message Test Instructor");
+  await box.fill("Could you call me on 0803 123 4567?");
+  await box.press("Enter");
+  const warning = page.getByRole("alert").filter({ hasText: "aren't protected" });
+  await expect(warning).toBeVisible();
+  await expect(box).toHaveValue("Could you call me on 0803 123 4567?");
+  await expectNoA11yViolations(page);
+  await warning.getByRole("button", { name: "Send anyway" }).click();
+  await expect(thread(page).getByText("Could you call me on 0803 123 4567?")).toBeVisible();
+});
+
+test("MSG-6: a learner reports a message and blocks; unblocking opens the chat again", async ({ page }) => {
+  await signIn(page, "learner@example.com");
+  await expect(page).toHaveURL(/\/learn$/);
+  await page.goto("/learn/messages?c=cnv_seed_direct");
+  await page.getByRole("button", { name: "Conversation options" }).click();
+  await page.getByRole("menuitem", { name: "Report" }).click();
+  const dialog = page.getByRole("dialog", { name: "Report this conversation" });
+  await dialog.getByRole("button", { name: "Send report" }).click();
+  await expect(dialog.getByText("Choose what's wrong.")).toBeVisible();
+  await dialog.getByLabel("Harassment or abuse").check();
+  await dialog.getByLabel("Which message?").selectOption({ label: "Test Instructor: Great. Bring one question about it to class and we'll start there." });
+  await dialog.getByLabel("Also block Test Instructor").check();
+  await expectNoA11yViolations(page);
+  await dialog.getByRole("button", { name: "Send report" }).click();
+  await expect(page.getByText("Thanks for telling us.")).toBeVisible();
+  await expect(page.getByText("You blocked Test Instructor.")).toBeVisible();
+  await expect(page.getByRole("textbox")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Unblock Test Instructor" }).click();
+  await expect(page.getByLabel("Message Test Instructor")).toBeVisible();
+});
+
+test("MSG-6: an admin reviews a reported message in context and removes it", async ({ page }) => {
+  await signIn(page, "admin@example.com", { mfa: true });
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.goto("/admin/moderation");
+  const card = page.getByRole("article", { name: /Asking to pay outside EduBridge: Fola Demo/ });
+  await expect(card).toContainText("Reported by Ada Demo");
+  await expectNoA11yViolations(page);
+
+  await card.getByRole("button", { name: /^Review/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Review report" });
+  await expect(dialog.getByRole("region", { name: "Messages around it" }).getByText("I tutor this privately")).toBeVisible();
+  await dialog.getByRole("button", { name: "Remove message" }).click();
+  await expect(dialog.getByText("Add a short note for the record.")).toBeVisible();
+  await dialog.getByLabel("Note for the record").fill("Off-platform payment offer, first warning.");
+  await expectNoA11yViolations(page);
+  await dialog.getByRole("button", { name: "Remove message" }).click();
+  await expect(page.getByText("Message removed for everyone.")).toBeVisible();
+  await expect(page.getByText("Nothing waiting for review")).toBeVisible();
+
+  await page.getByRole("group", { name: "Show reports" }).getByRole("button", { name: "Resolved" }).click();
+  await expect(page.getByRole("article", { name: /Fola Demo/ })).toContainText("Off-platform payment offer, first warning.");
+  await page.goto("/admin/audit-log");
+  await expect(page.getByText(/Removed a reported message/).first()).toBeVisible();
+});

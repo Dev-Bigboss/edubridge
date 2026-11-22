@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONTACT_FILTERS } from "@/lib/domain/contact-filter";
 import { ROLES } from "@/lib/domain/enums";
 import { MESSAGE_MAX_LENGTH, MAX_ATTACHMENTS } from "@/lib/domain/messages";
 import { StoredFile } from "./uploads";
@@ -38,6 +39,10 @@ export const Conversation = z.object({
   other_last_read_at: z.string().nullable(),
   can_post: z.boolean(),
   can_announce: z.boolean(),
+  /** MSG-6, DIRECT only: who blocked whom; nobody can post while it's set. */
+  blocked: z.enum(["BY_ME", "BY_THEM"]).nullable(),
+  /** MSG-6: the platform's rule for contact details, so the composer can warn before sending. */
+  contact_filter: z.enum(CONTACT_FILTERS),
   updated_at: z.string(),
 });
 export type Conversation = z.infer<typeof Conversation>;
@@ -52,6 +57,10 @@ export const Message = z.object({
   attachments: z.array(StoredFile),
   announcement: z.boolean(),
   client_id: z.string().nullable(),
+  /** MSG-6: contact details were replaced when it was sent. */
+  filtered: z.boolean(),
+  /** MSG-6: an admin removed it after a report; body and files are gone. */
+  removed: z.boolean(),
   created_at: z.string(),
 });
 export type Message = z.infer<typeof Message>;
@@ -73,3 +82,47 @@ export const OpenConversationInput = z.object({ user_id: z.string().min(1), trai
 export type OpenConversationInput = z.infer<typeof OpenConversationInput>;
 
 export const UnreadMessages = z.object({ unread_count: z.number().int().min(0) });
+
+/* ---------- MSG-6: reports, blocks and moderation ---------- */
+
+export const REPORT_REASONS = ["SPAM", "HARASSMENT", "OFF_PLATFORM_PAYMENT", "OTHER"] as const;
+export type ReportReason = (typeof REPORT_REASONS)[number];
+
+export const ReportInput = z
+  .object({
+    /** The message, or null for the conversation as a whole. */
+    message_id: z.string().nullable(),
+    reason: z.enum(REPORT_REASONS),
+    details: z.string().trim().max(1000, { error: "Keep it under 1000 characters." }),
+    /** DIRECT only: block the other person in the same step. */
+    block: z.boolean(),
+  })
+  .refine((r) => r.reason !== "OTHER" || r.details.length >= 5, { path: ["details"], error: "Tell us briefly what happened." });
+export type ReportInput = z.infer<typeof ReportInput>;
+
+export const REPORT_ACTIONS = ["REMOVE_MESSAGE", "DISMISS"] as const;
+
+export const MessageReport = z.object({
+  id: z.string(),
+  status: z.enum(["OPEN", "RESOLVED"]),
+  reason: z.enum(REPORT_REASONS),
+  details: z.string(),
+  created_at: z.string(),
+  reporter: Person,
+  /** The person reported: the message's sender, or the other person in a one-to-one chat. Null for a whole cohort channel. */
+  reported: Person.nullable(),
+  conversation: z.object({ id: z.string(), kind: z.enum(["DIRECT", "COHORT"]), title: z.string(), subtitle: z.string() }),
+  message: Message.nullable(),
+  resolution: z.object({ action: z.enum(REPORT_ACTIONS), note: z.string(), by_name: z.string(), at: z.string() }).nullable(),
+});
+export type MessageReport = z.infer<typeof MessageReport>;
+export const MessageReportList = z.object({ items: z.array(MessageReport) });
+/** The report with up to 5 messages either side of the reported one (or the latest 10), for context. */
+export const MessageReportDetail = z.object({ report: MessageReport, context: z.array(Message) });
+export type MessageReportDetail = z.infer<typeof MessageReportDetail>;
+
+export const ResolveReportInput = z.object({
+  action: z.enum(REPORT_ACTIONS),
+  note: z.string().trim().min(5, { error: "Add a short note for the record." }).max(500),
+});
+export type ResolveReportInput = z.infer<typeof ResolveReportInput>;

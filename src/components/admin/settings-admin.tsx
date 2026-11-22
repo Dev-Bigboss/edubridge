@@ -9,12 +9,14 @@ import { toast } from "sonner";
 import { FormError } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 import { LoadingState } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
 import { applyApiError } from "@/lib/api/form-errors";
 import { useSaveSettings, useSettings } from "@/lib/api/hooks/settings";
 import { SettingsInput, type SettingsResponse } from "@/lib/api/schemas/settings";
+import { CONTACT_FILTERS } from "@/lib/domain/contact-filter";
 import { formatMoney } from "@/lib/domain/money";
 import { describeTiers, refundPercent, tierProblems } from "@/lib/domain/policy";
 import { timeAgo } from "@/lib/domain/time";
@@ -49,6 +51,8 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
     learner_cancellation: settings.learner_cancellation,
     instructor_cancellation: settings.instructor_cancellation,
     recording_retention_months: settings.recording_retention_months,
+    message_email_delay_minutes: settings.message_email_delay_minutes,
+    contact_filter: settings.contact_filter,
   };
   const form = useForm<SettingsInput>({ resolver: zodResolver(FormSchema), defaultValues: defaults });
   const tiers = useFieldArray({ control: form.control, name: "learner_cancellation.tiers" });
@@ -74,6 +78,8 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
         learner_cancellation: res.settings.learner_cancellation,
         instructor_cancellation: res.settings.instructor_cancellation,
         recording_retention_months: res.settings.recording_retention_months,
+        message_email_delay_minutes: res.settings.message_email_delay_minutes,
+        contact_filter: res.settings.contact_filter,
       });
       toast.success(t("saved", { version: res.settings.version }));
     } catch (err) {
@@ -167,6 +173,25 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
           <Field label={t("retentionLabel")} error={errors.recording_retention_months?.message}>
             {(a) => <Suffixed suffix={t("months")}><Input {...a} type="number" inputMode="numeric" min={1} max={60} className="pr-24" {...form.register("recording_retention_months", { valueAsNumber: true })} /></Suffixed>}
           </Field>
+        </Section>
+
+        <Section title={t("messaging")} description={t("messagingBody")}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t("emailDelayLabel")} error={errors.message_email_delay_minutes?.message} hint={t("emailDelayHint")}>
+              {(a) => <Suffixed suffix={t("minutes")}><Input {...a} type="number" inputMode="numeric" min={5} max={1440} className="pr-24" {...form.register("message_email_delay_minutes", { valueAsNumber: true })} /></Suffixed>}
+            </Field>
+            <Field label={t("contactFilterLabel")} error={errors.contact_filter?.message} hint={t(`contactFilterHint.${values.contact_filter ?? "WARN"}`)}>
+              {(a) => (
+                <Select {...a} {...form.register("contact_filter")}>
+                  {CONTACT_FILTERS.map((f) => (
+                    <option key={f} value={f}>
+                      {t(`contactFilter.${f}`)}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          </div>
         </Section>
 
         <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-3 border-t border-border bg-white px-4 py-4 shadow-[0_-8px_24px_rgba(8,42,94,0.06)] sm:flex-row sm:items-center sm:justify-end lg:mx-0 lg:rounded-md lg:border">

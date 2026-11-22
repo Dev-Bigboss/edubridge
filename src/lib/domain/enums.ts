@@ -114,5 +114,6 @@ export const NOTIFICATION_TYPES = [
   "INSTRUCTOR_APPLICATION",
   "INSTRUCTOR_APPROVED",
   "INSTRUCTOR_REJECTED",
+  "MESSAGE_REPORTED",
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];

@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Megaphone, Paperclip, SendHorizontal, X } from "lucide-react";
+import { FileText, Megaphone, Paperclip, SendHorizontal, ShieldAlert, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { useUpload } from "@/lib/api/hooks/uploads";
 import type { Conversation } from "@/lib/api/schemas/messages";
 import type { StoredFile } from "@/lib/api/schemas/uploads";
 import { cn } from "@/lib/cn";
+import { findContactDetails } from "@/lib/domain/contact-filter";
 import { MAX_ATTACHMENTS, MESSAGE_MAX_LENGTH } from "@/lib/domain/messages";
 import { UPLOAD_RULES, formatBytes } from "@/lib/domain/uploads";
 
@@ -46,6 +47,8 @@ export function Composer({ conversation, onSent }: { conversation: Conversation;
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [announce, setAnnounce] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // MSG-6: contact details found; the sender has to confirm before it goes (WARN) or knows they'll be hidden (MASK).
+  const [contactWarning, setContactWarning] = useState(false);
   // One id per message being written: a retry after a timeout returns the first send, not a duplicate.
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const area = useRef<HTMLTextAreaElement>(null);
@@ -65,10 +68,12 @@ export function Composer({ conversation, onSent }: { conversation: Conversation;
   const empty = !text.trim() && files.length === 0;
   const busy = send.isPending || upload.isPending;
 
-  const submit = () => {
+  const submit = (confirmed = false) => {
     if (empty || busy) return;
     if (tooLong) return setError(t("tooLong", { max: MESSAGE_MAX_LENGTH }));
     setError(null);
+    if (!confirmed && conversation.contact_filter !== "OFF" && findContactDetails(text).length > 0) return setContactWarning(true);
+    setContactWarning(false);
     send.mutate(
       { body: text.trim(), attachment_ids: files.map((f) => f.id), announcement: announce, client_id: clientId },
       {
@@ -152,7 +157,10 @@ export function Composer({ conversation, onSent }: { conversation: Conversation;
           ref={area}
           rows={1}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            setContactWarning(false);
+          }}
           onKeyDown={onKeyDown}
           placeholder={t("placeholder")}
           aria-invalid={error || tooLong ? true : undefined}
@@ -171,6 +179,20 @@ export function Composer({ conversation, onSent }: { conversation: Conversation;
       <p id={`${id}-hint`} className={cn("mt-1 text-xs", tooLong && "text-danger")}>
         {text.length > MESSAGE_MAX_LENGTH - 500 ? t("count", { count: text.length, max: MESSAGE_MAX_LENGTH }) : t("hint")}
       </p>
+      {contactWarning && (
+        <div role="alert" className="mt-2 flex flex-wrap items-start gap-3 rounded-sm border border-accent/60 bg-accent/10 px-3 py-2.5 text-[15px] text-heading">
+          <ShieldAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+          <p className="min-w-[200px] flex-1 leading-relaxed">{conversation.contact_filter === "MASK" ? t("contactMask") : t("contactWarn")}</p>
+          <span className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={() => (setContactWarning(false), area.current?.focus())}>
+              {t("editMessage")}
+            </Button>
+            <Button type="button" variant="outline" loading={send.isPending} onClick={() => submit(true)}>
+              {t("sendAnyway")}
+            </Button>
+          </span>
+        </div>
+      )}
       {error && (
         <p id={`${id}-error`} role="alert" className="mt-1 text-sm text-danger">
           {error}

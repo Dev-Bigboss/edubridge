@@ -123,4 +123,8 @@ Every non-2xx response has this body:
 | Real-time delivery | WebSocket `/api/v1/realtime` pushes `message.created`, `conversation.read`, `unread.changed`; the UI polls (list 15 s, open conversation 5 s, badge 30 s) when the socket is down (MSG-3, plan D7) | `messages.yaml`, `hooks/messages.ts` |
 | Read receipts and unread | Per person `last_read_at`; unread = others' messages after it; "Seen" shown in one-to-one chats only | `messages.yaml`, `domain/messages.ts` |
 | Message limits | 1–4000 characters, up to 5 attachments (MESSAGE_ATTACHMENT: same types, 100 MB and scan as resources); `client_id` makes a retried send post once | `messages.yaml`, `uploads.yaml` |
-| New-message alerts | Not in the notification bell (it would flood it); the sidebar shows unread messages; the email after a delay comes with MSG-5 | `messages.yaml` |
+| New-message alerts | Not in the notification bell (it would flood it); the sidebar shows unread messages | `messages.yaml` |
+| Unread-message email | After `message_email_delay_minutes` (default 30, admin setting): one email per conversation per unread batch, none again until read; respects the "messages" email preference; no message text in the email (MSG-5) | `messages.yaml`, `settings.yaml` |
+| Contact details in messages | Admin setting OFF / WARN (default: the sender is warned, can still send) / MASK (replaced with "[contact details hidden]" on send); emails, 9–15-digit phone numbers, wa.me and t.me links (MSG-6) | `settings.yaml`, `domain/contact-filter.ts` |
+| Blocking | One-to-one only; either side; nobody can post while blocked; history stays; only the blocker unblocks; bookings and classes unaffected (MSG-6) | `messages.yaml` |
+| Reports and moderation | Report a message or the conversation with a reason (optionally block too); admins are notified and see only the 5 messages either side; remove or dismiss with a note, audited (MSG-6) | `messages.yaml` |

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Flag,
   Bell,
   CalendarClock,
   CalendarX,
@@ -40,6 +41,7 @@ const ICONS: Partial<Record<NotificationType, LucideIcon>> = {
   INSTRUCTOR_APPLICATION: UserPlus,
   INSTRUCTOR_APPROVED: UserCheck,
   INSTRUCTOR_REJECTED: UserX,
+  MESSAGE_REPORTED: Flag,
 };
 
 /** Bad news gets the danger tone; everything else stays calm. */

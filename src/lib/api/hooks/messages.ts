@@ -1,17 +1,23 @@
 "use client";
 
+import { z } from "zod";
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useApiReady } from "@/components/providers";
 import { api } from "@/lib/api/client";
 import { useApiQuery } from "@/lib/api/query";
 import {
   ContactList,
+  Conversation,
   ConversationList,
   ConversationResponse,
   MessagePage,
   MessageResponse,
+  MessageReportDetail,
+  MessageReportList,
   UnreadMessages,
   type Message,
+  type ReportInput,
+  type ResolveReportInput,
   type OpenConversationInput,
   type SendMessageInput,
 } from "@/lib/api/schemas/messages";
@@ -112,5 +118,58 @@ export function useMarkConversationRead() {
       void qc.invalidateQueries({ queryKey: [...KEY, "list"] });
       void qc.invalidateQueries({ queryKey: [...KEY, "unread"] });
     },
+  });
+}
+
+/* ---------- MSG-6 ---------- */
+
+function useConversationUpdate() {
+  const qc = useQueryClient();
+  return (conversation: Conversation) => {
+    qc.setQueryData([...KEY, "one", conversation.id], conversation);
+    void qc.invalidateQueries({ queryKey: [...KEY, "list"] });
+  };
+}
+
+export function useBlockConversation(id: string) {
+  const update = useConversationUpdate();
+  return useMutation({
+    mutationFn: (block: boolean) => api(`/conversations/${id}/${block ? "block" : "unblock"}`, { method: "POST", schema: ConversationResponse }).then((r) => r.conversation),
+    onSuccess: update,
+  });
+}
+
+export function useReportConversation(id: string) {
+  const update = useConversationUpdate();
+  return useMutation({
+    mutationFn: (body: ReportInput) => api(`/conversations/${id}/reports`, { method: "POST", body, schema: ReportResponse }),
+    onSuccess: (r) => update(r.conversation),
+  });
+}
+
+const ReportResponse = z.object({ report_id: z.string(), conversation: Conversation });
+
+const ADMIN_KEY = ["admin", "message-reports"] as const;
+
+export function useMessageReports(status: "OPEN" | "RESOLVED") {
+  return useApiQuery({
+    queryKey: [...ADMIN_KEY, status],
+    queryFn: ({ signal }) => api("/admin/message-reports", { query: { status }, schema: MessageReportList, signal }).then((r) => r.items),
+  });
+}
+
+export function useMessageReport(id: string | null) {
+  return useApiQuery({
+    queryKey: [...ADMIN_KEY, "one", id],
+    enabled: !!id,
+    queryFn: ({ signal }) => api(`/admin/message-reports/${id}`, { schema: MessageReportDetail, signal }),
+  });
+}
+
+export function useResolveReport(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ResolveReportInput) => api(`/admin/message-reports/${id}/resolve`, { method: "POST", body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ADMIN_KEY }),
   });
 }

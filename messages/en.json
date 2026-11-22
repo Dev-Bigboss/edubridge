@@ -902,7 +902,23 @@
       "retention": "Recording retention",
       "retentionBody": "Session recordings are deleted automatically this long after the session. Instructors can delete theirs sooner.",
       "retentionLabel": "Keep recordings for (months)",
-      "months": "months"
+      "months": "months",
+      "messaging": "Messaging",
+      "messagingBody": "When people get an email about unread messages, and what happens when someone shares a phone number or email in a message.",
+      "emailDelayLabel": "Email about unread messages after",
+      "emailDelayHint": "One email per conversation, then nothing more until they read it.",
+      "minutes": "minutes",
+      "contactFilterLabel": "Phone numbers and emails in messages",
+      "contactFilter": {
+        "OFF": "Allow them",
+        "WARN": "Warn the sender first",
+        "MASK": "Hide them when sent"
+      },
+      "contactFilterHint": {
+        "OFF": "Messages are sent as written.",
+        "WARN": "The sender is reminded that payments outside EduBridge aren't protected, and can still send.",
+        "MASK": "Phone numbers, emails and chat-app links are replaced with \"[contact details hidden]\"."
+      }
     },
     "audit": {
       "title": "Audit log",
@@ -987,6 +1003,54 @@
       "confirm": "Refund {amount}",
       "done": "{amount} refunded to {name}",
       "failed": "The refund didn't go through. Nothing was changed. Please try again."
+    },
+    "moderation": {
+      "title": "Moderation",
+      "intro": "Messages people have reported. Open one to see the conversation around it, then remove the message or dismiss the report. Every decision is recorded in the audit log.",
+      "show": "Show reports",
+      "status": {
+        "OPEN": "Waiting for review",
+        "RESOLVED": "Resolved"
+      },
+      "emptyOpen": "Nothing waiting for review",
+      "emptyOpenBody": "When someone reports a message or conversation, it appears here and admins are notified.",
+      "emptyResolved": "No resolved reports yet",
+      "emptyResolvedBody": "Reports you remove or dismiss move here with the note you left.",
+      "seeResolved": "See resolved reports",
+      "reasons": {
+        "SPAM": "Spam or a scam",
+        "HARASSMENT": "Harassment or abuse",
+        "OFF_PLATFORM_PAYMENT": "Asking to pay outside EduBridge",
+        "OTHER": "Something else"
+      },
+      "reportedBy": "Reported by {name}",
+      "alreadyRemoved": "Message removed",
+      "actions": {
+        "REMOVE_MESSAGE": "Message removed",
+        "DISMISS": "Dismissed"
+      },
+      "by": "by {name}",
+      "review": "Review",
+      "view": "View",
+      "reviewTitle": "Review report",
+      "reason": "Reason",
+      "reported": "Reported",
+      "wholeChannel": "The whole channel",
+      "where": "Conversation",
+      "reporter": "Reported by",
+      "theirWords": "What they told us",
+      "context": "Messages around it",
+      "contextHint": "Only these messages are shown, not the rest of anyone's inbox.",
+      "reportedMessage": "Reported",
+      "fileOnly": "{count, plural, one {Sent a file} other {Sent # files}}",
+      "note": "Note for the record",
+      "noteHint": "Kept in the audit log. Not sent to anyone.",
+      "noteRequired": "Add a short note for the record.",
+      "dismiss": "Dismiss report",
+      "remove": "Remove message",
+      "removedToast": "Message removed for everyone.",
+      "dismissedToast": "Report dismissed.",
+      "failed": "That didn't work. Try again."
     }
   },
   "catalog": {
@@ -1360,6 +1424,10 @@
         "account": {
           "label": "Account decisions",
           "hint": "Instructor applications and approval decisions."
+        },
+        "moderation": {
+          "label": "Reported messages",
+          "hint": "When someone reports a conversation for review."
         }
       },
       "save": "Save preferences",
@@ -1807,6 +1875,46 @@
     "askQuestionLabel": "Ask a question: {name}",
     "messageInstructor": "Message {name}",
     "messageLearner": "Message {name}",
-    "download": "Download"
+    "download": "Download",
+    "removed": "This message was removed by EduBridge because it broke the community rules.",
+    "filtered": "Contact details hidden",
+    "contactWarn": "This looks like a phone number, email or chat link. Payments made outside EduBridge aren't protected: no receipt, refund or help if something goes wrong.",
+    "contactMask": "Phone numbers, emails and chat links are hidden when sent, so payments stay protected on EduBridge.",
+    "editMessage": "Edit message",
+    "sendAnyway": "Send anyway",
+    "safety": {
+      "menu": "Conversation options",
+      "report": "Report",
+      "block": "Block {name}",
+      "unblock": "Unblock {name}",
+      "blockTitle": "Block {name}?",
+      "blockBody": "Neither of you will be able to send messages here. Past messages stay, and bookings and classes aren't affected. You can unblock at any time.",
+      "blockConfirm": "Block {name}",
+      "cancel": "Cancel",
+      "blocked": "{name} is blocked.",
+      "unblocked": "{name} is unblocked.",
+      "failed": "That didn't work. Try again.",
+      "youBlocked": "You blocked {name}. Unblock to send messages again.",
+      "theyBlocked": "You can't send messages in this conversation.",
+      "reportTitle": "Report this conversation",
+      "reportBody": "Our team reviews reports within two working days. The other person isn't told who reported them.",
+      "reason": "What's wrong?",
+      "reasonRequired": "Choose what's wrong.",
+      "reasons": {
+        "SPAM": "Spam or a scam",
+        "HARASSMENT": "Harassment or abuse",
+        "OFF_PLATFORM_PAYMENT": "Asking to pay outside EduBridge",
+        "OTHER": "Something else"
+      },
+      "which": "Which message?",
+      "whichHint": "Pick one so we can find it quickly, or report the whole conversation.",
+      "whole": "The whole conversation",
+      "detailsLabel": "Anything else we should know? (optional)",
+      "detailsLabelRequired": "Tell us what happened",
+      "detailsRequired": "Tell us briefly what happened.",
+      "alsoBlock": "Also block {name}",
+      "send": "Send report",
+      "reported": "Thanks for telling us. We'll review it within two working days."
+    }
   }
 }

@@ -1,13 +1,16 @@
 "use client";
 
-import { ArrowLeft, CheckCheck, Download, FileText, Lock, Megaphone, MessagesSquare, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Ban, CheckCheck, Download, EyeOff, FileText, Lock, Megaphone, MessagesSquare, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { LoadError } from "@/components/admin/catalog-admin";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/spinner";
-import { useConversation, useMarkConversationRead, useMessages } from "@/lib/api/hooks/messages";
+import { useBlockConversation, useConversation, useMarkConversationRead, useMessages } from "@/lib/api/hooks/messages";
+import type { Conversation } from "@/lib/api/schemas/messages";
+import { toast } from "sonner";
+import { ConversationMenu } from "./safety";
 import type { Message } from "@/lib/api/schemas/messages";
 import { cn } from "@/lib/cn";
 import { groupByDay, mergePages, seenMessageId, startsCluster } from "@/lib/domain/messages";
@@ -76,7 +79,7 @@ export function Thread({ id, base, me, zone }: { id: string; base: string; me: s
   if (!c || history.isPending) return <LoadingState label={t("loadingConversation")} />;
 
   const seen = c.kind === "DIRECT" ? seenMessageId(messages, me, c.other_last_read_at) : null;
-  const pinned = c.kind === "COHORT" ? messages.findLast((m) => m.announcement) : undefined;
+  const pinned = c.kind === "COHORT" ? messages.findLast((m) => m.announcement && !m.removed) : undefined;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -91,6 +94,7 @@ export function Thread({ id, base, me, zone }: { id: string; base: string; me: s
           <h2 className="truncate font-heading text-base font-semibold text-heading">{c.title}</h2>
           <p className="truncate text-sm">{c.kind === "COHORT" ? t("cohortSubtitle", { training: c.subtitle, count: c.member_count }) : c.subtitle}</p>
         </div>
+        <ConversationMenu c={c} messages={messages} me={me} />
       </header>
 
       {pinned && (
@@ -141,7 +145,9 @@ export function Thread({ id, base, me, zone }: { id: string; base: string; me: s
         )}
       </div>
 
-      {c.can_post ? (
+      {c.blocked ? (
+        <BlockedFooter c={c} />
+      ) : c.can_post ? (
         <Composer key={c.id} conversation={c} onSent={() => (stick.current = true)} />
       ) : (
         <p className="flex items-center gap-2 border-t border-border-subtle bg-white px-4 py-4 text-[15px]">
@@ -166,6 +172,12 @@ function MessageRow({ m, mine, header, zone, cohort, seen }: { m: Message; mine:
           <time dateTime={m.created_at}>{time}</time>
         </p>
       )}
+      {m.removed ? (
+        <p className="flex max-w-[min(85%,560px)] items-center gap-2 rounded-lg border border-dashed border-border px-3.5 py-2 text-[15px] italic">
+          <EyeOff aria-hidden="true" className="size-4 shrink-0" />
+          {t("removed")}
+        </p>
+      ) : (
       <div
         className={cn(
           "max-w-[min(85%,560px)] rounded-lg px-3.5 py-2 text-[15px] leading-relaxed break-words whitespace-pre-wrap",
@@ -211,6 +223,13 @@ function MessageRow({ m, mine, header, zone, cohort, seen }: { m: Message; mine:
           </ul>
         )}
       </div>
+      )}
+      {m.filtered && !m.removed && (
+        <p className="mt-0.5 flex items-center gap-1 px-1 text-xs">
+          <ShieldCheck aria-hidden="true" className="size-3.5" />
+          {t("filtered")}
+        </p>
+      )}
       {seen && (
         <p className="mt-0.5 flex items-center gap-1 px-1 text-xs">
           <CheckCheck aria-hidden="true" className="size-3.5 text-primary" />
@@ -218,5 +237,32 @@ function MessageRow({ m, mine, header, zone, cohort, seen }: { m: Message; mine:
         </p>
       )}
     </li>
+  );
+}
+
+/** MSG-6: the conversation is closed while one side has blocked the other. */
+function BlockedFooter({ c }: { c: Conversation }) {
+  const t = useTranslations("inbox.safety");
+  const block = useBlockConversation(c.id);
+  const name = c.participants[0]?.name ?? c.title;
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle bg-white px-4 py-4 text-[15px]">
+      <Ban aria-hidden="true" className="size-4 shrink-0" />
+      <p className="flex-1">{c.blocked === "BY_ME" ? t("youBlocked", { name }) : t("theyBlocked")}</p>
+      {c.blocked === "BY_ME" && (
+        <Button
+          variant="outline"
+          loading={block.isPending}
+          onClick={() =>
+            block.mutate(false, {
+              onSuccess: () => toast.success(t("unblocked", { name })),
+              onError: () => toast.error(t("failed")),
+            })
+          }
+        >
+          {t("unblock", { name })}
+        </Button>
+      )}
+    </div>
   );
 }

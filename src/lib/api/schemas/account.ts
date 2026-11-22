@@ -28,7 +28,7 @@ export type ChangePassword = z.infer<typeof ChangePassword>;
 export const MfaSetup = z.object({ secret: z.string(), otpauth_uri: z.string() });
 
 export const PreferenceItem = z.object({
-  group: z.enum(["bookings", "reminders", "payments", "content", "messages", "cohorts", "account"]),
+  group: z.enum(["bookings", "reminders", "payments", "content", "messages", "cohorts", "account", "moderation"]),
   in_app: z.boolean(),
   email: z.boolean(),
 });

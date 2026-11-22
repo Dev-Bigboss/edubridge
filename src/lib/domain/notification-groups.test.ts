@@ -4,7 +4,7 @@ import { effectivePreferences, groupOf, groupsFor, wants } from "./notification-
 describe("notification preferences (NTF-2)", () => {
   it("offers each role only the groups that reach it", () => {
     expect(groupsFor("LEARNER").map((g) => g.key)).toEqual(["bookings", "reminders", "payments", "cohorts", "content", "messages"]);
-    expect(groupsFor("ADMIN").map((g) => g.key)).toEqual(["account"]);
+    expect(groupsFor("ADMIN").map((g) => g.key)).toEqual(["account", "moderation"]);
     expect(groupOf("PAYMENT_REFUNDED")?.key).toBe("payments");
   });
 

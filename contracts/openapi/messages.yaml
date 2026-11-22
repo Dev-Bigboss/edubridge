@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: "EduBridge LMP API: Messages"
+  title: "EduBridge LMP API: Messages and moderation"
   version: 0.1.0
   description: |
-    Messaging (MSG-1..4). Zod mirror: src/lib/api/schemas/messages.ts. Mock: src/mocks/handlers/messages.ts.
+    Messaging (MSG-1..6). Zod mirror: src/lib/api/schemas/messages.ts. Mock: src/mocks/handlers/messages.ts.
     Rules mirrored in src/lib/domain/messages.ts.
 
     - MSG-1 / BR-6: a DIRECT conversation joins one learner and one instructor. Either may open it when a relationship exists:
@@ -24,8 +24,21 @@ info:
       scan as resources). At most 5 per message; only CLEAN files can be attached; signed URLs as for resources.
     - Messages are 1 to 4000 characters after trimming (or empty with at least one attachment). `client_id` (UUID) makes a
       retried send return the original message instead of posting twice.
-    - New messages do not fill the notification bell; the Messages item in the sidebar shows the unread total. MSG-5
-      (email after a delay when still unread) and MSG-6 (report, block, contact-detail filter) come in part 2.
+    - New messages do not fill the notification bell; the Messages item in the sidebar shows the unread total.
+    - MSG-5: a job emails each member once others' messages have waited unread `message_email_delay_minutes`
+      (settings.yaml, default 30): one email per conversation per unread batch, nothing more until they read it.
+      Honours the member's "messages" email preference (account.yaml). Subject: "<name> sent you a message" or
+      "New messages in <cohort>"; link to the conversation. Message text is not put in the email.
+    - MSG-6 contact details: `contact_filter` (settings.yaml) is OFF, WARN or MASK. WARN: the app warns the sender
+      before sending (rules in src/lib/domain/contact-filter.ts) and the message is stored as written. MASK: the backend
+      replaces emails, phone numbers (9 to 15 digits) and chat-app links (wa.me, t.me) with "[contact details hidden]"
+      and sets `filtered: true`. Each Conversation carries the current value so the composer can warn.
+    - MSG-6 blocking (DIRECT only): either member can block; then nobody can post (403 CONVERSATION_BLOCKED), history
+      stays readable, and only the blocker can unblock. Bookings and classes are not affected.
+    - MSG-6 reports: a member reports a message from someone else, or the whole conversation, with a reason. Admins get
+      MESSAGE_REPORTED (notifications.yaml). Admins see a report with up to 5 messages either side (never the whole inbox),
+      then REMOVE_MESSAGE (body and files cleared for everyone, `removed: true`) or DISMISS, with a note; audited
+      (`message.removed`, `message_report.dismissed`). Removing settles other open reports on the same message.
     - Writes are refused while an admin views as the user.
 
     WebSocket (not describable in OpenAPI): `GET /api/v1/realtime` upgrades with the session cookie. Server → client events,
@@ -136,6 +149,80 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/ConversationResponse" }
         "404": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/block:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Block the other person (DIRECT only, 422 otherwise)
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/unblock:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Unblock (only the person who blocked, 403 otherwise)
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "403": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/reports:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Report a message or the conversation (an open report by the same person on the same thing is returned, 200)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message_id, reason, details, block]
+              properties:
+                message_id: { type: [string, "null"], description: "Someone else's message in this conversation, or null for the whole conversation" }
+                reason: { $ref: "#/components/schemas/ReportReason" }
+                details: { type: string, maxLength: 1000, description: "At least 5 characters when reason is OTHER" }
+                block: { type: boolean, description: "DIRECT: also block the other person" }
+      responses:
+        "201":
+          description: Reported
+          content: { application/json: { schema: { type: object, required: [report_id, conversation], properties: { report_id: { type: string }, conversation: { $ref: "#/components/schemas/Conversation" } } } } }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/message-reports:
+    get:
+      summary: Reports to review (ADMIN), newest first
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [OPEN, RESOLVED], default: OPEN } }]
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/MessageReport" } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/message-reports/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: One report with up to 5 messages either side of the reported one (or the latest 10 for a whole conversation)
+      responses:
+        "200":
+          description: Report and context
+          content: { application/json: { schema: { type: object, required: [report, context], properties: { report: { $ref: "#/components/schemas/MessageReport" }, context: { type: array, items: { $ref: "#/components/schemas/Message" } } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/message-reports/{id}/resolve:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Remove the message or dismiss the report, with a note (409 if already resolved)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, note]
+              properties:
+                action: { type: string, enum: [REMOVE_MESSAGE, DISMISS] }
+                note: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        "200":
+          description: Resolved
+          content: { application/json: { schema: { type: object, required: [report], properties: { report: { $ref: "#/components/schemas/MessageReport" } } } } }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
 components:
   responses:
     Error:
@@ -164,7 +251,7 @@ components:
             conversation_id: { type: [string, "null"], description: "Existing DIRECT conversation, if any" }
     Conversation:
       type: object
-      required: [id, kind, title, subtitle, context, training_id, cohort_id, participants, member_count, last_message, unread_count, last_read_at, other_last_read_at, can_post, can_announce, updated_at]
+      required: [id, kind, title, subtitle, context, training_id, cohort_id, participants, member_count, last_message, unread_count, last_read_at, other_last_read_at, can_post, can_announce, blocked, contact_filter, updated_at]
       properties:
         id: { type: string }
         kind: { type: string, enum: [DIRECT, COHORT] }
@@ -190,10 +277,12 @@ components:
         other_last_read_at: { type: [string, "null"], format: date-time, description: "DIRECT only: read receipt" }
         can_post: { type: boolean }
         can_announce: { type: boolean }
+        blocked: { type: [string, "null"], enum: [BY_ME, BY_THEM, null], description: "DIRECT only (MSG-6)" }
+        contact_filter: { type: string, enum: [OFF, WARN, MASK] }
         updated_at: { type: string, format: date-time }
     Message:
       type: object
-      required: [id, conversation_id, sender, body, attachments, announcement, client_id, created_at]
+      required: [id, conversation_id, sender, body, attachments, announcement, client_id, filtered, removed, created_at]
       properties:
         id: { type: string }
         conversation_id: { type: string }
@@ -202,4 +291,35 @@ components:
         attachments: { type: array, items: { $ref: "./uploads.yaml#/components/schemas/StoredFile" } }
         announcement: { type: boolean }
         client_id: { type: [string, "null"] }
+        filtered: { type: boolean, description: "MSG-6: contact details were masked on send" }
+        removed: { type: boolean, description: "MSG-6: removed by an admin; body is empty and attachments []" }
         created_at: { type: string, format: date-time }
+    ReportReason:
+      type: string
+      enum: [SPAM, HARASSMENT, OFF_PLATFORM_PAYMENT, OTHER]
+    MessageReport:
+      type: object
+      required: [id, status, reason, details, created_at, reporter, reported, conversation, message, resolution]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [OPEN, RESOLVED] }
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        details: { type: string }
+        created_at: { type: string, format: date-time }
+        reporter: { $ref: "#/components/schemas/Person" }
+        reported: { oneOf: [{ $ref: "#/components/schemas/Person" }, { type: "null" }], description: "The message's sender, or the other person in a DIRECT conversation" }
+        conversation:
+          type: object
+          required: [id, kind, title, subtitle]
+          properties: { id: { type: string }, kind: { type: string, enum: [DIRECT, COHORT] }, title: { type: string }, subtitle: { type: string } }
+        message: { oneOf: [{ $ref: "#/components/schemas/Message" }, { type: "null" }] }
+        resolution:
+          oneOf:
+            - type: object
+              required: [action, note, by_name, at]
+              properties:
+                action: { type: string, enum: [REMOVE_MESSAGE, DISMISS] }
+                note: { type: string }
+                by_name: { type: string }
+                at: { type: string, format: date-time }
+            - { type: "null" }
