@@ -18,6 +18,8 @@ import { languageName } from "@/lib/domain/training";
 import { PersonAvatar, TrainingImage } from "./bits";
 import { CohortCard } from "./cohort-card";
 import { MessageButton } from "@/components/messages/message-button";
+import { InstructorRating, TrainingReviews } from "@/components/reviews/training-reviews";
+import { useTrainingReviews } from "@/lib/api/hooks/reviews";
 
 /** /trainings/[slug]: what it is, who teaches it, and the ways to join (TRN-1/4, COH-2, PRC-7). */
 export function TrainingDetail({ slug }: { slug: string }) {
@@ -59,6 +61,7 @@ function Detail({ training }: { training: PublicTrainingDetail }) {
   const t = useTranslations("catalog");
   const ti = useTranslations("inbox");
   const { data: user } = useSession();
+  const reviews = useTrainingReviews(training.id);
   const zone = useMemo(() => user?.timezone ?? browserTimeZone(), [user?.timezone]);
   const isCohort = training.modality.code === MODALITY.COHORT;
   const openCohorts = training.cohorts.filter((c) => c.status === "OPEN").length;
@@ -173,6 +176,7 @@ function Detail({ training }: { training: PublicTrainingDetail }) {
                   <div className="min-w-0 flex-1">
                     <h3 className="text-lg">{i.name}</h3>
                     {i.headline && <p className="text-[15px]">{i.headline}</p>}
+                    <InstructorRating data={reviews.data} instructorId={i.id} />
                   </div>
                   {/* MSG-1: a pre-sale question. Guests sign in first and come back here. */}
                   {(!user || user.role === "LEARNER") && (
@@ -207,6 +211,8 @@ function Detail({ training }: { training: PublicTrainingDetail }) {
             </ul>
             {!isCohort && <p className="mt-4 text-sm">{t("detail.bookingHow")}</p>}
           </section>
+
+          <TrainingReviews trainingId={training.id} zone={zone} />
         </div>
 
         <aside aria-labelledby="facts-heading" className="lg:sticky lg:top-28 lg:self-start">

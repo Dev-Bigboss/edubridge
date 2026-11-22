@@ -4,6 +4,7 @@ import { Archive, BookOpen, CalendarDays, Clock, FolderOpen, MessageSquareText,
   PlayCircle, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { ReviewButton } from "@/components/reviews/review-dialog";
 import { LoadError } from "@/components/admin/catalog-admin";
 import { joinState } from "@/components/booking/calendar-button";
 import { EnrolmentChecklist } from "./enrolment-checklist";
@@ -158,6 +159,7 @@ function EnrolmentCard({ item, zone, now, phase }: { item: LearnerEnrolment; zon
               {t("feedback")}
             </Link>
           )}
+          {phase === "FINISHED" && <ReviewButton trainingId={training.id} instructorId={item.cohort.instructor.id} variant="link" />}
           <Link href={`/receipts/${enrolment.payment_id}`} className="inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">
             <ReceiptText aria-hidden="true" className="size-4" />
             {t("receipt")}

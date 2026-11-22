@@ -1007,7 +1007,7 @@
     },
     "moderation": {
       "title": "Moderation",
-      "intro": "Messages people have reported. Open one to see the conversation around it, then remove the message or dismiss the report. Every decision is recorded in the audit log.",
+      "intro": "Reported messages and learners' reviews. Every decision is recorded in the audit log.",
       "show": "Show reports",
       "status": {
         "OPEN": "Waiting for review",
@@ -1051,7 +1051,38 @@
       "remove": "Remove message",
       "removedToast": "Message removed for everyone.",
       "dismissedToast": "Report dismissed.",
-      "failed": "That didn't work. Try again."
+      "failed": "That didn't work. Try again.",
+      "sections": "Moderation sections",
+      "tabs": {
+        "messages": "Reported messages",
+        "reviews": "Reviews"
+      },
+      "reviews": {
+        "show": "Show reviews",
+        "status": {
+          "PUBLISHED": "Live",
+          "HIDDEN": "Hidden"
+        },
+        "emptyLive": "No reviews yet",
+        "emptyLiveBody": "Learners can review a training once they finish it. New reviews appear here as soon as they're posted.",
+        "emptyHidden": "No hidden reviews",
+        "emptyHiddenBody": "Reviews you hide move here with your reason, and can be restored.",
+        "byLine": "{author} about {instructor}",
+        "training": "Training",
+        "instructor": "Instructor",
+        "hiddenBy": "Hidden by {name}: {reason}",
+        "hide": "Hide review",
+        "restore": "Restore",
+        "restored": "Review is live again.",
+        "hidden": "Review hidden.",
+        "failed": "That didn't work. Try again.",
+        "hideTitle": "Hide this review?",
+        "hideBody": "It disappears from the training page. {author} sees your reason and can edit the review, which posts it again.",
+        "reason": "Reason",
+        "reasonHint": "Shown to the author. Kept in the audit log.",
+        "reasonRequired": "Say why, so the learner understands.",
+        "cancel": "Cancel"
+      }
     },
     "rubrics": {
       "title": "Feedback rubrics",
@@ -2015,5 +2046,32 @@
       "send": "Send report",
       "reported": "Thanks for telling us. We'll review it within two working days."
     }
+  },
+  "reviews": {
+    "leave": "Leave a review",
+    "edit": "Edit your review",
+    "hiddenShort": "Hidden by EduBridge",
+    "title": "Review {training}",
+    "body": "Your review helps other learners choose. It shows your first name and initial, with {name} as the instructor.",
+    "hidden": "EduBridge hid this review: {reason} Edit it to post it again.",
+    "trainingQuestion": "How was the training?",
+    "instructorQuestion": "How was {name} as an instructor?",
+    "comment": "Your review",
+    "commentHint": "What went well, and what could be better? At least 10 characters.",
+    "delete": "Delete review",
+    "cancel": "Cancel",
+    "save": "Save review",
+    "post": "Post review",
+    "thanks": "Thanks for your review. It's live on the training page.",
+    "updated": "Review updated.",
+    "deleted": "Review deleted.",
+    "failed": "That didn't save. Try again; your text is still here.",
+    "heading": "What learners say",
+    "none": "No reviews yet. Learners can review once they finish.",
+    "fromCount": "{count, plural, one {from # review} other {from # reviews}}",
+    "notEnough": "{count, plural, one {# review so far} other {# reviews so far}}. An average shows from 3.",
+    "count": "{count, plural, one {# review} other {# reviews}}",
+    "editedLabel": "edited",
+    "instructorWas": "Instructor {name}:"
   }
 }

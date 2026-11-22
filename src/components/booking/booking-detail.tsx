@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarX, Clock, LoaderCircle, Video } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { MessageButton } from "@/components/messages/message-button";
+import { ReviewButton } from "@/components/reviews/review-dialog";
 import { useEffect, useState } from "react";
 import { LoadError } from "@/components/admin/catalog-admin";
 import { PersonAvatar } from "@/components/catalog/bits";
@@ -213,6 +214,11 @@ function Detail({ booking: b, zone }: { booking: Booking; zone: string }) {
                   <MessageButton role="LEARNER" userId={b.instructor.id} variant="link">
                     {ti("messageInstructor", { name: b.instructor.name })}
                   </MessageButton>
+                  {b.status === "COMPLETED" && (
+                    <span className="ml-4 inline-flex flex-wrap items-center gap-2">
+                      <ReviewButton trainingId={b.training.id} instructorId={b.instructor.id} variant="link" />
+                    </span>
+                  )}
                 </dd>
               )}
             </div>

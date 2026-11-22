@@ -98,6 +98,23 @@ export type StoredFeedback = Omit<Feedback, "training_title" | "instructor" | "l
   learner_id: string;
 };
 
+/** FDB-4: one review per learner, training and instructor. */
+export type StoredReview = {
+  id: string;
+  learner_id: string;
+  training_id: string;
+  instructor_id: string;
+  training_rating: number;
+  instructor_rating: number;
+  comment: string;
+  context: "COHORT" | "ONE_ON_ONE";
+  status: "PUBLISHED" | "HIDDEN";
+  hidden_reason: string | null;
+  moderation: { by_name: string; at: string } | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /** MSG-6: a report on a message or a whole conversation, for admins to review. */
 export type StoredMessageReport = {
   id: string;
@@ -166,6 +183,7 @@ type State = {
   /** FDB-1: admin-configured rubrics and the feedback written with them. */
   rubrics: Rubric[];
   feedback: StoredFeedback[];
+  reviews: StoredReview[];
   /** MSG-5: `conversation:user` → newest message already emailed about, so each unread batch emails once. */
   messageEmails: Record<string, string>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
@@ -316,6 +334,20 @@ function seedResources(): StoredResource[] {
     { ...base, id: "res_seed_2", kind: "LINK", title: "ICAN study text (official site)", folder: "Week 1", position: 1, scope: "TRAINING", file: null, link_url: "https://icanig.org/" },
     { ...base, id: "res_seed_3", kind: "FILE", title: "Practice questions", folder: "Past papers", position: 2, scope: "COHORT", cohort_id: cohort.id, file: pdf("file_seed_3", "past-paper-practice.pdf", 839), link_url: null },
     { ...base, id: "res_seed_4", kind: "LINK", title: "Whiteboard from the first class", folder: null, position: 3, scope: "SESSION", cohort_id: cohort.id, session_id: firstClass.id, file: null, link_url: "https://example.com/whiteboard/autumn-1" },
+  ];
+}
+
+/** Three reviews of last semester's MTH 101 cohort, so the training page shows an average (FDB-4). */
+function seedReviews(): StoredReview[] {
+  const at = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+  const r = (n: number, learner_id: string, training_rating: number, instructor_rating: number, comment: string, days: number): StoredReview => ({
+    id: `rev_seed_${n}`, learner_id, training_id: "trn_mth101", instructor_id: "usr_instructor_2", training_rating, instructor_rating, comment,
+    context: "COHORT", status: "PUBLISHED", hidden_reason: null, moderation: null, created_at: at(days), updated_at: at(days),
+  });
+  return [
+    r(1, "usr_roster_1", 5, 5, "Clear explanations and lots of worked examples. I finally understand limits.", 40),
+    r(2, "usr_roster_2", 4, 5, "Great instructor. The weekly problem sets were hard but worth it; I'd like the answers a little sooner.", 38),
+    r(3, "usr_roster_3", 4, 4, "Well organised. Recordings helped when I missed a class.", 35),
   ];
 }
 
@@ -536,6 +568,7 @@ function seed(): State {
     checklists: {},
     ...seedMessages(),
     ...seedFeedback(),
+    reviews: seedReviews(),
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -698,7 +731,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v19";
+const STORE_KEY = "edubridge.mock.db.v20";
 
 function load(): State {
   try {
