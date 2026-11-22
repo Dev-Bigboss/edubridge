@@ -21,6 +21,8 @@ export const SettingsInput = z.object({
   instructor_cancellation: z.object({ refund_percent: z.number().int().min(0).max(100) }),
   /** REC-5: recordings are deleted this many months after the session (plan §8 Q6 open). */
   recording_retention_months: z.number().int().min(1).max(60),
+  /** PAY-7: days after a session (or a cohort's first class) before earnings can be paid out. */
+  earnings_hold_days: z.number().int().min(0).max(60),
   /** MSG-5: email about unread messages once they've waited this long. */
   message_email_delay_minutes: z.number().int().min(5).max(1440),
   /** MSG-6: what happens to phone numbers, emails and chat links in messages. */

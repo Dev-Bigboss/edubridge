@@ -104,7 +104,7 @@ components:
         refund_percent: { type: integer, minimum: 0, maximum: 100 }
     SettingsInput:
       type: object
-      required: [commission_percent, booking_expiry_hours, learner_cancellation, instructor_cancellation, recording_retention_months, message_email_delay_minutes, contact_filter]
+      required: [commission_percent, booking_expiry_hours, learner_cancellation, instructor_cancellation, recording_retention_months, earnings_hold_days, message_email_delay_minutes, contact_filter]
       properties:
         commission_percent: { type: number, minimum: 0, maximum: 50, description: PAY-7 }
         booking_expiry_hours: { type: integer, minimum: 1, maximum: 168, description: "OTO-5, SRS default 24" }
@@ -117,6 +117,7 @@ components:
           required: [refund_percent]
           properties: { refund_percent: { type: integer, minimum: 0, maximum: 100 } }
         recording_retention_months: { type: integer, minimum: 1, maximum: 60, description: "REC-5; placeholder 12 until plan §8 Q6 is answered" }
+        earnings_hold_days: { type: integer, minimum: 0, maximum: 60, description: "PAY-7: days after a 1:1 session ends, or a cohort's first class, before earnings are available; default 7" }
         message_email_delay_minutes: { type: integer, minimum: 5, maximum: 1440, description: "MSG-5; default 30" }
         contact_filter: { type: string, enum: [OFF, WARN, MASK], description: "MSG-6: OFF, WARN the sender first, or MASK the details on send; default WARN" }
     PlatformSettings:

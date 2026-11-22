@@ -98,6 +98,36 @@ export type StoredFeedback = Omit<Feedback, "training_title" | "instructor" | "l
   learner_id: string;
 };
 
+/** PAY-7: one line in an instructor's earnings ledger. */
+export type StoredLedgerEntry = {
+  id: string;
+  instructor_id: string;
+  kind: "EARNING" | "REFUND" | "PAYOUT" | "PAYOUT_RETURNED";
+  description: string;
+  payment_id: string | null;
+  payout_id: string | null;
+  gross: number | null;
+  commission: number | null;
+  commission_percent: number | null;
+  amount: number;
+  available_at: string;
+  created_at: string;
+};
+
+export type StoredPayout = {
+  id: string;
+  instructor_id: string;
+  amount: number;
+  status: "REQUESTED" | "PAID" | "FAILED";
+  trigger: "REQUEST" | "SCHEDULE";
+  requested_at: string;
+  paid_at: string | null;
+  failure_reason: string | null;
+  reference: string | null;
+  /** Mock only: when the transfer "arrives". */
+  settles_at: string | null;
+};
+
 /** FDB-4: one review per learner, training and instructor. */
 export type StoredReview = {
   id: string;
@@ -184,6 +214,10 @@ type State = {
   rubrics: Rubric[];
   feedback: StoredFeedback[];
   reviews: StoredReview[];
+  /** PAY-7: earnings ledger, payouts and each instructor's payout schedule. */
+  ledger: StoredLedgerEntry[];
+  payouts: StoredPayout[];
+  payoutSchedules: Record<string, { schedule: "MANUAL" | "WEEKLY" | "MONTHLY"; next_run_at: string | null }>;
   /** MSG-5: `conversation:user` → newest message already emailed about, so each unread batch emails once. */
   messageEmails: Record<string, string>;
   /** Mock gateway only: when a completed checkout "arrives by webhook", and how it ended. */
@@ -335,6 +369,17 @@ function seedResources(): StoredResource[] {
     { ...base, id: "res_seed_3", kind: "FILE", title: "Practice questions", folder: "Past papers", position: 2, scope: "COHORT", cohort_id: cohort.id, file: pdf("file_seed_3", "past-paper-practice.pdf", 839), link_url: null },
     { ...base, id: "res_seed_4", kind: "LINK", title: "Whiteboard from the first class", folder: null, position: 3, scope: "SESSION", cohort_id: cohort.id, session_id: firstClass.id, file: null, link_url: "https://example.com/whiteboard/autumn-1" },
   ];
+}
+
+/** A payout already paid to the Autumn cohort's instructor, so the history isn't empty (PAY-7). */
+function seedPayouts(): Pick<State, "ledger" | "payouts" | "payoutSchedules"> {
+  const at = new Date(Date.now() - 10 * 86_400_000).toISOString();
+  const paid = new Date(Date.now() - 8 * 86_400_000).toISOString();
+  return {
+    payouts: [{ id: "po_seed_1", instructor_id: "usr_instructor_1", amount: 20000, status: "PAID", trigger: "REQUEST", requested_at: at, paid_at: paid, failure_reason: null, reference: "tr_demo_1A2B3C", settles_at: null }],
+    ledger: [{ id: "led_seed_po1", instructor_id: "usr_instructor_1", kind: "PAYOUT", description: "Payout to your bank account", payment_id: null, payout_id: "po_seed_1", gross: null, commission: null, commission_percent: null, amount: -20000, available_at: at, created_at: at }],
+    payoutSchedules: {},
+  };
 }
 
 /** Three reviews of last semester's MTH 101 cohort, so the training page shows an average (FDB-4). */
@@ -569,6 +614,7 @@ function seed(): State {
     ...seedMessages(),
     ...seedFeedback(),
     reviews: seedReviews(),
+    ...seedPayouts(),
     pricingRules: seedRules(),
     audit: seedAudit(),
     settings: { ...DEFAULT_SETTINGS, version: 1, updated_at: "2026-11-01T00:00:00.000Z", updated_by: null },
@@ -731,7 +777,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v20";
+const STORE_KEY = "edubridge.mock.db.v21";
 
 function load(): State {
   try {

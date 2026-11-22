@@ -51,6 +51,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
     learner_cancellation: settings.learner_cancellation,
     instructor_cancellation: settings.instructor_cancellation,
     recording_retention_months: settings.recording_retention_months,
+    earnings_hold_days: settings.earnings_hold_days,
     message_email_delay_minutes: settings.message_email_delay_minutes,
     contact_filter: settings.contact_filter,
   };
@@ -78,6 +79,7 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
         learner_cancellation: res.settings.learner_cancellation,
         instructor_cancellation: res.settings.instructor_cancellation,
         recording_retention_months: res.settings.recording_retention_months,
+        earnings_hold_days: res.settings.earnings_hold_days,
         message_email_delay_minutes: res.settings.message_email_delay_minutes,
         contact_filter: res.settings.contact_filter,
       });
@@ -108,6 +110,12 @@ function SettingsForm({ data }: { data: SettingsResponse }) {
         <Section title={t("commission")} description={t("commissionBody")}>
           <Field label={t("commissionLabel")} error={errors.commission_percent?.message} hint={t("commissionExample", { price: formatMoney({ amount: sample, currency: "USD" }), platform: formatMoney({ amount: Math.round((sample * commission) / 100), currency: "USD" }), instructor: formatMoney({ amount: sample - Math.round((sample * commission) / 100), currency: "USD" }) })}>
             {(a) => <Suffixed suffix="%"><Input {...a} type="number" inputMode="decimal" step={0.5} min={0} max={50} className="pr-10" {...form.register("commission_percent", { valueAsNumber: true })} /></Suffixed>}
+          </Field>
+        </Section>
+
+        <Section title={t("hold")} description={t("holdBody")}>
+          <Field label={t("holdLabel")} error={errors.earnings_hold_days?.message}>
+            {(a) => <Suffixed suffix={t("days")}><Input {...a} type="number" inputMode="numeric" min={0} max={60} className="pr-16" {...form.register("earnings_hold_days", { valueAsNumber: true })} /></Suffixed>}
           </Field>
         </Section>
 

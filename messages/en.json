@@ -223,7 +223,8 @@
     "myAccount": "My account",
     "recordings": "Recordings",
     "resources": "Resources",
-    "rubrics": "Feedback rubrics"
+    "rubrics": "Feedback rubrics",
+    "payouts": "Payouts"
   },
   "dashboard": {
     "greeting": "Welcome back, {name}",
@@ -919,7 +920,11 @@
         "OFF": "Messages are sent as written.",
         "WARN": "The sender is reminded that payments outside EduBridge aren't protected, and can still send.",
         "MASK": "Phone numbers, emails and chat-app links are replaced with \"[contact details hidden]\"."
-      }
+      },
+      "hold": "Earnings hold",
+      "holdBody": "How long instructors wait before earnings can be paid out, counted from the end of a one-on-one session or the first class of a cohort. It leaves time for refunds and disputes.",
+      "holdLabel": "Hold earnings for",
+      "days": "days"
     },
     "audit": {
       "title": "Audit log",
@@ -1122,6 +1127,49 @@
       "create": "Add rubric",
       "saved": "{name} saved.",
       "created": "{name} added."
+    },
+    "payouts": {
+      "title": "Payouts and reconciliation",
+      "intro": "What learners paid, what was refunded, the platform's commission and what instructors earned and were paid, for any period. The figures should match Stripe.",
+      "reconciliation": "Reconciliation",
+      "from": "From",
+      "to": "To",
+      "rangeError": "Choose a start date on or before the end date.",
+      "csv": "Download CSV",
+      "exported": "CSV downloaded.",
+      "exportFailed": "The export didn't download. Try again.",
+      "totals": "Totals for the period",
+      "byInstructor": "By instructor",
+      "rows": {
+        "captured": "Learners paid",
+        "refunded": "Refunded",
+        "netRevenue": "Net revenue",
+        "commission": "Platform commission",
+        "instructorEarnings": "Instructor earnings",
+        "paidOut": "Paid out to instructors",
+        "owed": "Owed to instructors now"
+      },
+      "instructor": "Instructor",
+      "earned": "Earned",
+      "refunds": "Refunds",
+      "paid": "Paid out",
+      "balanceNow": "Balance now",
+      "noActivity": "No earnings or payouts in this period.",
+      "payouts": "Payouts",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "payoutStatus": {
+        "REQUESTED": "On its way",
+        "PAID": "Paid",
+        "FAILED": "Failed"
+      },
+      "amount": "Amount",
+      "requested": "Requested",
+      "reference": "Stripe reference",
+      "automatic": "Automatic",
+      "noReference": "None yet",
+      "empty": "No payouts yet",
+      "emptyBody": "Instructors' payouts appear here as soon as they're requested or scheduled."
     }
   },
   "catalog": {
@@ -1676,6 +1724,58 @@
       "sentToast": "Feedback sent to {name}.",
       "updated": "Feedback for {name} updated.",
       "failed": "That didn't save. Try again; nothing you wrote is lost."
+    },
+    "earnings": {
+      "title": "Earnings",
+      "intro": "You earn what learners pay minus the {percent}% platform commission. Earnings become available {days} days after a one-on-one session, or after a cohort's first class.",
+      "balance": "Your balance",
+      "available": "Available to pay out",
+      "pending": "Pending",
+      "paidOut": "Paid out so far",
+      "negative": "Refunds took you {amount} below zero; new earnings cover it first.",
+      "nextAvailable": "More becomes available on {date}",
+      "inFlight": "{amount} on its way",
+      "request": "Pay out {amount}",
+      "requested": "Payout of {amount} requested. It usually arrives in 2 to 3 working days.",
+      "failed": "That didn't work. Try again.",
+      "finishSetup": "Finish payout set-up",
+      "scheduleLabel": "Pay me",
+      "schedules": {
+        "MANUAL": "When I ask",
+        "WEEKLY": "Every Monday",
+        "MONTHLY": "On the 1st of each month"
+      },
+      "scheduleSaved": {
+        "MANUAL": "You'll be paid when you ask.",
+        "WEEKLY": "You'll be paid every Monday.",
+        "MONTHLY": "You'll be paid on the 1st of each month."
+      },
+      "nextRun": "Next automatic payout: {date}, if at least $20 is available.",
+      "ledger": "Earnings history",
+      "emptyLedger": "No earnings yet",
+      "emptyLedgerBody": "When a learner pays for one of your sessions or a seat in your cohort, it shows here with the commission and when you can be paid.",
+      "date": "Date",
+      "what": "What",
+      "learnerPaid": "Learner paid",
+      "commission": "Commission",
+      "you": "You get",
+      "status": "Status",
+      "rate": "{percent}% commission",
+      "paidOutRow": "Paid out",
+      "availableRow": "Available",
+      "pendingRow": "Available {date}",
+      "payouts": "Payouts",
+      "noPayouts": "No payouts yet. Request one once you have at least $20 available, or choose automatic payouts.",
+      "requestedOn": "Requested",
+      "amount": "Amount",
+      "reference": "Reference",
+      "automatic": "Automatic",
+      "payoutStatus": {
+        "REQUESTED": "On its way",
+        "PAID": "Paid",
+        "FAILED": "Failed"
+      },
+      "noReference": "None yet"
     }
   },
   "booking": {

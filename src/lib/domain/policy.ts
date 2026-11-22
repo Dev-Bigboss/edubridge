@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   },
   instructor_cancellation: { refund_percent: 100 },
   recording_retention_months: 12,
+  earnings_hold_days: 7,
   message_email_delay_minutes: 30,
   contact_filter: "WARN",
 };
@@ -80,6 +81,7 @@ export function diffSettings(a: SettingsInput, b: SettingsInput): string {
   if (a.recording_retention_months !== b.recording_retention_months) {
     parts.push(`Recordings kept ${a.recording_retention_months} → ${b.recording_retention_months} months`);
   }
+  if (a.earnings_hold_days !== b.earnings_hold_days) parts.push(`Earnings hold ${a.earnings_hold_days} → ${b.earnings_hold_days} days`);
   if (a.message_email_delay_minutes !== b.message_email_delay_minutes) {
     parts.push(`Unread message email after ${a.message_email_delay_minutes} → ${b.message_email_delay_minutes} min`);
   }
