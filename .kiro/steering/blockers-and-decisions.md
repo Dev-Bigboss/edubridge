@@ -19,22 +19,14 @@ one without noting the assumption clearly.
 **Impact:** Stripe Tax is simpler and self-maintaining; manual rates need admin upkeep and carry compliance risk.
 **Status:** Awaiting PO answer. Frontend placeholder `tax_amount: 0` exists in `PriceBreakdown`.
 
-### PRC-6 — Currencies
-**Blocker for:** multi-currency display across catalog, checkout, receipts, earnings.
-**Questions:**
-1. Which currencies are supported at launch?
-2. Does the platform charge in one base currency (USD) and display in local, or settle in local currency?
-**Status:** Awaiting PO answer.
-
 ### COH-2 — Waiting lists
 **Blocker for:** waitlist enrolment flow on full cohorts.
 **Question:** Is the waiting list optional or required at launch? The COH-2 spec marks it optional.
 **Status:** Awaiting PO answer.
 
 ### REC-4 — Recording transcripts
-**Blocker for:** transcript generation and display on recordings.
-**Question:** Which video provider? (Zoom is the placeholder.) Transcripts come from the provider's API.
-**Status:** Awaiting PO answer on video provider.
+**Blocker for:** transcript display on recordings.
+**Status:** Unblocked: Zoom confirmed (see Resolved). Transcripts come from Zoom's cloud recording audio transcript; needs Zoom cloud recording with transcription enabled on the account.
 
 ### OTO-11 — Calendar sync
 **Blocker for:** `.ics` download is built. Full two-way calendar sync (Google/Outlook OAuth) needs:
@@ -51,7 +43,12 @@ one without noting the assumption clearly.
 
 ## Resolved
 
-*(Nothing resolved yet — populate as PO answers come in.)*
+### PRC-6 — Currencies (26 Nov 2026)
+USD only at launch: prices are set, shown and charged in USD. Multi-currency display is not built for launch.
+Tax handling (Stripe Tax vs admin-set rates) is still open, above.
+
+### Video provider (26 Nov 2026)
+Zoom. Meeting links, recordings and transcripts come from the Zoom API.
 
 ---
 
@@ -76,7 +73,7 @@ The full list of 79 choices is in `contracts/CONVENTIONS.md`. Key ones that affe
 | Phase 1 — Catalogue, cohorts, enrolments, payments | Shipped |
 | Phase 2 — One-on-one bookings, pricing, resources, recordings | Shipped |
 | Phase 3 — Earnings, messages, notifications, moderation, admin dashboard | Shipped (gaps filled) |
-| Phase 3 remainder — PRC-6 (discounts, tax, multi-currency) | **Blocked** — see PO decisions above |
+| Phase 3 remainder — PRC-6 (discounts, tax) | Tax blocked; currency settled as USD |
 | Phase 4 — Calendar sync, instalments, waiting lists, transcripts, recommendations, resource tracking | In progress |
 
 ### Phase 4 items without blockers (build these now)

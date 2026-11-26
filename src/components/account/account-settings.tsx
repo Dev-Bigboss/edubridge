@@ -7,15 +7,16 @@ import { LoadingState } from "@/components/ui/spinner";
 import { useSession } from "@/lib/auth/session";
 import { cn } from "@/lib/cn";
 import { NotificationsTab } from "./notifications-tab";
+import { PrivacyTab } from "./privacy-tab";
 import { ProfileTab } from "./profile-tab";
 import { SecurityTab } from "./security-tab";
 
-const TABS = ["profile", "security", "notifications"] as const;
+const TABS = ["profile", "security", "notifications", "privacy"] as const;
 type Tab = (typeof TABS)[number];
 
 /**
  * <area>/settings (admins: /admin/account): the person's own profile, sign-in security and
- * notification channels (ONB-2/3 edits, NFR Security, NTF-2). The tab lives in the URL.
+ * notification channels, and their data (ONB-2/3 edits, NFR Security, NTF-2, NFR Privacy). The tab lives in the URL.
  */
 export function AccountSettings() {
   const t = useTranslations("account");
@@ -52,6 +53,7 @@ export function AccountSettings() {
       {tab === "profile" && <ProfileTab user={user} />}
       {tab === "security" && <SecurityTab user={user} />}
       {tab === "notifications" && <NotificationsTab user={user} />}
+      {tab === "privacy" && <PrivacyTab user={user} />}
     </div>
   );
 }

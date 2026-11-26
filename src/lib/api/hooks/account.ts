@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "@/lib/api/client";
 import { useApiQuery } from "@/lib/api/query";
-import { MfaSetup, MyProfileResponse, Preferences, type ChangePassword } from "@/lib/api/schemas/account";
+import { DeletionCheck, MfaSetup, MyProfileResponse, Preferences, type ChangePassword, type DeleteAccount } from "@/lib/api/schemas/account";
 import { SessionResponse, User } from "@/lib/api/schemas/auth";
 import { sessionKey } from "@/lib/auth/session";
 
@@ -63,5 +63,38 @@ export function useSavePreferences() {
   return useMutation({
     mutationFn: (items: Preferences["items"]) => api("/me/notification-preferences", { method: "PUT", body: { items }, schema: Preferences }),
     onSuccess: (r) => qc.setQueryData(PREFS, r.items),
+  });
+}
+
+/** NFR Privacy: everything held about me, saved as a JSON file. */
+export function useDataExport() {
+  return useMutation({
+    mutationFn: async () => {
+      const data = await api("/me/data-export");
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = `edubridge-data-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    },
+  });
+}
+
+export function useDeletionCheck() {
+  return useApiQuery({ queryKey: ["me", "deletion"], queryFn: ({ signal }) => api("/me/deletion", { schema: DeletionCheck, signal }) });
+}
+
+/** Deletes the account; the caller clears the cache and leaves the signed-in area. */
+export function useDeleteAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: DeleteAccount) => api("/me/deletion", { method: "POST", body }),
+    onSuccess: () => {
+      qc.clear();
+      qc.setQueryData(sessionKey, null);
+    },
+    onError: () => void qc.invalidateQueries({ queryKey: ["me", "deletion"] }),
   });
 }

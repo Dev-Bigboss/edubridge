@@ -18,6 +18,20 @@ info:
     - Notification preferences: groups depend on the role; missing groups default to on; locked channels
       (payments email, cohort changes email, account decisions both) are always returned as true and can't be
       turned off. In-app delivery and email sending both consult them.
+    - Privacy (NFR Privacy, GDPR/UK GDPR):
+      - GET /me/data-export returns everything held about me as one JSON document (Content-Disposition: attachment).
+        Other people appear by name only. Refused while an admin views as me.
+      - GET /me/deletion lists what stops my account from being deleted now; empty means it can go.
+        ACTIVE_ENROLMENT (a confirmed seat in a cohort not yet COMPLETED or CANCELLED), ACTIVE_BOOKING (a 1:1 booking
+        PENDING_INSTRUCTOR, COUNTER_PROPOSED, ACCEPTED or RESCHEDULE_REQUESTED, as learner or instructor),
+        TEACHING_COHORT (an instructor's cohort OPEN, FULL, CLOSED or IN_PROGRESS), UNPAID_EARNINGS (ledger balance > 0),
+        ADMIN_ACCOUNT (admins are removed by another admin).
+      - POST /me/deletion deletes now: it needs confirm_email equal to my email and, if the account has a password,
+        the password (422 field_errors.password). With blockers: 409 DELETION_BLOCKED. On success the user is
+        anonymised ("Deleted user", unusable email, no password, sessions ended); onboarding answers, notifications,
+        preferences, MFA, resource accesses, recording positions and checklists are erased; payments, ledger, reviews
+        and messages are kept, anonymised, because others or the law rely on them (financial records: 7 years).
+        A confirmation email goes to the old address and the action is audited.
 servers:
   - url: /api/v1
 paths:
@@ -101,6 +115,34 @@ paths:
       summary: Sign out every other device
       responses:
         "200": { description: Count, content: { application/json: { schema: { type: object, required: [revoked], properties: { revoked: { type: integer } } } } } }
+  /me/data-export:
+    get:
+      summary: Download my data (JSON)
+      responses:
+        "200": { description: Export, content: { application/json: { schema: { $ref: "#/components/schemas/DataExport" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /me/deletion:
+    get:
+      summary: What stops my account from being deleted right now
+      responses:
+        "200": { $ref: "#/components/responses/DeletionCheck" }
+    post:
+      summary: Delete my account now (irreversible)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm_email, password]
+              properties:
+                confirm_email: { type: string }
+                password: { type: [string, "null"] }
+      responses:
+        "204": { description: Deleted and signed out }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
   /me/notification-preferences:
     get:
       summary: My channel choices per group (NTF-2)
@@ -128,7 +170,25 @@ components:
     Preferences:
       description: Effective preferences
       content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Preference" } } } } } }
+    DeletionCheck:
+      description: Blockers (empty when deletion is allowed), and whether the confirmation needs a password
+      content: { application/json: { schema: { type: object, required: [blockers, has_password], properties: { has_password: { type: boolean, description: "false for Google-only accounts" }, blockers: { type: array, items: { $ref: "#/components/schemas/DeletionBlocker" } } } } } }
   schemas:
+    DeletionBlocker:
+      type: object
+      required: [code, detail, link]
+      properties:
+        code: { type: string, enum: [ACTIVE_ENROLMENT, ACTIVE_BOOKING, TEACHING_COHORT, UNPAID_EARNINGS, ADMIN_ACCOUNT] }
+        detail: { type: string, description: "Plain words, e.g. the cohort's name" }
+        link: { type: [string, "null"], description: Where to sort it out }
+    DataExport:
+      type: object
+      required: [exported_at, format_version, account, sections]
+      properties:
+        exported_at: { type: string, format: date-time }
+        format_version: { type: integer }
+        account: { type: object, description: "User fields, profile and onboarding answers" }
+        sections: { type: object, additionalProperties: { type: array, items: { type: object } }, description: "enrolments, payments, bookings, messages, feedback, reviews, notifications, ... (only those that apply to my role)" }
     MyProfile:
       type: object
       required: [email, name, avatar, timezone, country, headline, bio]

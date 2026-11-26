@@ -1649,7 +1649,8 @@
     "tabs": {
       "profile": "Profile",
       "security": "Sign-in and security",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "privacy": "Your data"
     },
     "profile": {
       "name": "Full name",
@@ -1749,6 +1750,39 @@
       "discard": "Discard changes",
       "saved": "Notification preferences saved",
       "failed": "That didn't save. Please try again."
+    },
+    "privacy": {
+      "exportTitle": "Download your data",
+      "exportBody": "Get a copy of everything EduBridge holds about you: your profile and onboarding answers, enrolments, payments, bookings, messages you sent, feedback, reviews and notifications. It downloads as a JSON file.",
+      "exportCta": "Download my data",
+      "exported": "Your data has been downloaded.",
+      "exportFailed": "We couldn't prepare your data. Please try again.",
+      "deleteTitle": "Delete your account",
+      "deleteBody": "This erases your profile and personal details and signs you out everywhere. Payment records are kept, without your name, because the law requires us to keep them.",
+      "deleteCta": "Delete my account",
+      "blockedTitle": "Finish these first, then you can delete your account:",
+      "blockers": {
+        "ACTIVE_ENROLMENT": "Training in progress:",
+        "ACTIVE_BOOKING": "Open one-on-one booking:",
+        "TEACHING_COHORT": "Cohort you're teaching:",
+        "UNPAID_EARNINGS": "Earnings:",
+        "ADMIN_ACCOUNT": "Admin account."
+      },
+      "sortItOut": "Go there",
+      "dialogTitle": "Delete your account?",
+      "dialogBody": "This can't be undone.",
+      "erased": "Your name, email, photo, onboarding answers, notifications and settings are erased.",
+      "kept": "Payments, earnings, reviews and messages you sent stay, shown as “Deleted user”, because other people and our financial records rely on them.",
+      "final": "You'll be signed out, and you won't be able to sign in with this account again.",
+      "emailLabel": "Type your email address ({email}) to confirm",
+      "emailMismatch": "That doesn't match the email address you sign in with.",
+      "passwordLabel": "Your password",
+      "passwordRequired": "Enter your password.",
+      "keep": "Keep my account",
+      "confirmCta": "Delete my account for good",
+      "deleted": "Your account has been deleted. We've sent a confirmation to your email.",
+      "blockedNow": "Something still needs to be finished first. Close this and check the list.",
+      "failed": "We couldn't delete your account. Nothing was changed. Please try again."
     }
   },
   "teach": {
