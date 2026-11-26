@@ -2,6 +2,8 @@
 
 **For:** Product Owner · **From:** Frontend team · **Date:** 26 Nov 2026 · **Status:** Awaiting decision
 
+Also readable in the app at `/proposals/instalments` (src/app/(public)/proposals/instalments/page.tsx). Change both together.
+
 The SRS asks for "instalment plans for higher-priced cohorts" (PAY-3, a Could-have) but sets no rules. Below is what we propose to build. Each rule has a default you can accept as is, or change. Nothing is built until you confirm.
 
 ## Summary
