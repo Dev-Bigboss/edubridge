@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Captions, Lock, VideoOff } from "lucide-react";
+import { ArrowLeft, Captions, Lock, ScrollText, VideoOff } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
 import { saveProgress, usePlayback, useRecording } from "@/lib/api/hooks/recordings";
+import { TranscriptPanel } from "./transcript-panel";
 import type { Recording } from "@/lib/api/schemas/recordings";
 import { useSession } from "@/lib/auth/session";
 import { cn } from "@/lib/cn";
@@ -58,6 +59,8 @@ function Player({ recording: r, zone, backHref }: { recording: Recording; zone: 
   const [speed, setSpeed] = useState(1);
   const [captions, setCaptions] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [currentSec, setCurrentSec] = useState(0);
   const range = playableRange(r.duration_sec, r.trim);
 
   // REC-4: save the position every 10 s of watching, on pause, and when leaving.
@@ -131,6 +134,7 @@ function Player({ recording: r, zone, backHref }: { recording: Recording; zone: 
             onTimeUpdate={(e) => {
               // A trimmed recording plays only its kept part.
               const el = e.currentTarget;
+              setCurrentSec(el.currentTime);
               if (el.currentTime < range.start - 0.5) el.currentTime = range.start;
               if (el.currentTime > range.end) {
                 el.pause();
@@ -171,8 +175,29 @@ function Player({ recording: r, zone, backHref }: { recording: Recording; zone: 
                 {t("captions")}
               </label>
             )}
+            {r.has_captions && (
+              <Button variant="outline" aria-expanded={showTranscript} aria-controls="transcript" onClick={() => setShowTranscript((v) => !v)}>
+                <ScrollText aria-hidden="true" className="size-4" />
+                {showTranscript ? t("transcript.hide") : t("transcript.show")}
+              </Button>
+            )}
             {resumeAt(r.resume_sec, range) > range.start && <p className="text-sm">{t("resuming", { at: formatClock(resumeAt(r.resume_sec, range)) })}</p>}
           </div>
+          {showTranscript && (
+            <div id="transcript">
+              <TranscriptPanel
+                recordingId={r.id}
+                currentSec={currentSec}
+                onSeek={(sec) => {
+                  const el = video.current;
+                  if (!el) return;
+                  el.currentTime = Math.min(Math.max(sec, range.start), range.end);
+                  setCurrentSec(el.currentTime);
+                  el.focus();
+                }}
+              />
+            </div>
+          )}
         </>
       )}
 

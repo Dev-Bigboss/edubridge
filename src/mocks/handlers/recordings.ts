@@ -1,11 +1,26 @@
 import { delay } from "msw";
 import { http, HttpResponse } from "msw/http";
 import { RecordingUpdate, type Recording } from "@/lib/api/schemas/recordings";
-import { trimProblem, TRIM_PROBLEMS } from "@/lib/domain/recordings";
+import { parseVtt, playableRange, segmentsInRange, trimProblem, TRIM_PROBLEMS } from "@/lib/domain/recordings";
 import { db, findUser, notify, save, type MockUser, type StoredRecording } from "../db";
 import { apiError, blockWhileImpersonating, requireUser, url, validationError } from "./util";
 
 const MONTH = 30.44 * 86_400_000;
+
+/** What the backend would have stored from Zoom's audio transcript; matches public/demo/captions.vtt. */
+const DEMO_TRANSCRIPT = `WEBVTT
+
+00:00:00.000 --> 00:00:05.000
+Welcome back. Today we review group accounts.
+
+00:00:05.000 --> 00:00:10.000
+First, a quick recap of control and consolidation.
+
+00:00:10.000 --> 00:00:15.000
+Next, we work through a past exam question together.
+
+00:00:15.000 --> 00:00:20.000
+That's all for this demo recording.`;
 
 const deleteAt = (r: StoredRecording) => new Date(Date.parse(r.recorded_at) + db.settings.recording_retention_months * MONTH).toISOString();
 
@@ -128,6 +143,18 @@ export const recordingHandlers = [
       captions_url: found.r.has_captions ? "/demo/captions.vtt" : null,
       expires_at: expires,
     });
+  }),
+
+  /** REC-4: the stored transcript, trimmed like the video. */
+  http.get(url("/recordings/:id/transcript"), async ({ params }) => {
+    await delay(200);
+    const user = requireUser();
+    if (user instanceof Response) return user;
+    const found = find(params.id as string, user);
+    if (!found) return notFound();
+    if (found.r.status !== "READY") return apiError(409, "NOT_READY", "This recording is still processing. Try again in a few minutes.");
+    if (!found.r.has_captions) return apiError(404, "NOT_FOUND", "There's no transcript for this recording.");
+    return HttpResponse.json({ language: "en", segments: segmentsInRange(parseVtt(DEMO_TRANSCRIPT), playableRange(found.r.duration_sec, found.r.trim)) });
   }),
 
   /** REC-4: remember where this person stopped. Not a change to the recording, so allowed while viewing as. */

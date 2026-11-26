@@ -2190,6 +2190,18 @@
       "deleteBody": "The recording from {when} is removed for everyone. This can't be undone.",
       "deleteCta": "Delete recording",
       "deleted": "Recording deleted"
+    },
+    "transcript": {
+      "show": "Show transcript",
+      "hide": "Hide transcript",
+      "title": "Transcript",
+      "search": "Search the transcript",
+      "matches": "{count, plural, one {# line matches} other {# lines match}}",
+      "noMatches": "Nothing in this transcript mentions “{q}”.",
+      "seekLabel": "Play from {at}: {text}",
+      "empty": "No transcript for this part",
+      "emptyBody": "Zoom didn't pick up any speech in the part of this recording that's kept.",
+      "source": "Generated automatically by Zoom, so names and terms may be misheard."
     }
   },
   "resources": {

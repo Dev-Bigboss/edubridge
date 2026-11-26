@@ -24,10 +24,6 @@ one without noting the assumption clearly.
 **Question:** Is the waiting list optional or required at launch? The COH-2 spec marks it optional.
 **Status:** Awaiting PO answer.
 
-### REC-4 — Recording transcripts
-**Blocker for:** transcript display on recordings.
-**Status:** Unblocked: Zoom confirmed (see Resolved). Transcripts come from Zoom's cloud recording audio transcript; needs Zoom cloud recording with transcription enabled on the account.
-
 ### OTO-11 — Calendar sync
 **Blocker for:** `.ics` download is built. Full two-way calendar sync (Google/Outlook OAuth) needs:
 1. Which calendar providers to support at launch?
@@ -48,7 +44,7 @@ USD only at launch: prices are set, shown and charged in USD. Multi-currency dis
 Tax handling (Stripe Tax vs admin-set rates) is still open, above.
 
 ### Video provider (26 Nov 2026)
-Zoom. Meeting links, recordings and transcripts come from the Zoom API.
+Zoom. Meeting links, recordings and transcripts come from the Zoom API. REC-4 transcripts built against Zoom's audio transcript (VTT); the Zoom account needs cloud recording with audio transcription on.
 
 ---
 

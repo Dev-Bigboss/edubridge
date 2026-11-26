@@ -40,3 +40,10 @@ export const RecordingUpdate = z.object({
   trim: z.object({ start_sec: z.number().int().min(0), end_sec: z.number().int().positive() }).nullable().optional(),
 });
 export type RecordingUpdate = z.infer<typeof RecordingUpdate>;
+
+/** REC-4: Zoom's audio transcript as timed segments, limited to the trimmed part. */
+export const Transcript = z.object({
+  language: z.string(),
+  segments: z.array(z.object({ start_sec: z.number().nonnegative(), end_sec: z.number().nonnegative(), text: z.string() })),
+});
+export type Transcript = z.infer<typeof Transcript>;

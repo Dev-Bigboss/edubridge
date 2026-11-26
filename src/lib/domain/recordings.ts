@@ -43,3 +43,37 @@ export function trimProblem(startSec: number, endSec: number, durationSec: numbe
   if (endSec - startSec < 10) return "tooShort";
   return null;
 }
+
+/** REC-4: one line of a transcript, in seconds from the start of the full recording. */
+export type TranscriptSegment = { start_sec: number; end_sec: number; text: string };
+
+const vttTime = (s: string): number | null => {
+  const m = /^(?:(\d+):)?(\d{2}):(\d{2})[.,](\d{3})$/.exec(s.trim());
+  return m ? Number(m[1] ?? 0) * 3600 + Number(m[2]) * 60 + Number(m[3]) + Number(m[4]) / 1000 : null;
+};
+
+/** Parses WebVTT cues (what Zoom's audio transcript is delivered as) into plain segments. Tags and notes are dropped. */
+export function parseVtt(vtt: string): TranscriptSegment[] {
+  const out: TranscriptSegment[] = [];
+  for (const block of vtt.replace(/\r\n?/g, "\n").split(/\n{2,}/)) {
+    const lines = block.split("\n").filter(Boolean);
+    const at = lines.findIndex((l) => l.includes("-->"));
+    if (at < 0) continue;
+    const [from, rest] = lines[at].split("-->");
+    const start = vttTime(from);
+    const end = vttTime(rest.trim().split(/\s+/)[0]);
+    const text = lines.slice(at + 1).join(" ").replace(/<[^>]+>/g, "").trim();
+    if (start !== null && end !== null && text) out.push({ start_sec: start, end_sec: end, text });
+  }
+  return out;
+}
+
+/** REC-5: a trimmed recording's transcript keeps only what overlaps the kept part. */
+export function segmentsInRange(segments: TranscriptSegment[], range: { start: number; end: number }): TranscriptSegment[] {
+  return segments.filter((s) => s.end_sec > range.start && s.start_sec < range.end);
+}
+
+/** The segment being spoken at `t`, or null between segments. */
+export function activeSegmentIndex(segments: TranscriptSegment[], t: number): number {
+  return segments.findIndex((s) => t >= s.start_sec && t < s.end_sec);
+}

@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { useApiQuery } from "@/lib/api/query";
-import { Playback, RecordingList, RecordingResponse, type RecordingUpdate } from "@/lib/api/schemas/recordings";
+import { Playback, RecordingList, RecordingResponse, type RecordingUpdate, Transcript } from "@/lib/api/schemas/recordings";
 
 export function useMyRecordings(trainingId: string | null) {
   return useApiQuery({
@@ -87,5 +87,14 @@ export function useAdminDeleteRecording(id: string) {
       void qc.invalidateQueries({ queryKey: ["admin", "recordings"] });
       void qc.invalidateQueries({ queryKey: ["teach", "recordings"] });
     },
+  });
+}
+
+/** REC-4: the transcript, fetched only when the viewer opens it. */
+export function useTranscript(id: string, enabled: boolean) {
+  return useApiQuery({
+    queryKey: ["recordings", id, "transcript"],
+    enabled,
+    queryFn: ({ signal }) => api(`/recordings/${id}/transcript`, { schema: Transcript, signal }),
   });
 }

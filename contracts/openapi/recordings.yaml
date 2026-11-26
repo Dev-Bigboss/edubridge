@@ -14,6 +14,9 @@ info:
     - REC-6: playback is a signed URL valid for about an hour, created per request. Downloads are off by default
       (no download link; the player sets controlsList=nodownload; storage should send Content-Disposition: inline).
     - REC-4: speed control and captions (WebVTT) in the player; resume position stored per viewer.
+    - REC-4 transcripts: the backend fetches Zoom's audio transcript (VTT) with the recording and stores it; has_captions
+      means a transcript exists. GET /recordings/{id}/transcript returns its segments (seconds from the start of the full
+      recording), limited to the trimmed part. Same access rules as the recording; 404 when there is no transcript.
     - REC-5: the instructor (or an admin) hides/shows, trims (start/end, at least 10 s, within the length; the backend cuts
       the file or serves the range) or deletes. Recordings are deleted automatically `recording_retention_months` after the
       session (settings.yaml; plan §8 Q6 open). Writes are refused while an admin views as the instructor; saving a resume
@@ -80,6 +83,28 @@ paths:
                   url: { type: string }
                   captions_url: { type: [string, "null"] }
                   expires_at: { type: string, format: date-time }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /recordings/{id}/transcript:
+    get:
+      summary: The transcript as timed segments (REC-4)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Transcript
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [segments, language]
+                properties:
+                  language: { type: string, description: "BCP 47, e.g. en" }
+                  segments:
+                    type: array
+                    items:
+                      type: object
+                      required: [start_sec, end_sec, text]
+                      properties: { start_sec: { type: number }, end_sec: { type: number }, text: { type: string } }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
   /recordings/{id}/progress:

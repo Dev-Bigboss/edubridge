@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ApiError, api } from "@/lib/api/client";
-import { Playback, RecordingList, RecordingResponse } from "@/lib/api/schemas/recordings";
+import { Playback, RecordingList, RecordingResponse, Transcript } from "@/lib/api/schemas/recordings";
 import { db, mockSession, resetDb } from "../db";
 import { sweepRecordings } from "./recordings";
 
@@ -43,6 +43,22 @@ describe("recordings (REC-2/3/6)", () => {
     expect(p.url).toMatch(/^\/demo\/recording-sample\.webm\?token=\w+&expires=/);
     expect(p.captions_url).toBe("/demo/captions.vtt");
     expect(Date.parse(p.expires_at) - Date.now()).toBeLessThanOrEqual(60 * 60_000);
+  });
+
+  it("REC-4: serves the transcript, trimmed like the video, to the same people", async () => {
+    mockSession.set("usr_learner_1");
+    const rec = ready()[0];
+    const tr = await api(`/recordings/${rec.id}/transcript`, { schema: Transcript });
+    expect(tr.language).toBe("en");
+    expect(tr.segments).toHaveLength(4);
+    expect(tr.segments[0]).toEqual({ start_sec: 0, end_sec: 5, text: "Welcome back. Today we review group accounts." });
+    rec.trim = { start_sec: 6, end_sec: 16 };
+    expect((await api(`/recordings/${rec.id}/transcript`, { schema: Transcript })).segments.map((s) => s.start_sec)).toEqual([5, 10, 15]);
+    rec.has_captions = false;
+    expect((await failure(api(`/recordings/${rec.id}/transcript`))).status).toBe(404);
+    rec.has_captions = true;
+    mockSession.set("usr_instructor_3");
+    expect((await failure(api(`/recordings/${rec.id}/transcript`))).status).toBe(404);
   });
 
   it("REC-4: remembers where each viewer stopped", async () => {
