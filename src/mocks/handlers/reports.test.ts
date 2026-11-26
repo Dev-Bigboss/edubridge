@@ -34,7 +34,7 @@ describe("admin dashboard and reports (ADM-1, ADM-4)", () => {
     expect(d.enrolments.active_learners).toBe(4); // the Autumn cohort's four learners
     expect(d.cohorts.active).toBeGreaterThan(0);
     expect(d.attention.map((a) => a.kind)).toEqual(expect.arrayContaining(["APPLICATIONS", "MESSAGE_REPORTS"]));
-    expect(d.attention.find((a) => a.kind === "APPLICATIONS")).toMatchObject({ count: 1, href: "/admin/users?approval=PENDING" });
+    expect(d.attention.find((a) => a.kind === "APPLICATIONS")).toMatchObject({ count: 2, href: "/admin/users?approval=PENDING" });
     expect((await failure(api("/admin/dashboard", { query: { days: 12 } }))).status).toBe(422);
     mockSession.set("usr_instructor_1");
     expect((await failure(api("/admin/dashboard"))).status).toBe(403);

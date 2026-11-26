@@ -25,7 +25,7 @@ describe("admin users (ADM-2, ONB-3)", () => {
   it("is admin-only and lists applicants first, with a pending count", async () => {
     const page = await list();
     expect(page.items[0].id).toBe("usr_instructor_pending");
-    expect(page.pending_approvals).toBe(1);
+    expect(page.pending_approvals).toBe(2); // the applicant, and the demo instructor who hasn't started onboarding
     expect(page.items[0]).not.toHaveProperty("password");
     mockSession.set("usr_learner_1");
     expect((await failure(list())).status).toBe(403);
@@ -35,7 +35,7 @@ describe("admin users (ADM-2, ONB-3)", () => {
     expect((await list({ q: "applicant" })).items.map((u) => u.id)).toEqual(["usr_instructor_pending"]);
     expect((await list({ status: "SUSPENDED" })).items.map((u) => u.id)).toEqual(["usr_learner_suspended"]);
     expect((await list({ role: "ADMIN" })).total).toBe(1);
-    expect((await list({ approval: "PENDING" })).total).toBe(1);
+    expect((await list({ approval: "PENDING" })).total).toBe(2);
   });
 
   it("shows an applicant's submitted onboarding for review", async () => {
