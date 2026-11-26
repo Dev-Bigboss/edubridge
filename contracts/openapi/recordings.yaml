@@ -36,6 +36,12 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/RecordingList" }
         "403": { $ref: "#/components/responses/Error" }
+  /admin/recordings:
+    get:
+      summary: "REC-3 moderation (ADMIN): every recording, any status or visibility, newest first"
+      responses:
+        "200": { $ref: "#/components/responses/RecordingList" }
+        "403": { $ref: "#/components/responses/Error" }
   /recordings/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
     get:

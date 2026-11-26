@@ -132,6 +132,15 @@ paths:
       responses:
         "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Booking" } } } } } } }
         "403": { $ref: "#/components/responses/Error" }
+  /admin/bookings:
+    get:
+      summary: "OTO-4 oversight (ADMIN): every booking except DRAFTs, newest request first"
+      parameters:
+        - { name: status, in: query, schema: { type: string, description: "One booking status" } }
+        - { name: q, in: query, schema: { type: string, description: "Matches learner name, instructor name or training title, ignoring case" } }
+      responses:
+        "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Booking" } } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
   /bookings/{id}/{action}:
     post:
       summary: Answer a request or a counter-proposal (OTO-4/6/8, PAY-4)
