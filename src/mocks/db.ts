@@ -578,6 +578,16 @@ function seed(): State {
         headline: "Statistician and university tutor",
         created_at: "2026-11-17T10:12:00.000Z",
       }),
+      // Not onboarded yet, to test the learner and instructor wizards (ONB-2/3) from the start.
+      seedUser({ id: "usr_learner_new", role: "LEARNER", email: "new.learner@example.com", name: "New Learner", onboarding_status: "NOT_STARTED" }),
+      seedUser({
+        id: "usr_instructor_new",
+        role: "INSTRUCTOR",
+        email: "new.instructor@example.com",
+        name: "New Instructor",
+        onboarding_status: "NOT_STARTED",
+        approval_status: "PENDING",
+      }),
       seedUser({
         id: "usr_learner_suspended",
         role: "LEARNER",
@@ -804,7 +814,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v23";
+const STORE_KEY = "edubridge.mock.db.v24";
 
 function load(): State {
   try {

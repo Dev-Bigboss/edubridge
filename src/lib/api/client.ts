@@ -48,18 +48,21 @@ type RequestOptions<T> = {
 };
 
 const MOCKING = process.env.NEXT_PUBLIC_API_MOCKING === "on";
-let releaseGate: () => void = () => {};
-const mockGate = new Promise<void>((resolve) => (releaseGate = resolve));
+let releaseGate: (ok: boolean) => void = () => {};
+const mockGate = new Promise<boolean>((resolve) => (releaseGate = resolve));
 
 /**
  * Mock mode only: requests wait here until the MSW worker is intercepting, so a click that
- * beats the worker's start-up isn't sent to a backend that doesn't exist. Released by msw-starter
- * (and by the Vitest setup, where msw/node is already listening).
+ * beats the worker's start-up isn't sent to a real backend. Released by msw-starter with
+ * whether the worker started (and by the Vitest setup, where msw/node is already listening).
  */
-export const releaseMockGate = () => releaseGate();
+export const releaseMockGate = (ok = true) => releaseGate(ok);
 
 export async function api<T = unknown>(path: string, opts: RequestOptions<T> = {}): Promise<T> {
-  if (MOCKING) await mockGate;
+  // With mocking on, nothing may reach a real backend: if the worker didn't start, fail here.
+  if (MOCKING && !(await mockGate)) {
+    throw new ApiError(503, { code: "MOCKS_UNAVAILABLE", message: "The demo data didn't load. Reload the page to try again." });
+  }
   const url = new URL(`${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`);
   for (const [k, v] of Object.entries(opts.query ?? {})) {
     if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));

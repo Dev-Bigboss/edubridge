@@ -100,7 +100,6 @@
       "submitting": "Verifying",
       "back": "Use a different account"
     },
-    "mockHint": "Demo accounts (mock API): learner@example.com, instructor@example.com or admin@example.com with password Password123!. Code for instructor and admin: 123456.",
     "password": {
       "show": "Show password",
       "hide": "Hide password"
@@ -181,6 +180,21 @@
     "googleCallback": {
       "title": "Signing you in with Google",
       "subtitle": "One moment."
+    },
+    "demo": {
+      "title": "Demo accounts",
+      "intro": "The app is running on demo data, with no backend. Sign in as anyone below, or type an email with the password {password}. Instructors and admins use the code {code}.",
+      "roles": {
+        "LEARNER": "Learners",
+        "INSTRUCTOR": "Instructors",
+        "ADMIN": "Admin"
+      },
+      "signIn": "Sign in",
+      "signInAs": "Sign in as {name}",
+      "failed": "That didn't work. Try again, or reset the demo data.",
+      "reset": "Reset demo data",
+      "resetHint": "Removes everything added or changed while testing, in this browser only, and starts again from the demo data.",
+      "resetDone": "Demo data reset"
     }
   },
   "shell": {

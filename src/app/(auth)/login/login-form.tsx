@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AuthCard, AuthFooterLink, FormError } from "@/components/auth/auth-card";
+import { DemoAccounts } from "@/components/auth/demo-accounts";
 import { GoogleButton, OrDivider } from "@/components/auth/google-button";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
@@ -50,11 +51,7 @@ export function LoginForm() {
           {!challengeId && (
             <AuthFooterLink prompt={t("login.noAccount")} href="/register" label={t("login.createAccount")} />
           )}
-          {MOCKING && (
-            <p className="mt-6 rounded-sm border border-dashed border-border bg-white p-4 text-sm leading-relaxed">
-              {t("mockHint")}
-            </p>
-          )}
+          {MOCKING && !challengeId && <DemoAccounts onDone={finish} />}
         </>
       }
     >
