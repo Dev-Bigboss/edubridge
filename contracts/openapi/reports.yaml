@@ -1,0 +1,104 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Admin dashboard and reports"
+  version: 0.1.0
+  description: |
+    Admin dashboard (ADM-1) and CSV reports (ADM-4). Zod mirror: src/lib/api/schemas/reports.ts. Mock:
+    src/mocks/handlers/reports.ts. Rules mirrored in src/lib/domain/reports.ts. Amounts are integer cents, USD.
+
+    - Dashboard period: the last 7, 30 or 90 days up to now (422 otherwise).
+      users: learners (not suspended), approved instructors, accounts created in the period.
+      enrolments: seats confirmed in the period; active learners = confirmed seats in OPEN, FULL, CLOSED or IN_PROGRESS
+        cohorts plus learners with an upcoming ACCEPTED or RESCHEDULE_REQUESTED 1:1.
+      revenue: captured in the period (payment totals by captured_at), refunded and platform commission (from the ledger,
+        earnings.yaml); series buckets daily for 7 and 30 days, weekly for 90, UTC, oldest first, summing to captured.
+      cohorts: active, first class within 7 days, below minimum before the enrolment deadline.
+      one_on_one: requests PENDING_INSTRUCTOR, and those expiring within 6 hours.
+      response_times: requests that reached an instructor in the period (card authorised); hours to the instructor's first
+        answer (accept, decline or propose); EXPIRED if the system expired it first; median overall and per instructor.
+      attention: counts above zero, most urgent first: expiring requests, failed payouts, instructor applications,
+        open message reports, cohorts below minimum, each with a link where an admin page exists.
+    - Reports: GET /admin/reports/{type}?from=&to= (dates inclusive, UTC) returns text/csv (RFC 4180, CRLF, UTF-8),
+      money in dollars with two decimals; text cells starting with = + - @ are prefixed with ' so spreadsheets don't run
+      them. X-Row-Count gives the data rows. Every export is audited (report.exported, with type and dates).
+        revenue:    one row per captured payment (by ledger date): receipt, learner, training, kind, instructor, paid,
+                    commission % and amount, instructor amount, payment status
+        refunds:    one row per refund: receipt, learner, what, instructor, refunded, instructor share, platform share
+        payouts:    one row per payout requested in the range: dates, instructor, amount, status, trigger, Stripe id, reason
+        attendance: one row per learner per session that has started in the range: PRESENT, LATE, ABSENT or NOT_TAKEN
+servers:
+  - url: /api/v1
+paths:
+  /admin/dashboard:
+    get:
+      summary: Figures for the admin home (ADMIN)
+      parameters: [{ name: days, in: query, schema: { type: integer, enum: [7, 30, 90], default: 30 } }]
+      responses:
+        "200": { description: Dashboard, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboard" } } } }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/reports/{type}:
+    parameters:
+      - { name: type, in: path, required: true, schema: { type: string, enum: [revenue, payouts, attendance, refunds] } }
+      - { name: from, in: query, required: true, schema: { type: string, format: date } }
+      - { name: to, in: query, required: true, schema: { type: string, format: date } }
+    get:
+      summary: Download one report as CSV (ADMIN, audited)
+      responses:
+        "200":
+          description: CSV file
+          headers: { X-Row-Count: { schema: { type: integer } } }
+          content: { text/csv: { schema: { type: string } } }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+  schemas:
+    AdminDashboard:
+      type: object
+      required: [period, users, enrolments, revenue, cohorts, one_on_one, response_times, attention]
+      properties:
+        period: { type: object, required: [days, from, to], properties: { days: { type: integer }, from: { type: string, format: date-time }, to: { type: string, format: date-time } } }
+        users: { type: object, required: [learners, instructors, new_in_period], properties: { learners: { type: integer }, instructors: { type: integer }, new_in_period: { type: integer } } }
+        enrolments: { type: object, required: [new_in_period, active_learners], properties: { new_in_period: { type: integer }, active_learners: { type: integer } } }
+        revenue:
+          type: object
+          required: [captured, refunded, commission, series]
+          properties:
+            captured: { type: integer }
+            refunded: { type: integer }
+            commission: { type: integer }
+            series:
+              type: array
+              items: { type: object, required: [start, end, captured], properties: { start: { type: string, format: date-time }, end: { type: string, format: date-time }, captured: { type: integer } } }
+        cohorts: { type: object, required: [active, starting_within_7_days, below_minimum], properties: { active: { type: integer }, starting_within_7_days: { type: integer }, below_minimum: { type: integer } } }
+        one_on_one: { type: object, required: [pending, expiring_within_6_hours], properties: { pending: { type: integer }, expiring_within_6_hours: { type: integer } } }
+        response_times:
+          type: object
+          required: [median_hours, answered, expired, by_instructor]
+          properties:
+            median_hours: { type: [number, "null"] }
+            answered: { type: integer }
+            expired: { type: integer }
+            by_instructor:
+              type: array
+              items:
+                type: object
+                required: [instructor_id, name, answered, expired, median_hours]
+                properties:
+                  instructor_id: { type: string }
+                  name: { type: string }
+                  answered: { type: integer }
+                  expired: { type: integer }
+                  median_hours: { type: [number, "null"] }
+        attention:
+          type: array
+          items:
+            type: object
+            required: [kind, count, href]
+            properties:
+              kind: { type: string, enum: [APPLICATIONS, MESSAGE_REPORTS, BELOW_MINIMUM, EXPIRING_REQUESTS, FAILED_PAYOUTS] }
+              count: { type: integer }
+              href: { type: [string, "null"] }

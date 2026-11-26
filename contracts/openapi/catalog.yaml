@@ -1,0 +1,388 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Catalogue"
+  version: 0.1.0
+  description: |
+    Categories (TRN-3, TRN-4), modalities (TRN-2) and trainings (TRN-1, TRN-5, TRN-7).
+    Admin endpoints require role ADMIN (403 otherwise). Every admin write adds an audit entry (ADM-5).
+    Zod mirror: src/lib/api/schemas/catalog.ts. Mock: src/mocks/handlers/catalog.ts, admin-catalog.ts.
+    Public endpoints (/catalog/*) need no sign-in.
+
+    Rules the backend must enforce (the admin UI shows the same ones):
+    - A training has exactly one category and one modality (BR-1). The modality can't change once
+      the training has left DRAFT (409 MODALITY_LOCKED, field_errors.modality_id).
+    - Only APPROVED, ACTIVE instructors can be assigned (TRN-5, ONB-3).
+    - Price override and instructor rates must use a unit in the modality's pricing_units (PRC-2).
+    - Publish checklist (422 NOT_READY_TO_PUBLISH, field_errors.checks lists failed keys):
+      description ≥ 80 chars, category active, required metadata filled, ≥ 1 instructor, a price applies.
+      Mirrors publishChecks() in src/lib/domain/training.ts.
+    - Slug is generated from the title while DRAFT and frozen once published (stable URLs).
+    - ARCHIVED trainings are hidden from public endpoints but stay readable to enrolled learners (TRN-7).
+    - Category metadata field keys are permanent once saved (they are stored on trainings).
+servers:
+  - url: /api/v1
+paths:
+  /catalog/categories:
+    get:
+      summary: Categories. Public sees active only; admins may pass include_inactive=true
+      parameters:
+        - { name: include_inactive, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Category" } } } }
+  /catalog/modalities:
+    get:
+      summary: Modalities (TRN-2, stored in a table)
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Modality" } } } }
+  /catalog/trainings:
+    get:
+      summary: Public catalogue (TRN-6). PUBLISHED trainings only; ARCHIVED and DRAFT never appear (TRN-7)
+      description: |
+        No sign-in needed. Search matches title, summary, category name, category detail values
+        (e.g. "ICAN", "MTH 101") and instructor names; every word must match. Accents and case are ignored.
+        Default sort is `relevance` when `q` is set, otherwise `newest` (published_at desc).
+        `price_min`/`price_max` (minor units, inclusive) compare against `from_price.amount`; trainings
+        without a price are excluded by a price filter. Facets list options across all published trainings,
+        not only the current results, so a filter can be widened. Mirrors searchCatalog() in src/lib/domain/catalog.ts.
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: category, in: query, description: Category slug, schema: { type: string } }
+        - { name: modality, in: query, description: Modality code, schema: { type: string } }
+        - { name: language, in: query, description: BCP 47, schema: { type: string } }
+        - { name: instructor, in: query, description: Instructor user id, schema: { type: string } }
+        - { name: price_min, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: price_max, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: sort, in: query, schema: { type: string, enum: [relevance, newest, price_asc, price_desc, title] } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 60, default: 24 } }
+      responses:
+        "200":
+          description: One page of cards
+          content: { application/json: { schema: { $ref: "#/components/schemas/CatalogPage" } } }
+        "422": { $ref: "#/components/responses/Error" }
+  /catalog/trainings/{slug}:
+    get:
+      summary: Public training detail with visible cohorts (OPEN, FULL, CLOSED, IN_PROGRESS) or 1:1 instructor prices
+      description: 404 NOT_FOUND for DRAFT, ARCHIVED or unknown slugs. Enrolled learners read archived trainings through their enrolment, not here (TRN-7).
+      parameters: [{ name: slug, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Detail
+          content: { application/json: { schema: { type: object, required: [training], properties: { training: { $ref: "#/components/schemas/PublicTrainingDetail" } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/categories:
+    post:
+      summary: Create a category
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CategoryInput" } } } }
+      responses:
+        "201": { $ref: "#/components/responses/CategoryResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/categories/{id}:
+    patch:
+      summary: Rename, describe, enable/disable, or change metadata fields (partial)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CategoryInput" } } } }
+      responses:
+        "200": { $ref: "#/components/responses/CategoryResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/modalities:
+    post:
+      summary: Create a modality
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ModalityInput" } } } }
+      responses:
+        "201": { $ref: "#/components/responses/ModalityResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/modalities/{id}:
+    patch:
+      summary: Update name, units or active (code is immutable)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ModalityInput" } } } }
+      responses:
+        "200": { $ref: "#/components/responses/ModalityResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/instructors:
+    get:
+      summary: Approved, active instructors that can be assigned to trainings
+      parameters: [{ name: q, in: query, schema: { type: string } }]
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, email, avatar_url, headline]
+                      properties:
+                        id: { type: string }
+                        name: { type: string }
+                        email: { type: string }
+                        avatar_url: { type: [string, "null"] }
+                        headline: { type: [string, "null"] }
+  /admin/trainings:
+    get:
+      summary: All trainings, any status, newest change first (cursor pagination)
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] } }
+        - { name: category_id, in: query, schema: { type: string } }
+        - { name: modality_id, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string }, description: Title search }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 25, maximum: 100 } }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor, total]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Training" } }
+                  next_cursor: { type: [string, "null"] }
+                  total: { type: integer }
+    post:
+      summary: Create a training (always DRAFT)
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TrainingInput" } } } }
+      responses:
+        "201": { $ref: "#/components/responses/TrainingResponse" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/trainings/{id}:
+    get:
+      summary: One training
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { $ref: "#/components/responses/TrainingResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      summary: Replace the editable fields (full TrainingInput)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TrainingInput" } } } }
+      responses:
+        "200": { $ref: "#/components/responses/TrainingResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/trainings/{id}/{action}:
+    post:
+      summary: Status change (TRN-1)
+      description: |
+        publish:   DRAFT|ARCHIVED → PUBLISHED (runs the publish checklist)
+        unpublish: PUBLISHED → DRAFT
+        archive:   DRAFT|PUBLISHED → ARCHIVED
+        Anything else: 409 INVALID_TRANSITION.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [publish, unpublish, archive] } }
+      responses:
+        "200": { $ref: "#/components/responses/TrainingResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+    CategoryResponse:
+      description: Category
+      content: { application/json: { schema: { type: object, required: [category], properties: { category: { $ref: "#/components/schemas/Category" } } } } }
+    ModalityResponse:
+      description: Modality
+      content: { application/json: { schema: { type: object, required: [modality], properties: { modality: { $ref: "#/components/schemas/Modality" } } } } }
+    TrainingResponse:
+      description: Training
+      content: { application/json: { schema: { type: object, required: [training], properties: { training: { $ref: "#/components/schemas/Training" } } } } }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        field_errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    PricingUnit: { type: string, enum: [PER_SEAT, PER_SESSION, PER_HOUR] }
+    Price:
+      type: object
+      required: [amount, currency, unit]
+      properties:
+        amount: { type: integer, minimum: 1, description: Minor units }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        unit: { $ref: "#/components/schemas/PricingUnit" }
+    MetadataField:
+      type: object
+      required: [key, label, type, required]
+      properties:
+        key: { type: string, pattern: "^[a-z][a-z0-9_]*$" }
+        label: { type: string }
+        type: { type: string, enum: [TEXT, TAGS, SELECT] }
+        required: { type: boolean }
+        options: { type: array, items: { type: string }, description: SELECT only }
+    Category:
+      type: object
+      required: [id, name, slug, description, active, metadata_fields]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: [string, "null"] }
+        active: { type: boolean }
+        metadata_fields: { type: array, items: { $ref: "#/components/schemas/MetadataField" } }
+    CategoryInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 2, maxLength: 60 }
+        description: { type: [string, "null"], maxLength: 200 }
+        active: { type: boolean }
+        metadata_fields: { type: array, items: { $ref: "#/components/schemas/MetadataField" } }
+    Modality:
+      type: object
+      required: [id, code, name, active, pricing_units]
+      properties:
+        id: { type: string }
+        code: { type: string, description: "COHORT, ONE_ON_ONE or an admin-created code" }
+        name: { type: string }
+        active: { type: boolean }
+        pricing_units: { type: array, items: { $ref: "#/components/schemas/PricingUnit" } }
+    ModalityInput:
+      type: object
+      properties:
+        code: { type: string, pattern: "^[A-Z][A-Z0-9_]*$", description: Create only }
+        name: { type: string }
+        active: { type: boolean }
+        pricing_units: { type: array, minItems: 1, items: { $ref: "#/components/schemas/PricingUnit" } }
+    TrainingInstructor:
+      type: object
+      required: [instructor_id, name, avatar_url, headline, custom_rate]
+      properties:
+        instructor_id: { type: string }
+        name: { type: string }
+        avatar_url: { type: [string, "null"] }
+        headline: { type: [string, "null"] }
+        custom_rate: { oneOf: [{ $ref: "#/components/schemas/Price" }, { type: "null" }], description: "PRC-3 (TrainingInstructor.custom_rate)" }
+    Training:
+      type: object
+      required: [id, slug, title, summary, description, category_id, modality_id, level, language, duration_hours, thumbnail, status, metadata, instructors, price_override, created_at, updated_at, published_at]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        description: { type: string }
+        category_id: { type: string }
+        modality_id: { type: string }
+        level: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED, ALL_LEVELS] }
+        language: { type: string, description: BCP 47 }
+        duration_hours: { type: [number, "null"] }
+        thumbnail: { oneOf: [{ $ref: "./uploads.yaml#/components/schemas/StoredFile" }, { type: "null" }] }
+        status: { type: string, enum: [DRAFT, PUBLISHED, ARCHIVED] }
+        metadata: { type: object, additionalProperties: { oneOf: [{ type: string }, { type: array, items: { type: string } }] } }
+        instructors: { type: array, items: { $ref: "#/components/schemas/TrainingInstructor" } }
+        price_override: { oneOf: [{ $ref: "#/components/schemas/Price" }, { type: "null" }] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        published_at: { type: [string, "null"], format: date-time }
+    PublicInstructor:
+      type: object
+      required: [id, name, avatar_url, headline]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        avatar_url: { type: [string, "null"] }
+        headline: { type: [string, "null"] }
+    PublicTrainingCard:
+      type: object
+      description: Guest-safe view of a PUBLISHED training. No status, overrides or rates.
+      required: [id, slug, title, summary, thumbnail, level, language, duration_hours, category, modality, instructors, from_price, next_start_date, published_at]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        thumbnail: { oneOf: [{ $ref: "./uploads.yaml#/components/schemas/StoredFile" }, { type: "null" }] }
+        level: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED, ALL_LEVELS] }
+        language: { type: string }
+        duration_hours: { type: [number, "null"] }
+        category: { type: object, required: [id, name, slug], properties: { id: { type: string }, name: { type: string }, slug: { type: string } } }
+        modality: { type: object, required: [id, code, name], properties: { id: { type: string }, code: { type: string }, name: { type: string } } }
+        instructors: { type: array, items: { $ref: "#/components/schemas/PublicInstructor" } }
+        from_price:
+          oneOf: [{ $ref: "#/components/schemas/Price" }, { type: "null" }]
+          description: PRC-7. Lowest price any assigned instructor would charge today (resolvePrice per instructor, then min).
+        next_start_date: { type: [string, "null"], format: date, description: Start date of the soonest OPEN cohort whose deadline hasn't passed }
+        published_at: { type: string, format: date-time }
+    CatalogPage:
+      type: object
+      required: [items, next_cursor, total, facets]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/PublicTrainingCard" } }
+        next_cursor: { type: [string, "null"] }
+        total: { type: integer }
+        facets:
+          type: object
+          required: [instructors, languages]
+          properties:
+            instructors: { type: array, items: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } } }
+            languages: { type: array, items: { type: string } }
+    PublicTrainingDetail:
+      allOf:
+        - { $ref: "#/components/schemas/PublicTrainingCard" }
+        - type: object
+          required: [description, details, instructors, cohorts]
+          properties:
+            description: { type: string }
+            details:
+              type: array
+              description: TRN-4 category fields with labels, in the category's order. Empty values omitted.
+              items:
+                type: object
+                required: [key, label, value]
+                properties:
+                  key: { type: string }
+                  label: { type: string }
+                  value: { oneOf: [{ type: string }, { type: array, items: { type: string } }] }
+            instructors:
+              type: array
+              description: Each instructor's current price on this training (PRC-3/4)
+              items:
+                allOf:
+                  - { $ref: "#/components/schemas/PublicInstructor" }
+                  - { type: object, required: [price], properties: { price: { oneOf: [{ $ref: "#/components/schemas/Price" }, { type: "null" }] } } }
+            cohorts: { type: array, items: { $ref: "./cohorts.yaml#/components/schemas/PublicCohort" } }
+    TrainingInput:
+      type: object
+      required: [title, summary, description, category_id, modality_id, level, language, duration_hours, thumbnail_file_id, metadata, instructors, price_override]
+      properties:
+        title: { type: string, minLength: 5, maxLength: 120 }
+        summary: { type: string, minLength: 20, maxLength: 200 }
+        description: { type: string, maxLength: 5000 }
+        category_id: { type: string }
+        modality_id: { type: string }
+        level: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED, ALL_LEVELS] }
+        language: { type: string }
+        duration_hours: { type: [number, "null"] }
+        thumbnail_file_id: { type: [string, "null"], description: A CLEAN THUMBNAIL upload }
+        metadata: { type: object, additionalProperties: { oneOf: [{ type: string }, { type: array, items: { type: string } }] } }
+        instructors:
+          type: array
+          items:
+            type: object
+            required: [instructor_id, custom_rate]
+            properties:
+              instructor_id: { type: string }
+              custom_rate: { oneOf: [{ $ref: "#/components/schemas/Price" }, { type: "null" }] }
+        price_override: { oneOf: [{ $ref: "#/components/schemas/Price" }, { type: "null" }] }

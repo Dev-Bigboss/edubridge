@@ -1,0 +1,181 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Earnings and payouts"
+  version: 0.1.0
+  description: |
+    Instructor earnings ledger, payouts and reconciliation (PAY-7, PAY-8). Zod mirror: src/lib/api/schemas/earnings.ts.
+    Mock: src/mocks/handlers/earnings.ts. Rules mirrored in src/lib/domain/earnings.ts. Amounts are integer cents, USD.
+
+    - Earning: when a payment is CAPTURED (Stripe webhook), add an EARNING line for its instructor (the cohort's
+      instructor for a seat, the booking's for a 1:1): gross = payment total, commission = round(gross × commission_percent
+      / 100) at the rate in force at capture (settings.yaml), amount = gross − commission. The rate is stored on the line
+      and never recomputed.
+    - Hold: the line is PENDING until available_at = (1:1 session end, or the cohort's first class) + earnings_hold_days
+      (settings.yaml, default 7), then AVAILABLE. Status is derived from available_at.
+    - Refund (any route: admin refund, cancellation, cohort cancel, seat refunded because the cohort filled): add a REFUND
+      line with amount = −round(refund × net / gross) (never more than the earning). A refund on a still-pending earning
+      is pending with it; on an available one it's available at once (it can take the balance below zero; the next
+      earnings cover it).
+    - Balances: pending = sum of pending lines; available = sum of available lines (PAYOUT lines are negative and
+      count at once); in_flight = REQUESTED payouts.
+    - Payout: pays the whole available balance through Stripe Connect (transfer to the instructor's connected account).
+      Needs payout_account_status COMPLETE (onboarding.yaml), nothing in flight and at least 2000 ($20). A PAYOUT line
+      (−amount) is written when it's requested. Stripe's transfer webhook moves it to PAID with the transfer id; a
+      failure moves it to FAILED with a reason and adds PAYOUT_RETURNED (+amount). Idempotency-Key on the request.
+    - Schedule: MANUAL (default), WEEKLY (Mondays) or MONTHLY (the 1st), at 09:00 UTC; a job pays out the available
+      balance when the rules above allow, then sets the next run.
+    - PAY-8 reconciliation: for a date range (by ledger line date; payouts by paid date) the totals captured, refunded,
+      net revenue, platform commission, instructor earnings and paid out (commission + instructor earnings = net
+      revenue), plus what is owed to instructors now and a line per instructor. CSV with ?format=csv (audited as
+      report.exported). Webhook handlers must be idempotent (Stripe retries); key them on the Stripe event id.
+servers:
+  - url: /api/v1
+paths:
+  /teach/earnings:
+    get:
+      summary: My balances, schedule, ledger (newest first) and payouts (INSTRUCTOR)
+      responses:
+        "200": { description: Summary, content: { application/json: { schema: { $ref: "#/components/schemas/EarningsSummary" } } } }
+  /teach/payouts:
+    post:
+      summary: Pay out my whole available balance now (409 PAYOUT_NOT_AVAILABLE with the reason otherwise)
+      parameters: [{ name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { $ref: "#/components/responses/PayoutResponse" }
+        "201": { $ref: "#/components/responses/PayoutResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+  /teach/payout-schedule:
+    put:
+      summary: Choose MANUAL, WEEKLY or MONTHLY payouts
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [schedule], properties: { schedule: { type: string, enum: [MANUAL, WEEKLY, MONTHLY] } } } } } }
+      responses:
+        "200":
+          description: Saved
+          content: { application/json: { schema: { type: object, required: [schedule], properties: { schedule: { $ref: "#/components/schemas/Schedule" } } } } }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/payouts:
+    get:
+      summary: All payouts (ADMIN), newest first, with totals by status
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [REQUESTED, PAID, FAILED] } }]
+      responses:
+        "200":
+          description: List
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, totals]
+                properties:
+                  items: { type: array, items: { allOf: [{ $ref: "#/components/schemas/Payout" }, { type: object, required: [instructor], properties: { instructor: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } } } }] } }
+                  totals: { type: object, required: [requested, paid, failed], properties: { requested: { type: integer }, paid: { type: integer }, failed: { type: integer } } }
+  /admin/reconciliation:
+    get:
+      summary: Money in and out for a date range (ADMIN, PAY-8); ?format=csv for a download
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: format, in: query, schema: { type: string, enum: [json, csv], default: json } }
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Reconciliation" } }
+            text/csv: { schema: { type: string } }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    PayoutResponse:
+      description: Payout
+      content: { application/json: { schema: { type: object, required: [payout], properties: { payout: { $ref: "#/components/schemas/Payout" } } } } }
+  schemas:
+    Schedule:
+      type: object
+      required: [schedule, next_run_at]
+      properties:
+        schedule: { type: string, enum: [MANUAL, WEEKLY, MONTHLY] }
+        next_run_at: { type: [string, "null"], format: date-time }
+    LedgerEntry:
+      type: object
+      required: [id, kind, description, payment_id, payout_id, gross, commission, commission_percent, amount, status, available_at, created_at]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [EARNING, REFUND, PAYOUT, PAYOUT_RETURNED] }
+        description: { type: string }
+        payment_id: { type: [string, "null"] }
+        payout_id: { type: [string, "null"] }
+        gross: { type: [integer, "null"] }
+        commission: { type: [integer, "null"] }
+        commission_percent: { type: [number, "null"] }
+        amount: { type: integer, description: "Signed change to the balance" }
+        status: { type: string, enum: [PENDING, AVAILABLE] }
+        available_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+    Payout:
+      type: object
+      required: [id, amount, currency, status, trigger, requested_at, paid_at, failure_reason, reference]
+      properties:
+        id: { type: string }
+        amount: { type: integer }
+        currency: { type: string, enum: [USD] }
+        status: { type: string, enum: [REQUESTED, PAID, FAILED] }
+        trigger: { type: string, enum: [REQUEST, SCHEDULE] }
+        requested_at: { type: string, format: date-time }
+        paid_at: { type: [string, "null"], format: date-time }
+        failure_reason: { type: [string, "null"] }
+        reference: { type: [string, "null"], description: "Stripe transfer id" }
+    EarningsSummary:
+      type: object
+      required: [currency, balances, next_available_at, commission_percent, hold_days, min_payout, payout_account_status, schedule, payout_blocked_reason, entries, payouts]
+      properties:
+        currency: { type: string, enum: [USD] }
+        balances:
+          type: object
+          required: [pending, available, in_flight, paid_out_total, lifetime_net]
+          properties:
+            pending: { type: integer }
+            available: { type: integer }
+            in_flight: { type: integer }
+            paid_out_total: { type: integer }
+            lifetime_net: { type: integer }
+        next_available_at: { type: [string, "null"], format: date-time }
+        commission_percent: { type: number }
+        hold_days: { type: integer }
+        min_payout: { type: integer }
+        payout_account_status: { type: string, enum: [NOT_STARTED, PENDING, COMPLETE] }
+        schedule: { $ref: "#/components/schemas/Schedule" }
+        payout_blocked_reason: { type: [string, "null"] }
+        entries: { type: array, items: { $ref: "#/components/schemas/LedgerEntry" } }
+        payouts: { type: array, items: { $ref: "#/components/schemas/Payout" } }
+    Reconciliation:
+      type: object
+      required: [from, to, currency, totals, instructors]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        currency: { type: string, enum: [USD] }
+        totals:
+          type: object
+          required: [captured, refunded, net_revenue, commission, instructor_earnings, paid_out, owed_to_instructors]
+          properties:
+            captured: { type: integer }
+            refunded: { type: integer }
+            net_revenue: { type: integer }
+            commission: { type: integer }
+            instructor_earnings: { type: integer }
+            paid_out: { type: integer }
+            owed_to_instructors: { type: integer }
+        instructors:
+          type: array
+          items:
+            type: object
+            required: [instructor_id, name, earned, refunded, paid_out, balance]
+            properties:
+              instructor_id: { type: string }
+              name: { type: string }
+              earned: { type: integer }
+              refunded: { type: integer }
+              paid_out: { type: integer }
+              balance: { type: integer }

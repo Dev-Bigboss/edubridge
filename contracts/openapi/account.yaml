@@ -1,0 +1,209 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: My account"
+  version: 0.1.0
+  description: |
+    The signed-in person's own settings, any role: profile (ONB-2/3 edits), password, two-step sign-in
+    (NFR Security), other sessions, and notification preferences (NTF-2).
+    Zod mirror: src/lib/api/schemas/account.ts. Mock: src/mocks/handlers/account.ts.
+    Groups and locked channels: src/lib/domain/notification-groups.ts.
+
+    Rules:
+    - Every write returns 403 IMPERSONATION_READ_ONLY while an admin is viewing as the user (admin-users.yaml).
+    - Email can't be changed here (support confirms identity first).
+    - Instructors must keep headline (10–120) and bio (80–2000): they're public. Ignored for other roles.
+    - Changing the password revokes the user's other sessions and emails a notice.
+    - Two-step sign-in is mandatory for INSTRUCTOR and ADMIN (disable → 403 MFA_REQUIRED). Learners enable it with
+      setup → enable(code) and disable it with their password. Each change emails a notice.
+    - Notification preferences: groups depend on the role; missing groups default to on; locked channels
+      (payments email, cohort changes email, account decisions both) are always returned as true and can't be
+      turned off. In-app delivery and email sending both consult them.
+    - Privacy (NFR Privacy, GDPR/UK GDPR):
+      - GET /me/data-export returns everything held about me as one JSON document (Content-Disposition: attachment).
+        Other people appear by name only. Refused while an admin views as me.
+      - GET /me/deletion lists what stops my account from being deleted now; empty means it can go.
+        ACTIVE_ENROLMENT (a confirmed seat in a cohort not yet COMPLETED or CANCELLED), ACTIVE_BOOKING (a 1:1 booking
+        PENDING_INSTRUCTOR, COUNTER_PROPOSED, ACCEPTED or RESCHEDULE_REQUESTED, as learner or instructor),
+        TEACHING_COHORT (an instructor's cohort OPEN, FULL, CLOSED or IN_PROGRESS), UNPAID_EARNINGS (ledger balance > 0),
+        ADMIN_ACCOUNT (admins are removed by another admin).
+      - POST /me/deletion deletes now: it needs confirm_email equal to my email and, if the account has a password,
+        the password (422 field_errors.password). With blockers: 409 DELETION_BLOCKED. On success the user is
+        anonymised ("Deleted user", unusable email, no password, sessions ended); onboarding answers, notifications,
+        preferences, MFA, resource accesses, recording positions and checklists are erased; payments, ledger, reviews
+        and messages are kept, anonymised, because others or the law rely on them (financial records: 7 years).
+        A confirmation email goes to the old address and the action is audited.
+servers:
+  - url: /api/v1
+paths:
+  /me/profile:
+    get:
+      summary: My profile
+      responses:
+        "200": { $ref: "#/components/responses/Profile" }
+        "401": { $ref: "#/components/responses/Error" }
+    patch:
+      summary: Update my profile (full body)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, avatar_file_id, timezone, country, headline, bio]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                avatar_file_id: { type: [string, "null"], description: From uploads.yaml (AVATAR) }
+                timezone: { type: string }
+                country: { type: [string, "null"], pattern: "^[A-Z]{2}$" }
+                headline: { type: [string, "null"] }
+                bio: { type: [string, "null"] }
+      responses:
+        "200":
+          description: Saved; `user` is the refreshed session user (name and time zone show app-wide)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [profile, user]
+                properties:
+                  profile: { $ref: "#/components/schemas/MyProfile" }
+                  user: { $ref: "./auth.yaml#/components/schemas/User" }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /me/password:
+    post:
+      summary: Change my password (422 current_password when wrong)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password: { type: string, minLength: 10, maxLength: 128 }
+      responses:
+        "204": { description: Changed }
+        "422": { $ref: "#/components/responses/Error" }
+  /me/mfa/setup:
+    post:
+      summary: Start two-step sign-in set-up; returns the TOTP secret (409 MFA_ALREADY_ON)
+      responses:
+        "200":
+          description: Secret
+          content: { application/json: { schema: { type: object, required: [secret, otpauth_uri], properties: { secret: { type: string }, otpauth_uri: { type: string } } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /me/mfa/enable:
+    post:
+      summary: Confirm set-up with a current code (422 code)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [code], properties: { code: { type: string, pattern: "^\\d{6}$" } } } } } }
+      responses:
+        "200": { $ref: "#/components/responses/SessionUser" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /me/mfa/disable:
+    post:
+      summary: Turn two-step sign-in off with the password. Learners only (403 MFA_REQUIRED)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string } } } } } }
+      responses:
+        "200": { $ref: "#/components/responses/SessionUser" }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /me/sessions/revoke-others:
+    post:
+      summary: Sign out every other device
+      responses:
+        "200": { description: Count, content: { application/json: { schema: { type: object, required: [revoked], properties: { revoked: { type: integer } } } } } }
+  /me/data-export:
+    get:
+      summary: Download my data (JSON)
+      responses:
+        "200": { description: Export, content: { application/json: { schema: { $ref: "#/components/schemas/DataExport" } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /me/deletion:
+    get:
+      summary: What stops my account from being deleted right now
+      responses:
+        "200": { $ref: "#/components/responses/DeletionCheck" }
+    post:
+      summary: Delete my account now (irreversible)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirm_email, password]
+              properties:
+                confirm_email: { type: string }
+                password: { type: [string, "null"] }
+      responses:
+        "204": { description: Deleted and signed out }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /me/notification-preferences:
+    get:
+      summary: My channel choices per group (NTF-2)
+      responses:
+        "200": { $ref: "#/components/responses/Preferences" }
+    put:
+      summary: Replace my choices. Groups not offered to my role are ignored; locked channels stay on
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Preference" } } } } } }
+      responses:
+        "200": { $ref: "#/components/responses/Preferences" }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    Profile:
+      description: Profile
+      content: { application/json: { schema: { type: object, required: [profile], properties: { profile: { $ref: "#/components/schemas/MyProfile" } } } } }
+    SessionUser:
+      description: Updated session user
+      content: { application/json: { schema: { type: object, required: [user], properties: { user: { $ref: "./auth.yaml#/components/schemas/User" } } } } }
+    Preferences:
+      description: Effective preferences
+      content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Preference" } } } } } }
+    DeletionCheck:
+      description: Blockers (empty when deletion is allowed), and whether the confirmation needs a password
+      content: { application/json: { schema: { type: object, required: [blockers, has_password], properties: { has_password: { type: boolean, description: "false for Google-only accounts" }, blockers: { type: array, items: { $ref: "#/components/schemas/DeletionBlocker" } } } } } }
+  schemas:
+    DeletionBlocker:
+      type: object
+      required: [code, detail, link]
+      properties:
+        code: { type: string, enum: [ACTIVE_ENROLMENT, ACTIVE_BOOKING, TEACHING_COHORT, UNPAID_EARNINGS, ADMIN_ACCOUNT] }
+        detail: { type: string, description: "Plain words, e.g. the cohort's name" }
+        link: { type: [string, "null"], description: Where to sort it out }
+    DataExport:
+      type: object
+      required: [exported_at, format_version, account, sections]
+      properties:
+        exported_at: { type: string, format: date-time }
+        format_version: { type: integer }
+        account: { type: object, description: "User fields, profile and onboarding answers" }
+        sections: { type: object, additionalProperties: { type: array, items: { type: object } }, description: "enrolments, payments, bookings, messages, feedback, reviews, notifications, ... (only those that apply to my role)" }
+    MyProfile:
+      type: object
+      required: [email, name, avatar, timezone, country, headline, bio]
+      properties:
+        email: { type: string }
+        name: { type: string }
+        avatar: { oneOf: [{ $ref: "./uploads.yaml#/components/schemas/StoredFile" }, { type: "null" }] }
+        timezone: { type: string }
+        country: { type: [string, "null"] }
+        headline: { type: [string, "null"], description: Instructors only }
+        bio: { type: [string, "null"], description: Instructors only }
+    Preference:
+      type: object
+      required: [group, in_app, email]
+      properties:
+        group: { type: string, enum: [bookings, reminders, payments, content, messages, cohorts, account, moderation] }
+        in_app: { type: boolean }
+        email: { type: boolean }

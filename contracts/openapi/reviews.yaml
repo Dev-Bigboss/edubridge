@@ -1,0 +1,167 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Reviews"
+  version: 0.1.0
+  description: |
+    Ratings and reviews (FDB-4). Zod mirror: src/lib/api/schemas/reviews.ts. Mock: src/mocks/handlers/reviews.ts.
+    Rules mirrored in src/lib/domain/reviews.ts.
+
+    - Eligibility ("after completion"): a CONFIRMED seat in a cohort that is COMPLETED, or a 1:1 booking that is COMPLETED.
+      One review per learner, training and instructor; it rates both (training_rating and instructor_rating, 1–5) with
+      a comment of 10–1000 characters. Writing again edits it. 403 NOT_ELIGIBLE otherwise.
+    - Published at once (post-moderation). Admins hide a review with a reason the author sees, or restore it; both audited
+      (`review.hidden`, `review.restored`). Editing a hidden review publishes it again.
+    - Public lists show published reviews only, newest first, 10 per page. Authors appear as first name and last
+      initial ("Ada D."); no ids or full names. Averages (one decimal) are null until there are 3 reviews, for the
+      training overall and for each instructor on it.
+    - Writes are refused while an admin views as the learner.
+servers:
+  - url: /api/v1
+paths:
+  /trainings/{id}/reviews:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: cursor, in: query, schema: { type: string } }
+    get:
+      summary: Published reviews of a training (public)
+      security: []
+      responses:
+        "200":
+          description: Summary and a page of reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [summary, items, next_cursor]
+                properties:
+                  summary:
+                    type: object
+                    required: [count, training_average, instructors]
+                    properties:
+                      count: { type: integer }
+                      training_average: { type: [number, "null"] }
+                      instructors:
+                        type: array
+                        items:
+                          type: object
+                          required: [instructor_id, count, average]
+                          properties: { instructor_id: { type: string }, count: { type: integer }, average: { type: [number, "null"] } }
+                  items: { type: array, items: { $ref: "#/components/schemas/PublicReview" } }
+                  next_cursor: { type: [string, "null"] }
+        "404": { $ref: "#/components/responses/Error" }
+  /me/reviewables:
+    get:
+      summary: What I've finished and may review (LEARNER), with my review if written
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Reviewable" } } } } } }
+  /me/reviews:
+    put:
+      summary: Write (201) or edit (200) my review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [training_id, instructor_id, training_rating, instructor_rating, comment]
+              properties:
+                training_id: { type: string }
+                instructor_id: { type: string }
+                training_rating: { type: integer, minimum: 1, maximum: 5 }
+                instructor_rating: { type: integer, minimum: 1, maximum: 5 }
+                comment: { type: string, minLength: 10, maxLength: 1000 }
+      responses:
+        "200": { $ref: "#/components/responses/MyReviewResponse" }
+        "201": { $ref: "#/components/responses/MyReviewResponse" }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /me/reviews/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    delete:
+      summary: Delete my review
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/reviews:
+    get:
+      summary: Reviews for moderation (ADMIN), latest change first
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [PUBLISHED, HIDDEN], default: PUBLISHED } }]
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/AdminReview" } } } } } }
+  /admin/reviews/{id}/hide:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Hide with a reason the author sees (409 if already hidden)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [reason], properties: { reason: { type: string, minLength: 5, maxLength: 300 } } } } } }
+      responses:
+        "200": { $ref: "#/components/responses/AdminReviewResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/reviews/{id}/restore:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Publish a hidden review again
+      responses:
+        "200": { $ref: "#/components/responses/AdminReviewResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    MyReviewResponse:
+      description: My review
+      content: { application/json: { schema: { type: object, required: [review], properties: { review: { $ref: "#/components/schemas/MyReview" } } } } }
+    AdminReviewResponse:
+      description: Review
+      content: { application/json: { schema: { type: object, required: [review], properties: { review: { $ref: "#/components/schemas/AdminReview" } } } } }
+  schemas:
+    PublicReview:
+      type: object
+      required: [id, author_name, instructor, training_rating, instructor_rating, comment, context, created_at, edited]
+      properties:
+        id: { type: string }
+        author_name: { type: string, description: "First name and last initial" }
+        instructor: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
+        training_rating: { type: integer, minimum: 1, maximum: 5 }
+        instructor_rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        context: { type: string, enum: [COHORT, ONE_ON_ONE] }
+        created_at: { type: string, format: date-time }
+        edited: { type: boolean }
+    MyReview:
+      allOf:
+        - { $ref: "#/components/schemas/PublicReview" }
+        - type: object
+          required: [training_id, status, hidden_reason]
+          properties:
+            training_id: { type: string }
+            status: { type: string, enum: [PUBLISHED, HIDDEN] }
+            hidden_reason: { type: [string, "null"] }
+    AdminReview:
+      allOf:
+        - { $ref: "#/components/schemas/MyReview" }
+        - type: object
+          required: [author, training_title, moderation]
+          properties:
+            author: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
+            training_title: { type: string }
+            moderation:
+              oneOf:
+                - { type: object, required: [by_name, at], properties: { by_name: { type: string }, at: { type: string, format: date-time } } }
+                - { type: "null" }
+    Reviewable:
+      type: object
+      required: [training_id, training_title, training_slug, instructor, context, completed_at, review]
+      properties:
+        training_id: { type: string }
+        training_title: { type: string }
+        training_slug: { type: string }
+        instructor: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
+        context: { type: string, enum: [COHORT, ONE_ON_ONE] }
+        completed_at: { type: string, format: date-time }
+        review: { oneOf: [{ $ref: "#/components/schemas/MyReview" }, { type: "null" }] }

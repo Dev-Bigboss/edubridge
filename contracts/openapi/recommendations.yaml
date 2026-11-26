@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Recommendations"
+  version: 0.1.0
+  description: |
+    Trainings suggested from the learner's onboarding answers (Phase 4). Zod mirror: src/lib/api/schemas/recommendations.ts.
+    Mock: src/mocks/handlers/recommendations.ts. Scoring mirrored in src/lib/domain/recommendations.ts:
+
+    - Candidates: PUBLISHED trainings, minus any the learner has a PENDING_PAYMENT or CONFIRMED seat in, or a 1:1
+      booking on that isn't DECLINED, EXPIRED or CANCELLED.
+    - A training qualifies only if its category is one of the learner's interests (+3) or a topic matches (+2 each, at most
+      two). A topic matches when each of its words starts a word in the title, summary or category details, ignoring case
+      and accents.
+    - Then +1 when its level suits the learner's education level (SECONDARY → BEGINNER; UNDERGRADUATE → BEGINNER,
+      INTERMEDIATE; POSTGRADUATE and PROFESSIONAL → INTERMEDIATE, ADVANCED; OTHER → any; ALL_LEVELS always suits),
+      and +1 when its next open cohort starts today or later and before the exam target date.
+    - Highest score first, then the soonest start, then title. At most 6.
+    - profile_complete is false when the goals step hasn't been saved; items is then empty.
+servers:
+  - url: /api/v1
+paths:
+  /me/recommendations:
+    get:
+      summary: Trainings suggested for me (LEARNER), each with the reasons in the order above
+      responses:
+        "200":
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, profile_complete]
+                properties:
+                  profile_complete: { type: boolean }
+                  items: { type: array, maxItems: 6, items: { $ref: "#/components/schemas/Recommendation" } }
+        "403": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+  schemas:
+    Recommendation:
+      type: object
+      required: [training, reasons]
+      properties:
+        training: { $ref: "./catalog.yaml#/components/schemas/PublicTrainingCard" }
+        reasons:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [code, value]
+            properties:
+              code: { type: string, enum: [CATEGORY, TOPIC, LEVEL, BEFORE_EXAM] }
+              value: { type: [string, "null"], description: "CATEGORY: category name; TOPIC: the learner's topic; BEFORE_EXAM: exam date YYYY-MM-DD; LEVEL: null" }

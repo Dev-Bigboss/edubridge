@@ -1,0 +1,311 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Auth"
+  version: 0.1.0
+  description: |
+    Sign-in, MFA, registration, email verification, password reset, Google sign-in, consent,
+    session and sign-out. SRS refs: ONB-1, ONB-4, ONB-6, NFR Security, NFR Privacy.
+    Conventions: contracts/CONVENTIONS.md. Mock implementation: src/mocks/handlers/auth.ts.
+
+    Anti-enumeration: register, resend and forgot-password answer the same way whether or not
+    the email has an account. Rate-limit them per IP and per address (429 RATE_LIMITED).
+
+    Legal versions: the current terms/privacy versions live in the frontend at
+    src/lib/legal/versions.ts. The backend keeps the same values, stores the version and timestamp
+    of each acceptance (ONB-4), sets User.consent_required when a user's accepted version is older,
+    and rejects stale versions with 409 LEGAL_VERSION_OUTDATED.
+servers:
+  - url: /api/v1
+paths:
+  /auth/me:
+    get:
+      summary: Current signed-in user
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+  /auth/login:
+    post:
+      summary: Sign in with email and password
+      description: |
+        Admins and instructors get an MFA challenge instead of a session.
+        Unknown email and wrong password return the same 401 body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Signed in (Set-Cookie session) or MFA required (no cookie yet)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [mfa_required, user]
+                    properties:
+                      mfa_required: { const: false }
+                      user: { $ref: "#/components/schemas/User" }
+                  - type: object
+                    required: [mfa_required, mfa_challenge_id]
+                    properties:
+                      mfa_required: { const: true }
+                      mfa_challenge_id: { type: string }
+                discriminator: { propertyName: mfa_required }
+        "401":
+          description: INVALID_CREDENTIALS
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "403":
+          description: ACCOUNT_SUSPENDED or EMAIL_NOT_VERIFIED
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: RATE_LIMITED (NFR Security, rate limiting)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/mfa/verify:
+    post:
+      summary: Complete sign-in with a TOTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfa_challenge_id, code]
+              properties:
+                mfa_challenge_id: { type: string }
+                code: { type: string, pattern: "^\\d{6}$" }
+      responses:
+        "200":
+          description: Signed in (Set-Cookie session)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "400":
+          description: INVALID_MFA_CODE (field_errors.code) or MFA_CHALLENGE_EXPIRED
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/logout:
+    post:
+      summary: Sign out and clear session cookies
+      responses:
+        "204": { description: Signed out }
+  /auth/impersonation/end:
+    post:
+      summary: Leave "view as" and return to the admin's own session (ADM-2). Audited
+      description: The only write allowed in an impersonated session (besides logout). 409 NOT_IMPERSONATING otherwise.
+      responses:
+        "200":
+          description: The admin's session
+          content: { application/json: { schema: { type: object, required: [user], properties: { user: { $ref: "#/components/schemas/User" } } } } }
+        "409":
+          description: NOT_IMPERSONATING
+          content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  /auth/register:
+    post:
+      summary: Create a learner or instructor account (ONB-1, ONB-4)
+      description: |
+        Creates the user in PENDING_VERIFICATION and emails a single-use verification link to
+        {APP_URL}/verify-email?token=... (valid 24 h). No session is created.
+        If the email already exists, return the same 202 and email the owner instead.
+        Instructors start with approval_status PENDING. Admins are never self-registered.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, name, email, password, timezone, accept_terms, terms_version, privacy_version]
+              properties:
+                role: { type: string, enum: [LEARNER, INSTRUCTOR] }
+                name: { type: string, minLength: 2, maxLength: 120 }
+                email: { type: string, format: email }
+                password:
+                  type: string
+                  minLength: 10
+                  maxLength: 128
+                  description: Hash with argon2id or bcrypt; reject known-breached passwords
+                timezone: { type: string, description: IANA zone from the browser }
+                accept_terms: { const: true }
+                terms_version: { type: string }
+                privacy_version: { type: string }
+      responses:
+        "202":
+          description: Verification email sent (or owner notified)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [email]
+                properties:
+                  email: { type: string, format: email }
+        "409": { description: LEGAL_VERSION_OUTDATED, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "422": { description: VALIDATION_FAILED with field_errors, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "429": { description: RATE_LIMITED, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /auth/email/verify:
+    post:
+      summary: Redeem an email verification token
+      description: Sets status ACTIVE and signs the user in (Set-Cookie) so they continue to onboarding. Tokens are single use.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [token], properties: { token: { type: string } } }
+      responses:
+        "200":
+          description: Verified and signed in
+          content:
+            application/json:
+              schema: { type: object, required: [user], properties: { user: { $ref: "#/components/schemas/User" } } }
+        "400": { description: TOKEN_INVALID (unknown, used or expired), content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /auth/email/resend:
+    post:
+      summary: Send a fresh verification link
+      description: Always 202. Only sends if the address exists and is PENDING_VERIFICATION.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+      responses:
+        "202": { description: Accepted }
+        "429": { description: RATE_LIMITED, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /auth/password/forgot:
+    post:
+      summary: Email a password reset link
+      description: Always 202. The link goes to {APP_URL}/reset-password?token=... and is valid for 1 hour, single use.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+      responses:
+        "202": { description: Accepted }
+        "429": { description: RATE_LIMITED, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /auth/password/reset:
+    post:
+      summary: Set a new password with a reset token
+      description: Revokes every existing session for the user. Also marks a PENDING_VERIFICATION address as verified.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 10, maxLength: 128 }
+      responses:
+        "204": { description: Password changed }
+        "400": { description: TOKEN_INVALID, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "422": { description: VALIDATION_FAILED (field_errors.password), content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /auth/consent:
+    post:
+      summary: Accept the current terms and privacy versions (ONB-4)
+      description: Store user_id, both versions, timestamp, IP and user agent as an append-only consent record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [terms_version, privacy_version]
+              properties:
+                terms_version: { type: string }
+                privacy_version: { type: string }
+      responses:
+        "200":
+          description: Recorded
+          content:
+            application/json:
+              schema: { type: object, required: [user], properties: { user: { $ref: "#/components/schemas/User" } } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "409": { description: LEGAL_VERSION_OUTDATED, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /auth/google/start:
+    get:
+      summary: Begin Google sign-in (browser navigation, not fetch)
+      description: |
+        Redirects to Google (OIDC with PKCE and state). On return the backend signs the person in,
+        creating the account if needed (status ACTIVE, consent_required true, onboarding NOT_STARTED,
+        role from the query; an existing account keeps its role), then redirects to
+        {APP_URL}/auth/google/callback?next=... or ?error=CODE.
+      parameters:
+        - { name: role, in: query, required: true, schema: { type: string, enum: [LEARNER, INSTRUCTOR] } }
+        - name: next
+          in: query
+          required: false
+          schema: { type: string }
+          description: Internal path only. Accept it only if it starts with a single slash.
+      responses:
+        "302": { description: Redirect to Google }
+components:
+  responses:
+    Unauthenticated:
+      description: UNAUTHENTICATED
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        field_errors:
+          type: object
+          additionalProperties: { type: array, items: { type: string } }
+    User:
+      type: object
+      required: [id, role, email, name, timezone, status, avatar_url, onboarding_status, approval_status, mfa_enabled, consent_required]
+      properties:
+        id: { type: string }
+        role: { type: string, enum: [LEARNER, INSTRUCTOR, ADMIN] }
+        email: { type: string, format: email }
+        name: { type: string }
+        timezone: { type: string, description: IANA zone, e.g. Africa/Lagos }
+        status: { type: string, enum: [PENDING_VERIFICATION, ACTIVE, SUSPENDED] }
+        avatar_url: { type: [string, "null"] }
+        onboarding_status: { type: string, enum: [NOT_STARTED, IN_PROGRESS, COMPLETED] }
+        approval_status:
+          type: [string, "null"]
+          enum: [PENDING, APPROVED, REJECTED, null]
+          description: Instructors only (ONB-3)
+        mfa_enabled: { type: boolean }
+        consent_required:
+          type: boolean
+          description: True when the user hasn't accepted the current terms/privacy versions (ONB-4)
+        impersonated_by:
+          description: "ADM-2: set while an admin views the app as this user (read-only session). Null otherwise."
+          oneOf:
+            - { type: "null" }
+            - type: object
+              required: [id, name, started_at]
+              properties:
+                id: { type: string }
+                name: { type: string }
+                started_at: { type: string, format: date-time }

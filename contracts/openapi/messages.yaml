@@ -1,0 +1,361 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Messages and moderation"
+  version: 0.1.0
+  description: |
+    Messaging (MSG-1..6). Zod mirror: src/lib/api/schemas/messages.ts. Mock: src/mocks/handlers/messages.ts.
+    Rules mirrored in src/lib/domain/messages.ts.
+
+    - MSG-1 / BR-6: a DIRECT conversation joins one learner and one instructor. Either may open it when a relationship exists:
+        ENROLMENT  the learner has a CONFIRMED seat in one of the instructor's cohorts
+        BOOKING    a 1:1 booking between them that got past DRAFT
+        ENQUIRY    the learner asks a question before buying: `training_id` names a published training the instructor teaches
+      Otherwise 403 MESSAGING_NOT_ALLOWED. Instructors can't start enquiries. Admins don't take part (they can read
+      reported conversations in moderation, Phase 3 part 2). One DIRECT conversation per pair; opening it again returns it.
+      A conversation with no messages yet only shows in the list of the person who opened it.
+    - MSG-2: every cohort past DRAFT has one COHORT channel: its instructor plus learners with a CONFIRMED seat. The
+      instructor may flag a message `announcement: true` (shown pinned and highlighted); learners can't. A COMPLETED or
+      CANCELLED cohort's channel stays readable but `can_post` is false.
+    - MSG-3: history is paged newest first by cursor (`before` = a message id). `unread_count` counts others' messages
+      after my `last_read_at`. `POST /conversations/{id}/read` moves it. DIRECT conversations carry the other person's
+      `last_read_at` so the sender sees "Seen". Delivery is real time over WebSocket (below); the frontend falls back to
+      polling these endpoints (list 15 s, open conversation 5 s, unread count 30 s) when the socket is down.
+    - MSG-4: attachments are uploads with purpose MESSAGE_ATTACHMENT (uploads.yaml: same types, 100 MB limit and virus
+      scan as resources). At most 5 per message; only CLEAN files can be attached; signed URLs as for resources.
+    - Messages are 1 to 4000 characters after trimming (or empty with at least one attachment). `client_id` (UUID) makes a
+      retried send return the original message instead of posting twice.
+    - New messages do not fill the notification bell; the Messages item in the sidebar shows the unread total.
+    - MSG-5: a job emails each member once others' messages have waited unread `message_email_delay_minutes`
+      (settings.yaml, default 30): one email per conversation per unread batch, nothing more until they read it.
+      Honours the member's "messages" email preference (account.yaml). Subject: "<name> sent you a message" or
+      "New messages in <cohort>"; link to the conversation. Message text is not put in the email.
+    - MSG-6 contact details: `contact_filter` (settings.yaml) is OFF, WARN or MASK. WARN: the app warns the sender
+      before sending (rules in src/lib/domain/contact-filter.ts) and the message is stored as written. MASK: the backend
+      replaces emails, phone numbers (9 to 15 digits) and chat-app links (wa.me, t.me) with "[contact details hidden]"
+      and sets `filtered: true`. Each Conversation carries the current value so the composer can warn.
+    - MSG-6 blocking (DIRECT only): either member can block; then nobody can post (403 CONVERSATION_BLOCKED), history
+      stays readable, and only the blocker can unblock. Bookings and classes are not affected.
+    - MSG-6 reports: a member reports a message from someone else, or the whole conversation, with a reason. Admins get
+      MESSAGE_REPORTED (notifications.yaml). Admins see a report with up to 5 messages either side (never the whole inbox),
+      then REMOVE_MESSAGE (body and files cleared for everyone, `removed: true`) or DISMISS, with a note; audited
+      (`message.removed`, `message_report.dismissed`). Removing settles other open reports on the same message.
+    - COH-6 cohort page: GET /cohorts/{id}/space gives a cohort's members (its instructor and learners with a CONFIRMED
+      seat) the roster (names and photos only, never contact details), the next class with its join link, and the
+      latest 20 announcements from the cohort channel, newest first. Admins can read it; anyone else gets 404. The
+      instructor posts announcements through POST /conversations/{channel_id}/messages with announcement: true.
+      Each announcement notifies every other member (COHORT_CHANGED, linking to the cohort page).
+    - Writes are refused while an admin views as the user.
+
+    WebSocket (not describable in OpenAPI): `GET /api/v1/realtime` upgrades with the session cookie. Server → client events,
+    JSON `{ "type": ..., "data": ... }`:
+      message.created        data: Message                                  (to every member but the sender's other tabs too)
+      conversation.read      data: { conversation_id, user_id, last_read_at }
+      unread.changed         data: { unread_count }
+    The client sends nothing but pings; all writes go through REST.
+servers:
+  - url: /api/v1
+paths:
+  /me/conversations:
+    get:
+      summary: My conversations, most recent message first, empty ones last (DIRECT and COHORT)
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Conversation" } } } } } }
+    post:
+      summary: Open (or get) the DIRECT conversation with a person (BR-6). 200 if it existed, 201 if new
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id]
+              properties:
+                user_id: { type: string }
+                training_id: { type: [string, "null"], description: "Needed for an ENQUIRY: the training the question is about" }
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "201": { $ref: "#/components/responses/ConversationResponse" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /me/conversations/unread-count:
+    get:
+      summary: Unread messages across my conversations (sidebar badge)
+      responses:
+        "200":
+          description: Count
+          content: { application/json: { schema: { type: object, required: [unread_count], properties: { unread_count: { type: integer, minimum: 0 } } } } }
+  /me/contacts:
+    get:
+      summary: People I may message (BR-6), with why
+      responses:
+        "200":
+          description: Contacts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Contact" } }
+  /conversations/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: One conversation I'm in (404 otherwise)
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/messages:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: History, newest page first; items within a page oldest → newest
+      parameters:
+        - { name: before, in: query, schema: { type: string }, description: "Cursor: return messages older than this message id" }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 30 } }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Message" } }
+                  next_cursor: { type: [string, "null"], description: "Pass as `before` for older messages" }
+        "404": { $ref: "#/components/responses/Error" }
+    post:
+      summary: Send a message (MSG-3/4)
+      parameters: [{ name: Idempotency-Key, in: header, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body, attachment_ids, announcement, client_id]
+              properties:
+                body: { type: string, maxLength: 4000 }
+                attachment_ids: { type: array, maxItems: 5, items: { type: string } }
+                announcement: { type: boolean, description: "COHORT channel, instructor only" }
+                client_id: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Sent (200 with the original when client_id repeats)
+          content: { application/json: { schema: { type: object, required: [message], properties: { message: { $ref: "#/components/schemas/Message" } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/read:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Mark everything up to now as read
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "404": { $ref: "#/components/responses/Error" }
+  /cohorts/{id}/space:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: Cohort roster and announcements feed for its members (COH-6); ADMIN read-only
+      responses:
+        "200": { description: Cohort space, content: { application/json: { schema: { $ref: "#/components/schemas/CohortSpace" } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/block:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Block the other person (DIRECT only, 422 otherwise)
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/unblock:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Unblock (only the person who blocked, 403 otherwise)
+      responses:
+        "200": { $ref: "#/components/responses/ConversationResponse" }
+        "403": { $ref: "#/components/responses/Error" }
+  /conversations/{id}/reports:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Report a message or the conversation (an open report by the same person on the same thing is returned, 200)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message_id, reason, details, block]
+              properties:
+                message_id: { type: [string, "null"], description: "Someone else's message in this conversation, or null for the whole conversation" }
+                reason: { $ref: "#/components/schemas/ReportReason" }
+                details: { type: string, maxLength: 1000, description: "At least 5 characters when reason is OTHER" }
+                block: { type: boolean, description: "DIRECT: also block the other person" }
+      responses:
+        "201":
+          description: Reported
+          content: { application/json: { schema: { type: object, required: [report_id, conversation], properties: { report_id: { type: string }, conversation: { $ref: "#/components/schemas/Conversation" } } } } }
+        "422": { $ref: "#/components/responses/Error" }
+  /admin/message-reports:
+    get:
+      summary: Reports to review (ADMIN), newest first
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [OPEN, RESOLVED], default: OPEN } }]
+      responses:
+        "200":
+          description: List
+          content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/MessageReport" } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/message-reports/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    get:
+      summary: One report with up to 5 messages either side of the reported one (or the latest 10 for a whole conversation)
+      responses:
+        "200":
+          description: Report and context
+          content: { application/json: { schema: { type: object, required: [report, context], properties: { report: { $ref: "#/components/schemas/MessageReport" }, context: { type: array, items: { $ref: "#/components/schemas/Message" } } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /admin/message-reports/{id}/resolve:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: Remove the message or dismiss the report, with a note (409 if already resolved)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, note]
+              properties:
+                action: { type: string, enum: [REMOVE_MESSAGE, DISMISS] }
+                note: { type: string, minLength: 5, maxLength: 500 }
+      responses:
+        "200":
+          description: Resolved
+          content: { application/json: { schema: { type: object, required: [report], properties: { report: { $ref: "#/components/schemas/MessageReport" } } } } }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    ConversationResponse:
+      description: Conversation
+      content: { application/json: { schema: { type: object, required: [conversation], properties: { conversation: { $ref: "#/components/schemas/Conversation" } } } } }
+  schemas:
+    Person:
+      type: object
+      required: [id, name, role, avatar_url]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        role: { type: string, enum: [LEARNER, INSTRUCTOR, ADMIN] }
+        avatar_url: { type: [string, "null"] }
+    Contact:
+      allOf:
+        - { $ref: "#/components/schemas/Person" }
+        - type: object
+          required: [context, context_label, conversation_id]
+          properties:
+            context: { type: string, enum: [ENROLMENT, BOOKING, ENQUIRY] }
+            context_label: { type: string, description: "e.g. 'Your instructor, ICAN Audit and Assurance'" }
+            conversation_id: { type: [string, "null"], description: "Existing DIRECT conversation, if any" }
+    Conversation:
+      type: object
+      required: [id, kind, title, subtitle, context, training_id, cohort_id, participants, member_count, last_message, unread_count, last_read_at, other_last_read_at, can_post, can_announce, blocked, contact_filter, updated_at]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [DIRECT, COHORT] }
+        title: { type: string, description: "DIRECT: the other person's name. COHORT: the cohort name" }
+        subtitle: { type: string, description: "The training, or 'Question about <training>' for an enquiry" }
+        context: { type: string, enum: [ENROLMENT, BOOKING, ENQUIRY, COHORT] }
+        training_id: { type: [string, "null"] }
+        cohort_id: { type: [string, "null"] }
+        participants: { type: array, description: "Everyone but me", items: { $ref: "#/components/schemas/Person" } }
+        member_count: { type: integer }
+        last_message:
+          oneOf:
+            - type: object
+              required: [preview, sender_name, mine, created_at]
+              properties:
+                preview: { type: string, description: "First 120 characters, or 'Sent a file'" }
+                sender_name: { type: string }
+                mine: { type: boolean }
+                created_at: { type: string, format: date-time }
+            - { type: "null" }
+        unread_count: { type: integer, minimum: 0 }
+        last_read_at: { type: [string, "null"], format: date-time }
+        other_last_read_at: { type: [string, "null"], format: date-time, description: "DIRECT only: read receipt" }
+        can_post: { type: boolean }
+        can_announce: { type: boolean }
+        blocked: { type: [string, "null"], enum: [BY_ME, BY_THEM, null], description: "DIRECT only (MSG-6)" }
+        contact_filter: { type: string, enum: [OFF, WARN, MASK] }
+        updated_at: { type: string, format: date-time }
+    Message:
+      type: object
+      required: [id, conversation_id, sender, body, attachments, announcement, client_id, filtered, removed, created_at]
+      properties:
+        id: { type: string }
+        conversation_id: { type: string }
+        sender: { $ref: "#/components/schemas/Person" }
+        body: { type: string }
+        attachments: { type: array, items: { $ref: "./uploads.yaml#/components/schemas/StoredFile" } }
+        announcement: { type: boolean }
+        client_id: { type: [string, "null"] }
+        filtered: { type: boolean, description: "MSG-6: contact details were masked on send" }
+        removed: { type: boolean, description: "MSG-6: removed by an admin; body is empty and attachments []" }
+        created_at: { type: string, format: date-time }
+    CohortSpace:
+      type: object
+      required: [cohort, instructor, learners, channel_id, can_announce, announcements]
+      properties:
+        cohort:
+          type: object
+          required: [id, name, status, training_id, training_title, start_date, end_date, next_session]
+          properties:
+            id: { type: string }
+            name: { type: string }
+            status: { type: string }
+            training_id: { type: string }
+            training_title: { type: string }
+            start_date: { type: string, format: date }
+            end_date: { type: string, format: date }
+            next_session:
+              oneOf:
+                - { type: object, required: [id, start_utc, end_utc, join_url], properties: { id: { type: string }, start_utc: { type: string, format: date-time }, end_utc: { type: string, format: date-time }, join_url: { type: string } } }
+                - { type: "null" }
+        instructor: { $ref: "#/components/schemas/Person" }
+        learners: { type: array, items: { $ref: "#/components/schemas/Person" } }
+        channel_id: { type: string }
+        can_announce: { type: boolean }
+        announcements: { type: array, items: { $ref: "#/components/schemas/Message" } }
+    ReportReason:
+      type: string
+      enum: [SPAM, HARASSMENT, OFF_PLATFORM_PAYMENT, OTHER]
+    MessageReport:
+      type: object
+      required: [id, status, reason, details, created_at, reporter, reported, conversation, message, resolution]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [OPEN, RESOLVED] }
+        reason: { $ref: "#/components/schemas/ReportReason" }
+        details: { type: string }
+        created_at: { type: string, format: date-time }
+        reporter: { $ref: "#/components/schemas/Person" }
+        reported: { oneOf: [{ $ref: "#/components/schemas/Person" }, { type: "null" }], description: "The message's sender, or the other person in a DIRECT conversation" }
+        conversation:
+          type: object
+          required: [id, kind, title, subtitle]
+          properties: { id: { type: string }, kind: { type: string, enum: [DIRECT, COHORT] }, title: { type: string }, subtitle: { type: string } }
+        message: { oneOf: [{ $ref: "#/components/schemas/Message" }, { type: "null" }] }
+        resolution:
+          oneOf:
+            - type: object
+              required: [action, note, by_name, at]
+              properties:
+                action: { type: string, enum: [REMOVE_MESSAGE, DISMISS] }
+                note: { type: string }
+                by_name: { type: string }
+                at: { type: string, format: date-time }
+            - { type: "null" }

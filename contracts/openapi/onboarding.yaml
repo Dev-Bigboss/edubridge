@@ -1,0 +1,217 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Onboarding"
+  version: 0.1.0
+  description: |
+    Learner (ONB-2) and instructor (ONB-3) onboarding, saved step by step so it can be resumed (ONB-6).
+    Each wizard step is a "section". PUT validates and saves one section, adds it to
+    completed_steps, and moves User.onboarding_status from NOT_STARTED to IN_PROGRESS.
+    Validation errors use dot paths in field_errors (e.g. "qualifications.0.year", "weekly.3.end").
+    Zod mirror: src/lib/api/schemas/onboarding.ts. Mock: src/mocks/handlers/onboarding.ts.
+
+    Sections by role:
+      LEARNER:    profile, goals, background
+      INSTRUCTOR: profile, expertise, verification, payout (set by Stripe, not PUT), availability
+
+    The profile section also updates User.name, User.timezone and User.avatar_url.
+    Instructor availability is the same weekly model the booking module uses (OTO-1).
+servers:
+  - url: /api/v1
+paths:
+  /onboarding:
+    get:
+      summary: The signed-in user's onboarding state (LEARNER or INSTRUCTOR only)
+      responses:
+        "200":
+          description: State
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnboardingState" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+  /onboarding/sections/{section}:
+    put:
+      summary: Save one step
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema: { type: string, enum: [profile, goals, background, expertise, verification, availability] }
+      requestBody:
+        required: true
+        description: |
+          profile:      ProfileInput (instructors also send headline and bio)
+          goals:        GoalsInput (learner)
+          background:   BackgroundInput (learner)
+          expertise:    ExpertiseInput (instructor)
+          verification: VerificationInput (instructor). File ids must be CLEAN uploads owned by the user.
+          availability: AvailabilityInput (instructor)
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { $ref: "#/components/schemas/ProfileInput" }
+                - { $ref: "#/components/schemas/GoalsInput" }
+                - { $ref: "#/components/schemas/BackgroundInput" }
+                - { $ref: "#/components/schemas/ExpertiseInput" }
+                - { $ref: "#/components/schemas/VerificationInput" }
+                - { $ref: "#/components/schemas/AvailabilityInput" }
+      responses:
+        "200":
+          description: Updated state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnboardingState" }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /onboarding/payout-link:
+    post:
+      summary: Stripe Connect Express account link for payout details (instructor)
+      description: |
+        Creates the connected account if needed and returns a Stripe-hosted onboarding URL.
+        return_url = {APP_URL}/onboarding/instructor?step=payout&payout=return
+        refresh_url = {APP_URL}/onboarding/instructor?step=payout
+        The backend sets sections.payout.status from Stripe's account.updated webhook
+        (COMPLETE when charges_enabled and payouts_enabled), and marks the "payout" step complete.
+      responses:
+        "200":
+          description: Link
+          content:
+            application/json:
+              schema: { type: object, required: [url], properties: { url: { type: string } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /onboarding/defer:
+    post:
+      summary: Learner chose "finish later" (NOT_STARTED → IN_PROGRESS), so sign-in stops sending them here
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { type: object, required: [user], properties: { user: { $ref: "./auth.yaml#/components/schemas/User" } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /onboarding/submit:
+    post:
+      summary: Finish onboarding
+      description: |
+        Requires every section for the role. Sets onboarding_status COMPLETED.
+        Instructors: approval_status becomes PENDING and the profile joins the admin approval queue (ONB-3).
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema: { type: object, required: [user], properties: { user: { $ref: "./auth.yaml#/components/schemas/User" } } }
+        "422":
+          description: ONBOARDING_INCOMPLETE, field_errors.steps lists the missing sections
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        field_errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    ProfileInput:
+      type: object
+      required: [name, avatar_file_id, timezone, country]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        avatar_file_id: { type: [string, "null"] }
+        timezone: { type: string, description: IANA zone }
+        country: { type: string, pattern: "^[A-Z]{2}$", description: ISO 3166-1 alpha-2 }
+        headline: { type: string, minLength: 10, maxLength: 120, description: Instructors only, required for them }
+        bio: { type: string, minLength: 80, maxLength: 2000, description: Instructors only, required for them }
+    GoalsInput:
+      type: object
+      required: [learning_goals, interest_category_ids, topics]
+      properties:
+        learning_goals: { type: string, minLength: 10, maxLength: 1000 }
+        interest_category_ids: { type: array, minItems: 1, items: { type: string } }
+        topics: { type: array, maxItems: 10, items: { type: string, maxLength: 40 } }
+    BackgroundInput:
+      type: object
+      required: [education_level, exam_target_date]
+      properties:
+        education_level: { type: string, enum: [SECONDARY, UNDERGRADUATE, POSTGRADUATE, PROFESSIONAL, OTHER] }
+        exam_target_date: { type: [string, "null"], format: date }
+    ExpertiseInput:
+      type: object
+      required: [category_ids, subjects, qualifications]
+      properties:
+        category_ids: { type: array, minItems: 1, items: { type: string } }
+        subjects: { type: array, minItems: 1, maxItems: 15, items: { type: string, maxLength: 40 } }
+        qualifications:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [title, institution, year]
+            properties:
+              title: { type: string }
+              institution: { type: string }
+              year: { type: integer, minimum: 1950 }
+    VerificationInput:
+      type: object
+      required: [id_document_file_id, credential_file_ids]
+      properties:
+        id_document_file_id: { type: string }
+        credential_file_ids: { type: array, maxItems: 5, items: { type: string } }
+    WeeklySlot:
+      type: object
+      required: [weekday, start, end]
+      properties:
+        weekday: { type: integer, minimum: 1, maximum: 7, description: ISO weekday, 1 = Monday }
+        start: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$", description: Wall-clock time in the availability timezone }
+        end: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+    AvailabilityInput:
+      type: object
+      required: [timezone, weekly]
+      description: Slots must not overlap within a day and start < end.
+      properties:
+        timezone: { type: string }
+        weekly: { type: array, minItems: 1, items: { $ref: "#/components/schemas/WeeklySlot" } }
+    OnboardingState:
+      type: object
+      required: [role, status, completed_steps, sections]
+      properties:
+        role: { type: string, enum: [LEARNER, INSTRUCTOR] }
+        status: { type: string, enum: [NOT_STARTED, IN_PROGRESS, COMPLETED] }
+        completed_steps: { type: array, items: { type: string } }
+        sections:
+          type: object
+          required: [profile]
+          properties:
+            profile:
+              type: [object, "null"]
+              properties:
+                name: { type: string }
+                avatar: { oneOf: [{ $ref: "./uploads.yaml#/components/schemas/StoredFile" }, { type: "null" }] }
+                timezone: { type: string }
+                country: { type: [string, "null"] }
+                headline: { type: string }
+                bio: { type: string }
+            goals: { oneOf: [{ $ref: "#/components/schemas/GoalsInput" }, { type: "null" }] }
+            background: { oneOf: [{ $ref: "#/components/schemas/BackgroundInput" }, { type: "null" }] }
+            expertise: { oneOf: [{ $ref: "#/components/schemas/ExpertiseInput" }, { type: "null" }] }
+            verification:
+              type: [object, "null"]
+              properties:
+                id_document: { oneOf: [{ $ref: "./uploads.yaml#/components/schemas/StoredFile" }, { type: "null" }] }
+                credentials: { type: array, items: { $ref: "./uploads.yaml#/components/schemas/StoredFile" } }
+            payout:
+              type: object
+              properties:
+                status: { type: string, enum: [NOT_STARTED, PENDING, COMPLETE] }
+            availability: { oneOf: [{ $ref: "#/components/schemas/AvailabilityInput" }, { type: "null" }] }
