@@ -24,6 +24,11 @@ one without noting the assumption clearly.
 **Question:** Is the waiting list optional or required at launch? The COH-2 spec marks it optional.
 **Status:** Awaiting PO answer.
 
+### PAY-3 — Instalments
+**Blocker for:** instalment plans at checkout.
+**Proposal:** `docs/proposals/instalments-pay-3.md` (11 rules with defaults: $300+ cohort seats, 3 monthly payments, no fee, 7-day retry then access paused).
+**Status:** Sent for PO decision 26 Nov 2026. Build against it only once accepted.
+
 ### OTO-11 — Calendar sync
 **Blocker for:** `.ics` download is built. Full two-way calendar sync (Google/Outlook OAuth) needs:
 1. Which calendar providers to support at launch?
