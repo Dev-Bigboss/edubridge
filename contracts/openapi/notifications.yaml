@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Notifications"
+  version: 0.1.0
+  description: |
+    In-app notifications for every signed-in role (NTF-1). Zod mirror: src/lib/api/schemas/notifications.ts.
+    Mock: src/mocks/handlers/notifications.ts.
+
+    - The backend writes `title` and `body` in the user's language when the event happens; the same event
+      sends the email (NTF-1 "in-app and email"). NTF-2 preferences (per channel and event type) come later
+      and only decide which channels fire.
+    - `link` is an in-app path the UI opens after marking the notification read.
+    - Events already produced in Phase 1: PAYMENT_SUCCEEDED, PAYMENT_FAILED, PAYMENT_REFUNDED (cohort sold out
+      while paying), COHORT_CANCELLED (with the admin's reason and refund amount), INSTRUCTOR_APPLICATION (to admins),
+      INSTRUCTOR_APPROVED / INSTRUCTOR_REJECTED. The rest arrive with their modules.
+    - The bell polls unread-count every 60 s until real-time delivery lands with messaging (Phase 3).
+servers:
+  - url: /api/v1
+paths:
+  /me/notifications:
+    get:
+      summary: The signed-in user's notifications, newest first
+      parameters:
+        - { name: unread_only, in: query, schema: { type: boolean } }
+        - { name: cursor, in: query, description: Id of the last item on the previous page, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor, unread_count]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Notification" } }
+                  next_cursor: { type: [string, "null"] }
+                  unread_count: { type: integer, minimum: 0 }
+        "401": { $ref: "#/components/responses/Error" }
+  /me/notifications/unread-count:
+    get:
+      summary: Unread count for the bell
+      responses:
+        "200": { description: Count, content: { application/json: { schema: { type: object, required: [unread_count], properties: { unread_count: { type: integer, minimum: 0 } } } } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /me/notifications/{id}/read:
+    post:
+      summary: Mark one as read (idempotent)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Updated
+          content: { application/json: { schema: { type: object, required: [notification, unread_count], properties: { notification: { $ref: "#/components/schemas/Notification" }, unread_count: { type: integer } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /me/notifications/read-all:
+    post:
+      summary: Mark all as read
+      responses:
+        "200": { description: Done, content: { application/json: { schema: { type: object, required: [unread_count], properties: { unread_count: { type: integer, enum: [0] } } } } } }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+  schemas:
+    NotificationType:
+      type: string
+      description: Clients must render unknown values (generic icon).
+      enum: [BOOKING_REQUESTED, BOOKING_ACCEPTED, BOOKING_DECLINED, BOOKING_EXPIRED, BOOKING_RESCHEDULED, SESSION_REMINDER, PAYMENT_SUCCEEDED, PAYMENT_FAILED, PAYMENT_REFUNDED, RESOURCE_ADDED, RECORDING_ADDED, FEEDBACK_ADDED, MESSAGE_RECEIVED, COHORT_CANCELLED, COHORT_CHANGED, INSTRUCTOR_APPLICATION, INSTRUCTOR_APPROVED, INSTRUCTOR_REJECTED, MESSAGE_REPORTED]
+    Notification:
+      type: object
+      required: [id, type, title, body, link, created_at, read_at]
+      properties:
+        id: { type: string }
+        type: { $ref: "#/components/schemas/NotificationType" }
+        title: { type: string }
+        body: { type: string }
+        link: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        read_at: { type: [string, "null"], format: date-time }

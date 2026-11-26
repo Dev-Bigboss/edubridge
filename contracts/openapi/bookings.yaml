@@ -1,0 +1,281 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: One-on-one bookings"
+  version: 0.1.0
+  description: |
+    Instructor availability (OTO-1), free slots (OTO-2), booking requests with a card hold (OTO-3/5/7, PAY-4).
+    Accept/decline/propose, counter-proposals (OTO-4/6/8), reschedule and cancel (OTO-9, PAY-5) are below.
+    Zod mirror: src/lib/api/schemas/bookings.ts. Mock: src/mocks/handlers/bookings.ts.
+    Rules mirrored in src/lib/domain/slots.ts, checkout.ts (sessionBreakdown), booking-machine.ts.
+
+    Availability:
+    - Weekly hours are wall-clock times in the instructor's zone; date overrides replace that date's hours
+      (no ranges = blocked all day). Ranges can't overlap within a day (422 with dotted field_errors).
+    - `notice_hours` (0–168): the earliest a learner can book from now. Learners can book up to 60 days ahead.
+    - Saving changes only affects new requests.
+
+    Slots:
+    - 30-minute steps inside the instructor's hours, long enough for the whole session, after the notice period,
+      not overlapping anything that takes the instructor's time (OTO-10): DRAFT bookings still held,
+      PENDING_INSTRUCTOR, ACCEPTED, the proposed time of COUNTER_PROPOSED, both times of RESCHEDULE_REQUESTED,
+      and every class of cohorts they teach (OPEN, FULL, CLOSED, IN_PROGRESS). Returned as UTC instants.
+
+    Requesting (OTO-3, PAY-4):
+    1. POST /bookings (Idempotency-Key) re-checks the slot (409 SLOT_TAKEN), creates a DRAFT booking that holds
+       the slot for 30 minutes, a Payment (booking_id set, PENDING) and a Stripe Checkout Session with
+       `payment_intent_data.capture_method=manual`. success_url = /learn/bookings/{id}; cancel_url = the booking page.
+    2. Webhook: authorised → Payment AUTHORISED, booking PENDING_INSTRUCTOR, expires_at = now + platform setting
+       booking_expiry_hours (settings.yaml), instructor notified (BOOKING_REQUESTED). Declined → Payment FAILED,
+       slot released, booking stays DRAFT (not listed). Learner left the page → Payment VOIDED, slot released.
+    3. Scheduler: PENDING_INSTRUCTOR past expires_at → EXPIRED, authorisation cancelled (VOIDED), learner notified.
+    Stripe authorisations last about 7 days; the expiry window must stay well under that.
+    Price: per-hour prices × length (rounded to the cent) or flat per-session price; the breakdown is frozen on the booking (BR-4).
+servers:
+  - url: /api/v1
+paths:
+  /teach/availability:
+    get:
+      summary: My hours (INSTRUCTOR)
+      responses:
+        "200": { $ref: "#/components/responses/Availability" }
+        "403": { $ref: "#/components/responses/Error" }
+    put:
+      summary: Replace my hours (INSTRUCTOR). Read-only while an admin views as me
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/Availability" } } } }
+      responses:
+        "200": { $ref: "#/components/responses/Availability" }
+        "403": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /trainings/{id}/slots:
+    get:
+      summary: Free start times for one instructor of a published 1:1 training (public)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: instructor_id, in: query, required: true, schema: { type: string } }
+        - { name: duration_min, in: query, required: true, schema: { type: integer, enum: [60, 90, 120, 150, 180, 210, 240] } }
+        - { name: from, in: query, description: "First date (YYYY-MM-DD) in the instructor's zone; default today", schema: { type: string, format: date } }
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 60, default: 28 } }
+      responses:
+        "200":
+          description: Slots
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [instructor_timezone, duration_min, slots]
+                properties:
+                  instructor_timezone: { type: string }
+                  duration_min: { type: integer }
+                  slots: { type: array, items: { type: string, format: date-time } }
+        "404": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /bookings/quote:
+    get:
+      summary: Price breakdown for a session length (PRC-7), and the answer window in hours
+      parameters:
+        - { name: training_id, in: query, required: true, schema: { type: string } }
+        - { name: instructor_id, in: query, required: true, schema: { type: string } }
+        - { name: duration_min, in: query, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Quote
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [breakdown, expiry_hours]
+                properties:
+                  breakdown: { $ref: "./payments.yaml#/components/schemas/PriceBreakdown" }
+                  expiry_hours: { type: integer }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /bookings:
+    post:
+      summary: Request a session (LEARNER, Idempotency-Key). Returns the gateway URL for the card hold
+      parameters: [{ name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [training_id, instructor_id, start_utc, duration_min, note]
+              properties:
+                training_id: { type: string }
+                instructor_id: { type: string }
+                start_utc: { type: string, format: date-time }
+                duration_min: { type: integer, enum: [60, 90, 120, 150, 180, 210, 240] }
+                note: { type: [string, "null"], maxLength: 1000 }
+      responses:
+        "201":
+          description: Draft booking and gateway session
+          content: { application/json: { schema: { type: object, required: [booking, checkout_url], properties: { booking: { $ref: "#/components/schemas/Booking" }, checkout_url: { type: string } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /bookings/{id}:
+    get:
+      summary: One booking, for its learner, its instructor or an admin (404 for anyone else)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Booking, content: { application/json: { schema: { type: object, required: [booking], properties: { booking: { $ref: "#/components/schemas/Booking" } } } } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /me/bookings:
+    get:
+      summary: My bookings (LEARNER), newest start first, without DRAFTs
+      responses:
+        "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Booking" } } } } } } }
+  /teach/bookings:
+    get:
+      summary: My bookings as the instructor (INSTRUCTOR), by start time, without DRAFTs
+      responses:
+        "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Booking" } } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /admin/bookings:
+    get:
+      summary: "OTO-4 oversight (ADMIN): every booking except DRAFTs, newest request first"
+      parameters:
+        - { name: status, in: query, schema: { type: string, description: "One booking status" } }
+        - { name: q, in: query, schema: { type: string, description: "Matches learner name, instructor name or training title, ignoring case" } }
+      responses:
+        "200": { description: List, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/Booking" } } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /bookings/{id}/{action}:
+    post:
+      summary: Answer a request or a counter-proposal (OTO-4/6/8, PAY-4)
+      description: |
+        Who may do what follows src/lib/domain/booking-machine.ts; anything else is 409 INVALID_TRANSITION
+        (which also makes a repeated click harmless). The caller must be the booking's learner or instructor (404 otherwise).
+        - accept (INSTRUCTOR, PENDING_INSTRUCTOR → ACCEPTED): capture the authorised payment (receipt number issued),
+          create the meeting (Zoom, plan §8 Q1), email both parties the confirmation with the .ics invite
+          (reminders 24 h and 1 h before, src/lib/domain/ics.ts), notify the learner (BOOKING_ACCEPTED).
+        - decline (INSTRUCTOR → DECLINED): body { reason } ≥ 5 chars (422 reason), cancel the authorisation, notify the learner with the reason.
+        - propose (INSTRUCTOR → COUNTER_PROPOSED): body { start_utc, note? }; start must be one of the instructor's free slots for the
+          same length, ignoring this booking's own hold (409 SLOT_TAKEN). Sets `proposal` and expires_at = now + 48 h; the original
+          slot is released and the proposed one held. Authorisation stays in place. Notifies the learner.
+        - accept-proposal (LEARNER, COUNTER_PROPOSED → ACCEPTED): re-checks the time (409 SLOT_TAKEN), moves the booking to it, then as accept.
+        - decline-proposal (LEARNER → DECLINED): body { note? }; cancel the authorisation, notify the instructor.
+        - reschedule (either party, ACCEPTED → RESCHEDULE_REQUESTED): body { start_utc, note? }; must be one of the instructor's free
+          slots for the same length, ignoring this booking (409 SLOT_TAKEN); refused once the session started (409 SESSION_STARTED).
+          expires_at = the earlier of now + 48 h and the original start. Notifies the other party.
+        - accept-reschedule / decline-reschedule (the OTHER party only; the requester gets 409): accept re-checks the time and moves the
+          session (update the meeting, re-send the .ics with a higher SEQUENCE); decline keeps the original time. Both → ACCEPTED.
+        - cancel (either party, ACCEPTED or RESCHEDULE_REQUESTED → CANCELLED): body { reason } ≥ 5 chars. Refund per the booking's
+          `policy` snapshot (src/lib/domain/policy.ts cancellationRefund): learner → tier for the notice given; instructor → instructor
+          share. Refused after the start (409 SESSION_STARTED). Sets `cancellation`, refunds that amount, notifies the other party.
+        Scheduler: COUNTER_PROPOSED past expires_at → EXPIRED, authorisation cancelled, both notified.
+        RESCHEDULE_REQUESTED past expires_at → ACCEPTED at the original time, requester notified.
+        All writes are refused while an admin views as the user (403 IMPERSONATION_READ_ONLY).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [accept, decline, propose, accept-proposal, decline-proposal, reschedule, accept-reschedule, decline-reschedule, cancel] } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 500 }
+                start_utc: { type: string, format: date-time }
+                note: { type: [string, "null"], maxLength: 500 }
+      responses:
+        "200": { description: Updated booking, content: { application/json: { schema: { type: object, required: [booking], properties: { booking: { $ref: "#/components/schemas/Booking" } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    Availability:
+      description: Availability
+      content: { application/json: { schema: { type: object, required: [availability], properties: { availability: { $ref: "#/components/schemas/Availability" } } } } }
+  schemas:
+    TimeRange:
+      type: object
+      required: [start, end]
+      properties:
+        start: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+        end: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+    Availability:
+      type: object
+      required: [timezone, weekly, overrides, notice_hours]
+      properties:
+        timezone: { type: string }
+        weekly:
+          type: array
+          items:
+            allOf:
+              - { $ref: "#/components/schemas/TimeRange" }
+              - { type: object, required: [weekday], properties: { weekday: { type: integer, minimum: 1, maximum: 7, description: ISO weekday, 1 = Monday } } }
+        overrides:
+          type: array
+          items:
+            type: object
+            required: [date, ranges]
+            properties:
+              date: { type: string, format: date }
+              ranges: { type: array, items: { $ref: "#/components/schemas/TimeRange" }, description: Empty = blocked all day }
+        notice_hours: { type: integer, minimum: 0, maximum: 168 }
+    TimelineEntry:
+      type: object
+      required: [at, actor, event, note]
+      properties:
+        at: { type: string, format: date-time }
+        actor: { type: string, enum: [LEARNER, INSTRUCTOR, SYSTEM] }
+        event: { type: string, description: "REQUESTED, PAYMENT_AUTHORISED, PAYMENT_FAILED, ACCEPTED, DECLINED, TIME_PROPOSED, PROPOSAL_ACCEPTED, PROPOSAL_DECLINED, EXPIRED, RESCHEDULE_*, CANCELLED, COMPLETED, NO_SHOW" }
+        note: { type: [string, "null"] }
+    Booking:
+      type: object
+      required: [id, status, training, instructor, learner, start_utc, end_utc, duration_min, note, expires_at, proposal, reschedule, meeting_url, breakdown, policy, cancellation, payment_id, payment_status, timeline, created_at]
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [DRAFT, PENDING_INSTRUCTOR, COUNTER_PROPOSED, ACCEPTED, DECLINED, EXPIRED, RESCHEDULE_REQUESTED, COMPLETED, CANCELLED, NO_SHOW] }
+        training: { type: object, required: [id, slug, title], properties: { id: { type: string }, slug: { type: string }, title: { type: string } } }
+        instructor: { $ref: "./catalog.yaml#/components/schemas/PublicInstructor" }
+        learner: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
+        start_utc: { type: string, format: date-time }
+        end_utc: { type: string, format: date-time }
+        duration_min: { type: integer }
+        note: { type: [string, "null"] }
+        expires_at: { type: [string, "null"], format: date-time, description: When the waiting side must answer by }
+        proposal:
+          oneOf:
+            - { type: "null" }
+            - { type: object, required: [start_utc, end_utc, note], properties: { start_utc: { type: string }, end_utc: { type: string }, note: { type: [string, "null"] } } }
+        reschedule:
+          oneOf:
+            - { type: "null" }
+            - type: object
+              required: [requested_by, start_utc, end_utc, note]
+              properties:
+                requested_by: { type: string, enum: [LEARNER, INSTRUCTOR] }
+                start_utc: { type: string }
+                end_utc: { type: string }
+                note: { type: [string, "null"] }
+        meeting_url: { type: [string, "null"] }
+        breakdown: { $ref: "./payments.yaml#/components/schemas/PriceBreakdown" }
+        policy:
+          type: object
+          description: Cancellation rules snapshotted from settings.yaml when the booking was requested (later changes don't apply)
+          required: [learner_tiers, instructor_refund_percent]
+          properties:
+            learner_tiers: { type: array, items: { $ref: "./settings.yaml#/components/schemas/RefundTier" } }
+            instructor_refund_percent: { type: integer }
+        cancellation:
+          oneOf:
+            - { type: "null" }
+            - type: object
+              required: [by, reason, refund_amount]
+              properties:
+                by: { type: string, enum: [LEARNER, INSTRUCTOR] }
+                reason: { type: string }
+                refund_amount: { type: integer, description: Minor units returned to the learner }
+        payment_id: { type: string }
+        payment_status: { type: string, enum: [PENDING, AUTHORISED, CAPTURED, VOIDED, FAILED, PARTIALLY_REFUNDED, REFUNDED] }
+        timeline: { type: array, items: { $ref: "#/components/schemas/TimelineEntry" } }
+        created_at: { type: string, format: date-time }

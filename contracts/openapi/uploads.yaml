@@ -1,0 +1,109 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Uploads"
+  version: 0.1.0
+  description: |
+    Direct-to-storage uploads. File bytes never pass through the API: the client asks for a signed
+    URL, PUTs the file to object storage, then confirms. Every file is virus-scanned before anyone
+    can open it (RES-4). Limits per purpose are in src/lib/domain/uploads.ts and must match here.
+    Mock: src/mocks/handlers/uploads.ts.
+
+    | purpose     | types                     | max   | who can read                   |
+    |-------------|---------------------------|-------|--------------------------------|
+    | AVATAR      | jpeg, png, webp           | 5 MB  | anyone (public profile photo)  |
+    | ID_DOCUMENT | jpeg, png, webp, pdf      | 10 MB | owner and admins only          |
+    | CREDENTIAL  | jpeg, png, webp, pdf      | 10 MB | owner and admins only          |
+    | THUMBNAIL   | jpeg, png, webp           | 5 MB  | anyone (training card image)   |
+    | RESOURCE    | pdf, docx, pptx, xlsx, jpeg, png, webp | 100 MB | per resource visibility (resources.yaml), RES-4 |
+    | MESSAGE_ATTACHMENT | as RESOURCE        | 100 MB | members of the conversation (messages.yaml), MSG-4 |
+    | FEEDBACK_ATTACHMENT | as RESOURCE       | 100 MB | the learner, the instructor who wrote it, admins (feedback.yaml), FDB-3/5 |
+servers:
+  - url: /api/v1
+paths:
+  /uploads:
+    post:
+      summary: Start an upload and get a signed PUT URL (valid 15 minutes)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [purpose, filename, content_type, size_bytes]
+              properties:
+                purpose: { $ref: "#/components/schemas/UploadPurpose" }
+                filename: { type: string, maxLength: 255 }
+                content_type: { type: string }
+                size_bytes: { type: integer, minimum: 1 }
+      responses:
+        "201":
+          description: Created in SCANNING state
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [file, upload]
+                properties:
+                  file: { $ref: "#/components/schemas/StoredFile" }
+                  upload:
+                    type: object
+                    required: [url, method, headers]
+                    properties:
+                      url: { type: string, description: Signed object-storage URL }
+                      method: { const: PUT }
+                      headers: { type: object, additionalProperties: { type: string } }
+        "401": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+  /uploads/{id}/complete:
+    post:
+      summary: Confirm the PUT finished; starts the virus scan
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The file (scan_status SCANNING, or CLEAN if the scan is already done)
+          content:
+            application/json:
+              schema: { type: object, required: [file], properties: { file: { $ref: "#/components/schemas/StoredFile" } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /uploads/{id}:
+    get:
+      summary: Current scan status and a fresh signed URL (poll while SCANNING)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The file
+          content:
+            application/json:
+              schema: { type: object, required: [file], properties: { file: { $ref: "#/components/schemas/StoredFile" } } }
+        "404": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        field_errors: { type: object, additionalProperties: { type: array, items: { type: string } } }
+    UploadPurpose:
+      type: string
+      enum: [AVATAR, ID_DOCUMENT, CREDENTIAL, THUMBNAIL, RESOURCE, MESSAGE_ATTACHMENT, FEEDBACK_ATTACHMENT]
+    StoredFile:
+      type: object
+      required: [id, purpose, name, content_type, size_bytes, scan_status, url]
+      properties:
+        id: { type: string }
+        purpose: { $ref: "#/components/schemas/UploadPurpose" }
+        name: { type: string }
+        content_type: { type: string }
+        size_bytes: { type: integer }
+        scan_status: { type: string, enum: [SCANNING, CLEAN, INFECTED] }
+        url: { type: [string, "null"], description: Signed, short-lived. Null until CLEAN. }
