@@ -100,7 +100,7 @@ function LearnerHome({ fallback }: { fallback: React.ReactNode }) {
 }
 
 /** One account-level prompt at most: unfinished onboarding (ONB-6) or instructor approval (ONB-3). */
-function AccountNotice({ user }: { user: User }) {
+export function AccountNotice({ user }: { user: User }) {
   const t = useTranslations("dashboard.notices");
   let notice: { icon: LucideIcon; tone: "info" | "warn"; title: string; body: string; href?: string; cta?: string } | null = null;
 

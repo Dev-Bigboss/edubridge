@@ -31,6 +31,13 @@ export function useRubrics() {
   return useApiQuery({ queryKey: ["admin", "rubrics"], queryFn: ({ signal }) => api("/admin/rubrics", { schema: RubricList, signal }).then((r) => r.items) });
 }
 
+export function useAdminUserFeedback(userId: string) {
+  return useApiQuery({
+    queryKey: ["admin", "user-feedback", userId],
+    queryFn: ({ signal }) => api(`/admin/users/${userId}/feedback`, { schema: FeedbackList, signal }).then((r) => r.items),
+  });
+}
+
 export function useSaveRubric(id: string | null) {
   const qc = useQueryClient();
   return useMutation({

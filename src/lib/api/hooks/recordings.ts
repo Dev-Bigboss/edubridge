@@ -58,3 +58,34 @@ export function useDeleteRecording(id: string) {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["teach", "recordings"] }),
   });
 }
+
+export function useAdminRecordings() {
+  return useApiQuery({
+    queryKey: ["admin", "recordings"],
+    refetchInterval: 60_000,
+    queryFn: ({ signal }) => api("/admin/recordings", { schema: RecordingList, signal }).then((r) => r.items),
+  });
+}
+
+export function useAdminUpdateRecording(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RecordingUpdate) => api(`/recordings/${id}`, { method: "PATCH", body, schema: RecordingResponse }).then((r) => r.recording),
+    onSuccess: (r) => {
+      qc.setQueryData(["recording", id], r);
+      void qc.invalidateQueries({ queryKey: ["admin", "recordings"] });
+      void qc.invalidateQueries({ queryKey: ["teach", "recordings"] });
+    },
+  });
+}
+
+export function useAdminDeleteRecording(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api(`/recordings/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["admin", "recordings"] });
+      void qc.invalidateQueries({ queryKey: ["teach", "recordings"] });
+    },
+  });
+}

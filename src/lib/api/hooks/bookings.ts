@@ -84,6 +84,13 @@ export function useMyBookings() {
   return useApiQuery({ queryKey: ["me", "bookings"], queryFn: ({ signal }) => api("/me/bookings", { schema: BookingList, signal }) });
 }
 
+export function useAdminBookings(filters: { status?: string; q?: string }) {
+  return useApiQuery({
+    queryKey: ["admin", "bookings", filters],
+    queryFn: ({ signal }) => api("/admin/bookings", { query: filters, schema: BookingList, signal }),
+  });
+}
+
 export function useTeachBookings() {
   return useApiQuery({
     queryKey: ["teach", "bookings"],

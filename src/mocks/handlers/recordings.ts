@@ -178,4 +178,16 @@ export const recordingHandlers = [
     save();
     return new HttpResponse(null, { status: 204 });
   }),
+
+  /* ---------- Admin: all recordings for moderation (REC-3) ---------- */
+  http.get(url("/admin/recordings"), async () => {
+    await delay(250);
+    const admin = requireUser("ADMIN");
+    if (admin instanceof Response) return admin;
+    sweepRecordings();
+    const items = db.recordings
+      .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
+      .map((r) => toRecording(r, admin));
+    return HttpResponse.json({ items });
+  }),
 ];

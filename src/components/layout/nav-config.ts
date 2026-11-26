@@ -71,6 +71,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/catalog", labelKey: "categoriesAndModalities", icon: Tags, phase: 1, req: "TRN-2..4", ready: true },
     { href: "/admin/pricing", labelKey: "pricing", icon: BadgeDollarSign, phase: 1, req: "PRC-1..5", ready: true },
     { href: "/admin/users", labelKey: "users", icon: Users, phase: 1, req: "ADM-2, ONB-3", ready: true },
+    { href: "/admin/bookings", labelKey: "bookings", icon: CalendarClock, phase: 2, req: "OTO-4", ready: true },
     { href: "/admin/payments", labelKey: "paymentsAndRefunds", icon: CreditCard, phase: 1, req: "PAY-5, PAY-8", ready: true },
     { href: "/admin/rubrics", labelKey: "rubrics", icon: ClipboardCheck, phase: 3, req: "FDB-1", ready: true },
     { href: "/admin/payouts", labelKey: "payouts", icon: Landmark, phase: 3, req: "PAY-7, PAY-8", ready: true },
@@ -84,7 +85,7 @@ export const NAV: Record<Role, NavItem[]> = {
 };
 
 /** Highest phase that has shipped. Bump as each phase lands so its nav items appear. */
-export const SHIPPED_PHASE = 0;
+export const SHIPPED_PHASE = 3;
 
 export function navFor(role: Role): NavItem[] {
   return NAV[role].filter((i) => i.phase <= SHIPPED_PHASE || i.ready);

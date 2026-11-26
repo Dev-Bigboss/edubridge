@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { DashboardHome } from "@/components/dashboard/dashboard-home";
+import { TeachDashboardPage } from "@/components/teach/teach-dashboard-page";
 
 export const metadata: Metadata = { title: "Instructor dashboard" };
 
 export default function Page() {
-  return <DashboardHome area="instructor" />;
+  return <TeachDashboardPage />;
 }

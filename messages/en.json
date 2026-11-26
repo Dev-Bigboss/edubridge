@@ -201,6 +201,7 @@
   "appNav": {
     "auditLog": "Audit log",
     "availability": "Availability",
+    "bookings": "Bookings",
     "categoriesAndModalities": "Categories & modalities",
     "cohorts": "Cohorts",
     "dashboard": "Dashboard",
@@ -866,6 +867,14 @@
         "reactivate": "{name} can sign in again",
         "reset-access": "Reset link sent to {name}",
         "impersonate": "Viewing as {name}"
+      },
+      "feedback": {
+        "title": "{count, plural, one {# feedback entry} other {# feedback entries}}",
+        "byInstructor": "by {name}",
+        "forLearner": "for {name}",
+        "strengths": "Strengths",
+        "improvements": "Improvements",
+        "nextSteps": "Next steps"
       }
     },
     "settings": {
@@ -956,6 +965,38 @@
       "noMatches": "Nothing matches",
       "noMatchesBody": "Try a wider date range, another type, or fewer words.",
       "clearFilters": "Clear filters"
+    },
+    "bookings": {
+      "title": "One-on-one bookings",
+      "intro": "All one-on-one session requests across the platform. Click a learner or instructor name to open their profile.",
+      "filters": "Filter bookings",
+      "search": "Search by learner, instructor or training",
+      "statusFilter": "Status",
+      "allStatuses": "All statuses",
+      "statuses": {
+        "PENDING_INSTRUCTOR": "Awaiting instructor",
+        "COUNTER_PROPOSED": "New time proposed",
+        "ACCEPTED": "Confirmed",
+        "DECLINED": "Declined",
+        "EXPIRED": "Expired",
+        "RESCHEDULE_REQUESTED": "Reschedule requested",
+        "COMPLETED": "Completed",
+        "NO_SHOW": "No-show",
+        "CANCELLED": "Cancelled"
+      },
+      "empty": "No bookings yet",
+      "emptyBody": "One-on-one session requests appear here as soon as learners book.",
+      "emptyFiltered": "No matches",
+      "emptyFilteredBody": "Try a different status or fewer words in the search.",
+      "colLearner": "Learner",
+      "colInstructor": "Instructor",
+      "colTraining": "Training",
+      "colWhen": "When (UTC)",
+      "colStatus": "Status",
+      "colAmount": "Amount",
+      "colActions": "Actions",
+      "view": "View",
+      "viewLabel": "View learner profile for {name}"
     },
     "payments": {
       "title": "Payments and refunds",
@@ -1060,7 +1101,8 @@
       "sections": "Moderation sections",
       "tabs": {
         "messages": "Reported messages",
-        "reviews": "Reviews"
+        "reviews": "Reviews",
+        "recordings": "Recordings"
       },
       "reviews": {
         "show": "Show reviews",
@@ -1087,6 +1129,31 @@
         "reasonHint": "Shown to the author. Kept in the audit log.",
         "reasonRequired": "Say why, so the learner understands.",
         "cancel": "Cancel"
+      },
+      "recordings": {
+        "title": "Recordings",
+        "empty": "No recordings",
+        "emptyBody": "Session recordings appear here once the video provider finishes processing them.",
+        "colSession": "Session",
+        "colInstructor": "Recorded",
+        "colLength": "Length",
+        "colVisibility": "Visibility",
+        "colDeletes": "Deletes",
+        "colActions": "Actions",
+        "hide": "Hide",
+        "show": "Show",
+        "hideLabel": "Hide recording: {title}",
+        "showLabel": "Show recording: {title}",
+        "hidden": "Recording hidden from learners.",
+        "shown": "Recording is visible again.",
+        "delete": "Delete",
+        "deleteLabel": "Delete recording: {title}",
+        "deleteTitle": "Delete this recording?",
+        "deleteBody": "The recording for {title} will be permanently deleted and learners will lose access. This can't be undone.",
+        "deleteCta": "Delete permanently",
+        "deleted": "Recording deleted.",
+        "cancel": "Cancel",
+        "failed": "That didn't work. Try again."
       }
     },
     "rubrics": {
@@ -1667,6 +1734,26 @@
     }
   },
   "teach": {
+    "dashboard": {
+      "greeting": "Welcome back, {name}",
+      "intro": "Your requests, today's sessions and earnings at a glance.",
+      "earningsTitle": "Earnings",
+      "earningsCta": "Full breakdown",
+      "available": "Available to pay out",
+      "pendingEarnings": "Pending clearance",
+      "requestsTitle": "Waiting for you",
+      "requestsCta": "All requests",
+      "requestsEmpty": "No requests need your attention right now.",
+      "reviewCta": "Review",
+      "reviewLabel": "Review request from {name}",
+      "todayTitle": "Today's sessions",
+      "todayCta": "Full schedule",
+      "todayEmpty": "Nothing scheduled for today.",
+      "takeAttendance": "Take attendance",
+      "attendanceLabel": "Take attendance for {what}",
+      "cohort": "Cohort",
+      "oneOnOne": "One-on-one"
+    },
     "availability": {
       "title": "Availability",
       "intro": "When learners can book one-on-one sessions with you. Times are in your time zone; learners see them in theirs.",

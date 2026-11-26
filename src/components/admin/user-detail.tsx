@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, FileText, UserX } from "lucide-react";
+import { ArrowLeft, FileText, MessageSquareText, UserX } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,12 +16,13 @@ import { Textarea } from "@/components/ui/select";
 import { LoadingState } from "@/components/ui/spinner";
 import { ApiError } from "@/lib/api/client";
 import { useAdminUser, useUserAction } from "@/lib/api/hooks/admin-users";
+import { useAdminUserFeedback } from "@/lib/api/hooks/feedback";
 import { useCategories } from "@/lib/api/hooks/catalog";
 import { NEEDS_REASON, type AdminUserDetail, type UserAction } from "@/lib/api/schemas/admin-users";
 import { ROLE_HOME } from "@/lib/auth/routes";
 import { formatCalendarDate } from "@/lib/domain/cohort-schedule";
 import { formatMoney } from "@/lib/domain/money";
-import { timeAgo } from "@/lib/domain/time";
+import { browserTimeZone, formatInZone, timeAgo } from "@/lib/domain/time";
 import { LoadError } from "./catalog-admin";
 import { ApprovalBadge, UserStatusBadge } from "./user-badges";
 
@@ -121,6 +122,8 @@ export function UserDetail({ id }: { id: string }) {
           </Section>
         </aside>
       </div>
+
+      <UserFeedbackSection userId={id} role={user.role} />
 
       {action && <ActionDialog user={user} action={action} onClose={() => setAction(null)} />}
     </div>
@@ -320,5 +323,70 @@ function Facts({ rows }: { rows: [string, string][] }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/** FDB-5: feedback written by or for this user, visible only to admins. */
+function UserFeedbackSection({ userId, role }: { userId: string; role: string }) {
+  const t = useTranslations("admin.users.feedback");
+  const query = useAdminUserFeedback(userId);
+  const zone = browserTimeZone();
+
+  if (query.isError) return <LoadError onRetry={query.refetch} />;
+  if (query.isPending) return null; // below the fold — no skeleton
+  if (!query.data || query.data.length === 0) return null; // only show when there's something
+
+  return (
+    <section aria-labelledby="user-feedback" className="mt-8 border-t border-border-subtle pt-8">
+      <h2 id="user-feedback" className="mb-4 flex items-center gap-2 text-lg">
+        <MessageSquareText aria-hidden="true" className="size-5 text-primary" />
+        {t("title", { count: query.data.length })}
+      </h2>
+      <ul className="space-y-4">
+        {query.data.map((f) => (
+          <li key={f.id} className="rounded-lg border border-border-subtle bg-white p-5">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-medium text-heading">{f.training_title}</p>
+                <p className="text-sm">
+                  {role === "LEARNER" ? t("byInstructor", { name: f.instructor.name }) : t("forLearner", { name: f.learner.name })}
+                  {" · "}
+                  <time dateTime={f.session_start_utc}>{formatInZone(f.session_start_utc, zone, "d MMM yyyy")}</time>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(f.scores).map(([key, score]) => {
+                  const criterion = f.rubric.criteria.find((c) => c.key === key);
+                  return (
+                    <span key={key} className="rounded-full bg-surface-1 px-2.5 py-0.5 text-sm font-medium text-heading">
+                      {criterion?.label ?? key}: {score}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            {f.comment && <p className="mb-2 leading-relaxed text-heading">{f.comment}</p>}
+            {f.strengths && (
+              <p className="text-[15px]">
+                <span className="font-medium text-heading">{t("strengths")}: </span>
+                {f.strengths}
+              </p>
+            )}
+            {f.improvements && (
+              <p className="text-[15px]">
+                <span className="font-medium text-heading">{t("improvements")}: </span>
+                {f.improvements}
+              </p>
+            )}
+            {f.next_steps && (
+              <p className="text-[15px]">
+                <span className="font-medium text-heading">{t("nextSteps")}: </span>
+                {f.next_steps}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

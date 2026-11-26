@@ -21,22 +21,23 @@ import { useSession } from "@/lib/auth/session";
 import { cn } from "@/lib/cn";
 import { browserTimeZone, formatInZone, timeAgo } from "@/lib/domain/time";
 import { LoadError } from "./catalog-admin";
+import { RecordingsModeration } from "./recordings-moderation";
 import { ReviewsModeration } from "./reviews-moderation";
 
 /** /admin/moderation (MSG-6): reported messages, newest first; open one to remove the message or dismiss. */
 export function ModerationAdmin() {
   const t = useTranslations("admin.moderation");
   const params = useSearchParams();
-  const tab = params.get("tab") === "reviews" ? "reviews" : "messages";
+  const tab = params.get("tab") === "reviews" ? "reviews" : params.get("tab") === "recordings" ? "recordings" : "messages";
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader title={t("title")} description={t("intro")} />
       <nav aria-label={t("sections")} className="mb-6 border-b border-border-subtle">
         <ul className="-mb-px flex gap-1">
-          {(["messages", "reviews"] as const).map((k) => (
+          {(["messages", "reviews", "recordings"] as const).map((k) => (
             <li key={k}>
               <Link
-                href={k === "reviews" ? "/admin/moderation?tab=reviews" : "/admin/moderation"}
+                href={k === "messages" ? "/admin/moderation" : `/admin/moderation?tab=${k}`}
                 aria-current={tab === k ? "page" : undefined}
                 className={cn(
                   "flex min-h-11 items-center border-b-2 px-4 font-heading text-[15px] font-medium focus-visible:outline-2 focus-visible:outline-primary",
@@ -49,7 +50,7 @@ export function ModerationAdmin() {
           ))}
         </ul>
       </nav>
-      {tab === "reviews" ? <ReviewsModeration /> : <MessageReports />}
+      {tab === "reviews" ? <ReviewsModeration /> : tab === "recordings" ? <RecordingsModeration /> : <MessageReports />}
     </div>
   );
 }

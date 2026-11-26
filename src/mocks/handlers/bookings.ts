@@ -559,4 +559,31 @@ export const bookingHandlers = [
     save();
     return HttpResponse.json({ booking: toBooking(b) });
   }),
+
+  /* ---------- Admin: list bookings (admin gap #4) ---------- */
+  http.get(url("/admin/bookings"), async ({ request }) => {
+    await delay(250);
+    const admin = requireUser("ADMIN");
+    if (admin instanceof Response) return admin;
+    sweepBookings();
+    const p = new URL(request.url).searchParams;
+    const status = p.get("status");
+    const q = p.get("q")?.toLowerCase() ?? "";
+    const items = db.bookings
+      .filter((b) => {
+        if (b.status === "DRAFT") return false;
+        if (status && b.status !== status) return false;
+        if (q) {
+          const learner = findUser(b.learner_id);
+          const instructor = findUser(b.instructor_id);
+          const training = db.trainings.find((t) => t.id === b.training_id);
+          const hay = `${learner?.name ?? ""} ${instructor?.name ?? ""} ${training?.title ?? ""}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map(toBooking);
+    return HttpResponse.json({ items });
+  }),
 ];
