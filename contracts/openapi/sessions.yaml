@@ -1,0 +1,102 @@
+openapi: 3.1.0
+info:
+  title: "EduBridge LMP API: Sessions, schedule and attendance"
+  version: 0.1.0
+  description: |
+    The instructor's combined schedule (OTO-10) and attendance (COH-4). INSTRUCTOR only, own sessions only (404 otherwise).
+    Zod mirror: src/lib/api/schemas/sessions.ts. Mock: src/mocks/handlers/sessions.ts.
+
+    - Cohort classes are real Session rows the backend creates from the cohort schedule (src/lib/domain/cohort-schedule.ts
+      cohortSessions mirrors it); each gets its own meeting link (Zoom, plan §8 Q1). A 1:1 session is its booking (id = booking id).
+    - The schedule lists cohort classes of OPEN, FULL, CLOSED, IN_PROGRESS and COMPLETED cohorts and 1:1 bookings that are
+      ACCEPTED, RESCHEDULE_REQUESTED, COMPLETED or NO_SHOW, by start time.
+    - Join links work from 15 minutes before the start until the end (the UI hides the button otherwise).
+    - Attendance can be saved from the session's start (409 NOT_STARTED before). Marks are PRESENT, LATE or ABSENT per enrolled
+      (CONFIRMED) learner; anyone else is 422. Saving merges with earlier marks. For a 1:1, PRESENT/LATE completes the booking and
+      ABSENT marks it NO_SHOW (booking-machine.ts MARK_NO_SHOW). Writes are refused while an admin views as the instructor.
+    - /me/enrolments (payments.yaml) gains `next_session` so learners get the next class's join link.
+servers:
+  - url: /api/v1
+paths:
+  /teach/schedule:
+    get:
+      summary: My sessions in a window (default from 7 days ago, 35 days)
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: days, in: query, schema: { type: integer, minimum: 1, maximum: 90, default: 35 } }
+      responses:
+        "200": { description: Items, content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "#/components/schemas/ScheduleItem" } } } } } } }
+        "403": { $ref: "#/components/responses/Error" }
+  /sessions/{id}:
+    get:
+      summary: One of my sessions with its roster and marks
+      parameters: [{ name: id, in: path, required: true, schema: { type: string }, description: "URL-encoded; cohort classes look like coh_x:2027-01-12" }]
+      responses:
+        "200": { $ref: "#/components/responses/SessionDetail" }
+        "404": { $ref: "#/components/responses/Error" }
+  /sessions/{id}/attendance:
+    put:
+      summary: Save attendance marks (merge)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [marks]
+              properties:
+                marks:
+                  type: array
+                  minItems: 1
+                  items: { type: object, required: [learner_id, status], properties: { learner_id: { type: string }, status: { $ref: "#/components/schemas/Attendance" } } }
+      responses:
+        "200": { $ref: "#/components/responses/SessionDetail" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error body per CONVENTIONS.md
+      content: { application/json: { schema: { $ref: "./catalog.yaml#/components/schemas/Error" } } }
+    SessionDetail:
+      description: Session with roster
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [session, roster]
+            properties:
+              session: { $ref: "#/components/schemas/ScheduleItem" }
+              roster:
+                type: array
+                items:
+                  type: object
+                  required: [learner_id, name, status]
+                  properties:
+                    learner_id: { type: string }
+                    name: { type: string }
+                    status: { oneOf: [{ $ref: "#/components/schemas/Attendance" }, { type: "null" }] }
+  schemas:
+    Attendance: { type: string, enum: [PRESENT, LATE, ABSENT] }
+    ScheduleItem:
+      type: object
+      required: [id, kind, training_title, subtitle, start_utc, end_utc, join_url, status, attendance]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [COHORT, ONE_ON_ONE] }
+        training_title: { type: string }
+        subtitle: { type: string, description: Cohort name, or the learner's name for a 1:1 }
+        start_utc: { type: string, format: date-time }
+        end_utc: { type: string, format: date-time }
+        join_url: { type: [string, "null"] }
+        status: { type: string, enum: [SCHEDULED, COMPLETED, NO_SHOW, CANCELLED] }
+        attendance:
+          type: object
+          required: [taken, present, total]
+          properties:
+            taken: { type: boolean, description: Every enrolled learner has a mark }
+            present: { type: integer, description: PRESENT or LATE }
+            total: { type: integer }

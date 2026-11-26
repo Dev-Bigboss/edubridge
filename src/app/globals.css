@@ -1,0 +1,154 @@
+@import "tailwindcss";
+
+/*
+ * EduBridge design tokens.
+ * Values carried over from the original theme (public/assets/css/main.css on `main`)
+ * so the rebuilt app keeps the look the Product Owner approved. See docs/redesign-plan.md §5.
+ */
+:root {
+  --brand-primary: #1363df;
+  --brand-primary-hover: #082a5e;
+  --brand-heading: #082a5e;
+  --brand-ink: #061e43;
+  --brand-body: #39557e;
+  --brand-accent: #fab123;
+
+  --surface: #ffffff;
+  --surface-1: #f4f7fb;
+  --surface-2: #e7effc;
+  --border: #d0dae9;
+  --border-subtle: #ececec;
+
+  /* Text-safe status colours (4.5:1 on white). Raw theme green/red are for fills only. */
+  --success: #0b7a45;
+  --success-fill: #12bb6a;
+  --success-soft: #e3f6ec;
+  --danger: #c81e1e;
+  --danger-fill: #ff2e2e;
+  --danger-soft: #fdeaea;
+  --warning: #8a5a00;
+  --warning-soft: #fff4dc;
+  --info-soft: #e7effc;
+}
+
+@theme inline {
+  --color-primary: var(--brand-primary);
+  --color-primary-hover: var(--brand-primary-hover);
+  --color-heading: var(--brand-heading);
+  --color-ink: var(--brand-ink);
+  --color-body: var(--brand-body);
+  --color-accent: var(--brand-accent);
+  --color-surface: var(--surface);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-success: var(--success);
+  --color-success-fill: var(--success-fill);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-fill: var(--danger-fill);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info-soft: var(--info-soft);
+
+  --font-sans: var(--font-hind), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-lexend), ui-sans-serif, system-ui, sans-serif;
+
+  /* Radius scale: 6 / 10 / 14 / 20 + pill for buttons in the header and badges */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Type scale (named tokens) */
+  --text-display: 3.4375rem; /* 55px, hero title as in the original */
+  --text-display--line-height: 1.19;
+  --text-page: 2.25rem; /* 36px, section and page titles */
+  --text-page--line-height: 1.32;
+  --text-section: 1.375rem; /* 22px */
+  --text-section--line-height: 1.3;
+
+  --container-site: 1320px;
+  --container-wide: 1650px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--brand-body);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.75;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    color: var(--brand-heading);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility container-site {
+  width: 100%;
+  max-width: var(--container-site);
+  margin-inline: auto;
+  padding-inline: 16px;
+  @media (width >= 48rem) {
+    padding-inline: 24px;
+  }
+}
+
+/* Sonner's rich-colour text falls just under 4.5:1; use our text-safe status colours instead. */
+:root [data-sonner-toaster][data-sonner-theme] {
+  --success-text: var(--success);
+  --success-bg: var(--success-soft);
+  --error-text: var(--danger);
+  --error-bg: var(--danger-soft);
+  --warning-text: var(--warning);
+  --warning-bg: var(--warning-soft);
+  --info-text: var(--brand-primary-hover);
+  --info-bg: var(--info-soft);
+}
+
+/* Gentle float used by the decorative hero/category shapes (disabled by reduced motion above). */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@utility animate-float {
+  animation: float-y 4s ease-in-out infinite;
+}
