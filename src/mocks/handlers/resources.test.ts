@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { ApiError, api } from "@/lib/api/client";
 import { uploadFile } from "@/lib/api/hooks/uploads";
-import { AudienceOptions, ResourceList, ResourceResponse, TeachingTrainings } from "@/lib/api/schemas/resources";
+import { AudienceOptions, ResourceAccessList, ResourceList, ResourceResponse, TeachingTrainings } from "@/lib/api/schemas/resources";
 import { db, mockSession, resetDb } from "../db";
 
 const failure = (p: Promise<unknown>) =>
@@ -74,5 +74,42 @@ describe("resources (RES-1..4)", () => {
     await api("/resources/res_seed_4", { method: "DELETE" });
     mockSession.set("usr_learner_1");
     expect((await mine()).map((r) => r.id)).not.toContain("res_seed_4");
+  });
+
+  it("RES-5: records learner opens and shows the instructor who opened what", async () => {
+    const teachList = () => api("/teach/resources", { query: { training_id: AA }, schema: ResourceList }).then((r) => r.items);
+    const before = (await teachList()).find((r) => r.id === "res_seed_1")!;
+    expect(before.access).toEqual({ opened: 2, audience: 4 });
+    expect(before.opened_at).toBeNull();
+
+    mockSession.set("usr_learner_1");
+    expect((await mine())[0]).toMatchObject({ access: null, opened_at: null });
+    await api("/resources/res_seed_1/opens", { method: "POST" });
+    await api("/resources/res_seed_1/opens", { method: "POST" });
+    const first = (await mine())[0].opened_at;
+    expect(first).not.toBeNull();
+    expect(db.resourceOpens.find((o) => o.resource_id === "res_seed_1" && o.learner_id === "usr_learner_1")).toMatchObject({ count: 2, first_opened_at: first });
+
+    db.impersonation = { admin_id: "usr_admin_1", started_at: new Date().toISOString(), reason: "Support" };
+    await api("/resources/res_seed_2/opens", { method: "POST" });
+    expect(db.resourceOpens.some((o) => o.resource_id === "res_seed_2" && o.learner_id === "usr_learner_1")).toBe(false);
+    db.impersonation = null;
+
+    mockSession.set("usr_learner_suspended");
+    db.users.find((u) => u.id === "usr_learner_suspended")!.status = "ACTIVE";
+    expect((await failure(api("/resources/res_seed_1/opens", { method: "POST" }))).status).toBe(404); // not in its audience
+
+    mockSession.set("usr_instructor_1");
+    expect((await teachList()).find((r) => r.id === "res_seed_1")!.access).toEqual({ opened: 3, audience: 4 });
+    const who = (await api("/resources/res_seed_1/opens", { schema: ResourceAccessList })).items;
+    expect(who).toHaveLength(4);
+    expect(who[0]).toMatchObject({ learner_id: "usr_learner_1", count: 2 });
+    expect(who.at(-1)).toMatchObject({ first_opened_at: null, count: 0 });
+
+    mockSession.set("usr_instructor_3");
+    expect((await failure(api("/resources/res_seed_1/opens"))).status).toBe(404);
+    mockSession.set("usr_instructor_1");
+    await api("/resources/res_seed_1", { method: "DELETE" });
+    expect(db.resourceOpens.some((o) => o.resource_id === "res_seed_1")).toBe(false);
   });
 });

@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { useApiQuery } from "@/lib/api/query";
-import { AudienceOptions, ResourceList, ResourceResponse, TeachingTrainings, type ResourceInput } from "@/lib/api/schemas/resources";
+import { AudienceOptions, ResourceAccessList, ResourceList, ResourceResponse, TeachingTrainings, type ResourceInput } from "@/lib/api/schemas/resources";
 
 export function useTeachingTrainings() {
   return useApiQuery({ queryKey: ["teach", "trainings"], queryFn: ({ signal }) => api("/teach/trainings", { schema: TeachingTrainings, signal }).then((r) => r.items) });
@@ -57,4 +57,22 @@ export function useDeleteResource() {
 export function useReorderResources() {
   const invalidate = useInvalidate();
   return useMutation({ mutationFn: (ids: string[]) => api("/teach/resources/reorder", { method: "POST", body: { ids }, schema: ResourceList }), onSuccess: invalidate });
+}
+
+/** RES-5: who in the audience has opened one resource (instructor). */
+export function useResourceAccess(id: string | null) {
+  return useApiQuery({
+    queryKey: ["teach", "resource-opens", id],
+    enabled: !!id,
+    queryFn: ({ signal }) => api(`/resources/${id}/opens`, { schema: ResourceAccessList, signal }).then((r) => r.items),
+  });
+}
+
+/** RES-5: record that the learner opened it. Fire and forget: the link opens regardless. */
+export function useRecordOpen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/resources/${id}/opens`, { method: "POST" }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["me", "resources"] }),
+  });
 }

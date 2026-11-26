@@ -47,7 +47,17 @@ function label(r: StoredResource, viewer: MockUser): string {
   }
 }
 
-const toResource = (r: StoredResource, viewer: MockUser): Resource => ({ ...omit(r, "owner_id"), audience_label: label(r, viewer) });
+/** RES-5: instructors get the opened/audience counts, learners their own first access. */
+function toResource(r: StoredResource, viewer: MockUser): Resource {
+  const isOwner = viewer.id === r.owner_id;
+  const audience = isOwner ? learnersOf(r) : [];
+  return {
+    ...omit(r, "owner_id"),
+    audience_label: label(r, viewer),
+    access: isOwner ? { opened: db.resourceOpens.filter((o) => o.resource_id === r.id && audience.includes(o.learner_id)).length, audience: audience.length } : null,
+    opened_at: isOwner ? null : (db.resourceOpens.find((o) => o.resource_id === r.id && o.learner_id === viewer.id)?.first_opened_at ?? null),
+  };
+}
 
 /** RES-2 checks: the audience must be the instructor's own cohort, class or 1:1 learner on this training. */
 function audienceError(input: ResourceInput, ownerId: string): string | null {
@@ -182,6 +192,7 @@ export const resourceHandlers = [
     const before = db.resources.length;
     db.resources = db.resources.filter((x) => !(x.id === params.id && x.owner_id === user.id));
     if (db.resources.length === before) return apiError(404, "NOT_FOUND", "That resource doesn't exist.");
+    db.resourceOpens = db.resourceOpens.filter((o) => o.resource_id !== params.id);
     save();
     return new HttpResponse(null, { status: 204 });
   }),
@@ -202,6 +213,38 @@ export const resourceHandlers = [
     items.forEach((r, i) => (r!.position = slots[i]));
     save();
     return HttpResponse.json({ items: items.map((r) => toResource(r!, user)) });
+  }),
+
+  /** RES-5: a learner opened or downloaded it. Not recorded while an admin views as them. */
+  http.post(url("/resources/:id/opens"), async ({ params }) => {
+    await delay(80);
+    const user = requireUser("LEARNER");
+    if (user instanceof Response) return user;
+    const r = db.resources.find((x) => x.id === params.id);
+    if (!r || !learnersOf(r).includes(user.id) || (r.kind === "FILE" && r.file?.scan_status !== "CLEAN")) return apiError(404, "NOT_FOUND", "That resource doesn't exist.");
+    if (db.impersonation) return new HttpResponse(null, { status: 204 });
+    const now = new Date().toISOString();
+    const open = db.resourceOpens.find((o) => o.resource_id === r.id && o.learner_id === user.id);
+    if (open) Object.assign(open, { last_opened_at: now, count: open.count + 1 });
+    else db.resourceOpens.push({ resource_id: r.id, learner_id: user.id, first_opened_at: now, last_opened_at: now, count: 1 });
+    save();
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  /** RES-5: who in the current audience has opened it, opened ones first (most recent first), then by name. */
+  http.get(url("/resources/:id/opens"), async ({ params }) => {
+    await delay(200);
+    const user = requireUser("INSTRUCTOR");
+    if (user instanceof Response) return user;
+    const r = db.resources.find((x) => x.id === params.id && x.owner_id === user.id);
+    if (!r) return apiError(404, "NOT_FOUND", "That resource doesn't exist.");
+    const items = learnersOf(r)
+      .map((id) => {
+        const o = db.resourceOpens.find((x) => x.resource_id === r.id && x.learner_id === id);
+        return { learner_id: id, name: findUser(id)?.name ?? "Learner", first_opened_at: o?.first_opened_at ?? null, last_opened_at: o?.last_opened_at ?? null, count: o?.count ?? 0 };
+      })
+      .sort((a, b) => (b.last_opened_at ?? "").localeCompare(a.last_opened_at ?? "") || a.name.localeCompare(b.name));
+    return HttpResponse.json({ items });
   }),
 
   /** RES-2: what this learner can open: files only once they've passed the virus scan (RES-4). */

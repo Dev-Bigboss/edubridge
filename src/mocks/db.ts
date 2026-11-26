@@ -57,7 +57,9 @@ export type StoredRecording = {
   has_captions: boolean;
 };
 
-export type StoredResource = Omit<Resource, "audience_label"> & { owner_id: string };
+export type StoredResource = Omit<Resource, "audience_label" | "access" | "opened_at"> & { owner_id: string };
+/** RES-5: one learner's accesses to one resource. */
+export type StoredResourceOpen = { resource_id: string; learner_id: string; first_opened_at: string; last_opened_at: string; count: number };
 
 /** MSG-1/2: a DIRECT pair or a cohort's channel (members come from the cohort's seats). */
 export type StoredConversation = {
@@ -204,6 +206,7 @@ type State = {
   recordingProgress: Record<string, Record<string, number>>;
   /** RES-1..3: training materials. */
   resources: StoredResource[];
+  resourceOpens: StoredResourceOpen[];
   /** ONB-5: enrolment id → steps done, plus whether the learner dismissed it. */
   checklists: Record<string, { join_tested: boolean; resources_opened: boolean; met_instructor: boolean; dismissed: boolean }>;
   /** MSG-1..4 */
@@ -368,6 +371,16 @@ function seedResources(): StoredResource[] {
     { ...base, id: "res_seed_2", kind: "LINK", title: "ICAN study text (official site)", folder: "Week 1", position: 1, scope: "TRAINING", file: null, link_url: "https://icanig.org/" },
     { ...base, id: "res_seed_3", kind: "FILE", title: "Practice questions", folder: "Past papers", position: 2, scope: "COHORT", cohort_id: cohort.id, file: pdf("file_seed_3", "past-paper-practice.pdf", 839), link_url: null },
     { ...base, id: "res_seed_4", kind: "LINK", title: "Whiteboard from the first class", folder: null, position: 3, scope: "SESSION", cohort_id: cohort.id, session_id: firstClass.id, file: null, link_url: "https://example.com/whiteboard/autumn-1" },
+  ];
+}
+
+/** RES-5: two of the Autumn cohort have opened the week 1 notes, so the instructor sees real counts. */
+function seedResourceOpens(): StoredResourceOpen[] {
+  const at = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+  return [
+    { resource_id: "res_seed_1", learner_id: "usr_roster_1", first_opened_at: at(20), last_opened_at: at(3), count: 4 },
+    { resource_id: "res_seed_1", learner_id: "usr_roster_2", first_opened_at: at(18), last_opened_at: at(18), count: 1 },
+    { resource_id: "res_seed_2", learner_id: "usr_roster_1", first_opened_at: at(19), last_opened_at: at(19), count: 1 },
   ];
 }
 
@@ -610,6 +623,7 @@ function seed(): State {
     recordings: seedRecordings(),
     recordingProgress: {},
     resources: seedResources(),
+    resourceOpens: seedResourceOpens(),
     checklists: {},
     ...seedMessages(),
     ...seedFeedback(),
@@ -777,7 +791,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v21";
+const STORE_KEY = "edubridge.mock.db.v22";
 
 function load(): State {
   try {

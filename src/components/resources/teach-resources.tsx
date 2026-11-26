@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ExternalLink, FileText, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, ExternalLink, FileText, FolderOpen, Pencil, Plus, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -12,12 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input } from "@/components/ui/field";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, TableCard, td, th } from "@/components/ui/page-header";
 import { Select, Textarea } from "@/components/ui/select";
 import { LoadingState } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/status-badge";
 import { ApiError } from "@/lib/api/client";
-import { useAudienceOptions, useDeleteResource, useReorderResources, useSaveResource, useTeachResources, useTeachingTrainings } from "@/lib/api/hooks/resources";
+import { useAudienceOptions, useDeleteResource, useReorderResources, useResourceAccess, useSaveResource, useTeachResources, useTeachingTrainings } from "@/lib/api/hooks/resources";
 import type { AudienceOptions, Resource, ResourceScope } from "@/lib/api/schemas/resources";
 import type { StoredFile } from "@/lib/api/schemas/uploads";
 import { useSession } from "@/lib/auth/session";
@@ -38,6 +38,7 @@ export function TeachResources() {
   const reorder = useReorderResources();
   const [editing, setEditing] = useState<Resource | "new" | null>(null);
   const [deleting, setDeleting] = useState<Resource | null>(null);
+  const [viewingAccess, setViewingAccess] = useState<Resource | null>(null);
 
   const move = (r: Resource, dir: -1 | 1) => {
     const ids = moveInFolder(resources.data ?? [], r.id, dir);
@@ -106,6 +107,11 @@ export function TeachResources() {
                           {r.audience_label}
                           {r.file && ` · ${formatBytes(r.file.size_bytes)}`}
                         </p>
+                        {r.access && (
+                          <p className="text-sm text-heading">
+                            {r.access.audience === 0 ? t("openedNone") : t("openedCount", { opened: r.access.opened, audience: r.access.audience })}
+                          </p>
+                        )}
                       </div>
                       {r.file && r.file.scan_status !== "CLEAN" && <Badge tone={r.file.scan_status === "INFECTED" ? "danger" : "warning"}>{t(`scan.${r.file.scan_status}`)}</Badge>}
                       <span className="flex gap-1">
@@ -114,6 +120,9 @@ export function TeachResources() {
                         </Button>
                         <Button variant="ghost" size="icon" disabled={i === g.items.length - 1 || reorder.isPending} onClick={() => move(r, 1)} aria-label={t("moveDown", { title: r.title })}>
                           <ArrowDown aria-hidden="true" className="size-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setViewingAccess(r)} aria-label={t("accessLabel", { title: r.title })}>
+                          <Eye aria-hidden="true" className="size-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => setEditing(r)} aria-label={t("edit", { title: r.title })}>
                           <Pencil aria-hidden="true" className="size-4" />
@@ -132,6 +141,7 @@ export function TeachResources() {
       )}
       {editing && trainingId && <ResourceDialog trainingId={trainingId} resource={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}
       {deleting && <DeleteDialog resource={deleting} onClose={() => setDeleting(null)} />}
+      {viewingAccess && <AccessDialog resource={viewingAccess} onClose={() => setViewingAccess(null)} />}
     </div>
   );
 }
@@ -345,6 +355,51 @@ function DeleteDialog({ resource, onClose }: { resource: Resource; onClose: () =
         >
           {t("deleteCta")}
         </Button>
+      </div>
+    </Dialog>
+  );
+}
+
+/** RES-5: each learner in the resource's current audience and whether, when and how often they opened it. */
+function AccessDialog({ resource, onClose }: { resource: Resource; onClose: () => void }) {
+  const t = useTranslations("resources.teach");
+  const query = useResourceAccess(resource.id);
+  const zone = useSession().data?.timezone ?? "UTC";
+  const when = (iso: string | null) => (iso ? formatInZone(iso, zone, "d MMM yyyy, HH:mm") : t("notOpened"));
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={t("accessTitle")} description={t("accessIntro", { title: resource.title, who: resource.audience_label })} wide>
+      {query.isPending ? (
+        <LoadingState />
+      ) : query.isError ? (
+        <LoadError onRetry={query.refetch} />
+      ) : query.data.length === 0 ? (
+        <EmptyState icon={Eye} title={t("accessEmpty")} description={t("accessEmptyBody")} />
+      ) : (
+        <TableCard label={t("accessTitle")}>
+          <table className="w-full text-[15px]">
+            <thead className="border-b border-border-subtle">
+              <tr>
+                <th scope="col" className={th}>{t("learnerCol")}</th>
+                <th scope="col" className={th}>{t("firstCol")}</th>
+                <th scope="col" className={th}>{t("lastCol")}</th>
+                <th scope="col" className={cn(th, "text-right")}>{t("timesCol")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle">
+              {query.data.map((a) => (
+                <tr key={a.learner_id}>
+                  <th scope="row" className={cn(td, "text-left font-medium text-heading")}>{a.name}</th>
+                  <td className={cn(td, "whitespace-nowrap", !a.first_opened_at && "text-warning")}>{when(a.first_opened_at)}</td>
+                  <td className={cn(td, "whitespace-nowrap")}>{a.last_opened_at ? when(a.last_opened_at) : "–"}</td>
+                  <td className={cn(td, "text-right tabular-nums")}>{a.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableCard>
+      )}
+      <div className="mt-6 flex justify-end">
+        <Button variant="outline" onClick={onClose}>{t("close")}</Button>
       </div>
     </Dialog>
   );

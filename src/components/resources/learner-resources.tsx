@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, ExternalLink, FileText, FolderOpen } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink, FileText, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { LoadingState } from "@/components/ui/spinner";
-import { useMyResources } from "@/lib/api/hooks/resources";
+import { useMyResources, useRecordOpen } from "@/lib/api/hooks/resources";
+import { useSession } from "@/lib/auth/session";
+import { formatInZone } from "@/lib/domain/time";
 import { groupByFolder } from "@/lib/domain/resources";
 import { formatBytes } from "@/lib/domain/uploads";
 
@@ -18,6 +20,8 @@ export function LearnerResources() {
   const t = useTranslations("resources");
   const params = useSearchParams();
   const query = useMyResources(params.get("training"));
+  const recordOpen = useRecordOpen();
+  const zone = useSession().data?.timezone ?? "UTC";
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -55,10 +59,16 @@ export function LearnerResources() {
                       {r.audience_label}
                       {r.file && ` · ${formatBytes(r.file.size_bytes)}`}
                     </p>
+                    {r.opened_at && (
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-success">
+                        <CheckCircle2 aria-hidden="true" className="size-4" />
+                        {t("openedOn", { date: formatInZone(r.opened_at, zone, "d MMM yyyy") })}
+                      </p>
+                    )}
                   </div>
                   {r.kind === "FILE" && r.file?.url ? (
                     <Button asChild variant="outline">
-                      <a href={r.file.url} download={r.file.name} aria-label={t("downloadLabel", { title: r.title })}>
+                      <a href={r.file.url} download={r.file.name} onClick={() => recordOpen.mutate(r.id)} aria-label={t("downloadLabel", { title: r.title })}>
                         <Download aria-hidden="true" className="size-4" />
                         {t("download")}
                       </a>
@@ -66,7 +76,7 @@ export function LearnerResources() {
                   ) : (
                     r.link_url && (
                       <Button asChild variant="outline">
-                        <a href={r.link_url} target="_blank" rel="noopener noreferrer" aria-label={t("openLabel", { title: r.title })}>
+                        <a href={r.link_url} target="_blank" rel="noopener noreferrer" onClick={() => recordOpen.mutate(r.id)} aria-label={t("openLabel", { title: r.title })}>
                           <ExternalLink aria-hidden="true" className="size-4" />
                           {t("open")}
                         </a>

@@ -18,6 +18,9 @@ info:
       no dragging is needed: WCAG 2.2 2.5.7).
     - RES-4: files up to 100 MB (pdf, docx, pptx, xlsx, jpeg, png, webp), virus-scanned; learners only get files whose scan
       is CLEAN, via a signed URL. Unlike recordings, downloads are allowed.
+    - RES-5: opening a file or link records an access for the learner (first and last time, how often). Instructors see,
+      per resource, how many of its current audience have opened it and who; learners see when they first opened it.
+      Accesses made while an admin views as a learner are not recorded. Deleting a resource deletes its accesses.
     - Writes are refused while an admin views as the instructor.
 servers:
   - url: /api/v1
@@ -95,6 +98,26 @@ paths:
       responses:
         "204": { description: Deleted }
         "404": { $ref: "#/components/responses/Error" }
+  /resources/{id}/opens:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    post:
+      summary: "RES-5: record that I (LEARNER) opened or downloaded it; call before following the link"
+      responses:
+        "204": { description: Recorded (or ignored while an admin views as this learner) }
+        "404": { $ref: "#/components/responses/Error" }
+    get:
+      summary: "RES-5: every learner in its current audience (owning INSTRUCTOR), opened ones first"
+      responses:
+        "200":
+          description: Accesses
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/ResourceAccess" } }
+        "404": { $ref: "#/components/responses/Error" }
   /me/resources:
     get:
       summary: Resources shared with me (LEARNER), by position; files only once scanned clean
@@ -138,7 +161,7 @@ components:
       allOf:
         - { $ref: "#/components/schemas/Audience" }
         - type: object
-          required: [id, training_id, kind, title, description, folder, position, file, link_url, audience_label, created_at]
+          required: [id, training_id, kind, title, description, folder, position, file, link_url, audience_label, created_at, access, opened_at]
           properties:
             id: { type: string }
             training_id: { type: string }
@@ -151,3 +174,20 @@ components:
             link_url: { type: [string, "null"] }
             audience_label: { type: string, description: "Plain words, e.g. 'Autumn cohort' or 'Ada Demo (one-on-one)'" }
             created_at: { type: string, format: date-time }
+            access:
+              description: "RES-5, instructor views only (null for learners)"
+              oneOf:
+                - type: object
+                  required: [opened, audience]
+                  properties: { opened: { type: integer }, audience: { type: integer } }
+                - type: "null"
+            opened_at: { type: [string, "null"], format: date-time, description: "RES-5, learner views only: when I first opened it" }
+    ResourceAccess:
+      type: object
+      required: [learner_id, name, first_opened_at, last_opened_at, count]
+      properties:
+        learner_id: { type: string }
+        name: { type: string }
+        first_opened_at: { type: [string, "null"], format: date-time }
+        last_opened_at: { type: [string, "null"], format: date-time }
+        count: { type: integer, minimum: 0 }

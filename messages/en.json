@@ -2215,8 +2215,22 @@
       "deleteTitle": "Delete this material?",
       "deleteBody": "“{title}” is removed for: {who}.",
       "deleteCta": "Delete",
-      "deleted": "Deleted"
-    }
+      "deleted": "Deleted",
+      "openedCount": "Opened by {opened} of {audience}",
+      "openedNone": "No one to show it to yet",
+      "accessLabel": "See who opened {title}",
+      "accessTitle": "Who opened it",
+      "accessIntro": "“{title}”, for {who}. Counts include downloads and link clicks.",
+      "accessEmpty": "No learners can see this yet",
+      "accessEmptyBody": "When learners join its audience, you'll see here whether they've opened it.",
+      "learnerCol": "Learner",
+      "firstCol": "First opened",
+      "lastCol": "Last opened",
+      "timesCol": "Times",
+      "notOpened": "Not yet",
+      "close": "Close"
+    },
+    "openedOn": "You opened this on {date}"
   },
   "inbox": {
     "title": "Messages",

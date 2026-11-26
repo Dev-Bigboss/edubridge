@@ -31,6 +31,10 @@ export const Resource = Audience.extend({
   /** Plain words for the audience, e.g. "Evening cohort" or "Ada Demo (1:1)". */
   audience_label: z.string(),
   created_at: z.string(),
+  /** RES-5, instructor views only: how many of the current audience have opened it. */
+  access: z.object({ opened: z.number().int(), audience: z.number().int() }).nullable(),
+  /** RES-5, learner views only: when I first opened it. */
+  opened_at: z.string().nullable(),
 });
 export type Resource = z.infer<typeof Resource>;
 export const ResourceList = z.object({ items: z.array(Resource) });
@@ -56,3 +60,14 @@ export const AudienceOptions = z.object({
 export type AudienceOptions = z.infer<typeof AudienceOptions>;
 
 export const TeachingTrainings = z.object({ items: z.array(z.object({ id: z.string(), title: z.string(), modality_code: z.string() })) });
+
+/** RES-5: one learner of a resource's audience and whether they've opened it. */
+export const ResourceAccess = z.object({
+  learner_id: z.string(),
+  name: z.string(),
+  first_opened_at: z.string().nullable(),
+  last_opened_at: z.string().nullable(),
+  count: z.number().int().min(0),
+});
+export type ResourceAccess = z.infer<typeof ResourceAccess>;
+export const ResourceAccessList = z.object({ items: z.array(ResourceAccess) });
