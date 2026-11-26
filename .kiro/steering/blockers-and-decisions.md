@@ -9,6 +9,8 @@ When a decision is made, move it to the **Resolved** section and update the rele
 Kiro reads this every session so it never re-asks about resolved items and never builds against an unresolved
 one without noting the assumption clearly.
 
+**When backend work starts:** read `docs/backend-start-reminders.md` first and remind the user of every open item in it.
+
 ---
 
 ## Unresolved (do not build these without a decision)
