@@ -257,6 +257,24 @@
       "pendingBody": "We check every instructor's ID and qualifications, usually within two working days. We'll email you when you're approved and your profile goes live.",
       "rejectedTitle": "We couldn't approve your profile yet",
       "rejectedBody": "Check your email for what's missing. Reply to that email and we'll take another look."
+    },
+    "recommendations": {
+      "title": "Suggested for you",
+      "intro": "Based on the goals and background in your profile.",
+      "update": "Update your interests",
+      "browse": "Browse all trainings",
+      "noProfileTitle": "Tell us what you want to learn",
+      "noProfileBody": "Add your goals and interests to your profile and we'll suggest trainings that fit them.",
+      "noProfileCta": "Add your goals",
+      "emptyTitle": "No matches right now",
+      "emptyBody": "Nothing open matches your interests yet. New trainings are added regularly, or you can broaden your interests.",
+      "why": "Why it's suggested",
+      "reasons": {
+        "CATEGORY": "You're interested in {value}",
+        "TOPIC": "Covers {value}",
+        "LEVEL": "Suits your level",
+        "BEFORE_EXAM": "Starts before your exam on {value}"
+      }
     }
   },
   "onboarding": {

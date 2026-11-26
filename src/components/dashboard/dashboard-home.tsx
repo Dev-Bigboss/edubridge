@@ -4,6 +4,7 @@ import { BookOpen, CalendarClock, CircleAlert, Hourglass, LayoutDashboard, UserR
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AdminDashboard } from "@/components/admin/admin-dashboard";
+import { Recommendations } from "@/components/dashboard/recommendations";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingState } from "@/components/ui/spinner";
@@ -35,7 +36,12 @@ export function DashboardHome({ area }: { area: Area }) {
       <h1 className="mb-1 text-[28px]">{t("greeting", { name: user?.name.split(" ")[0] ?? "" })}</h1>
       <p className="mb-8 leading-relaxed">{t(`${area}.intro`)}</p>
       {user && <AccountNotice user={user} />}
-      {area === "learner" ? <LearnerHome fallback={<Empty area={area} />} /> : area === "admin" ? <AdminDashboard /> : <Empty area={area} />}
+      {area === "learner" ? (
+        <>
+          <LearnerHome fallback={<Empty area={area} />} />
+          <Recommendations />
+        </>
+      ) : area === "admin" ? <AdminDashboard /> : <Empty area={area} />}
     </div>
   );
 }

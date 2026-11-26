@@ -250,6 +250,7 @@ Messaging (WebSocket, unread, receipts, attachments, report/block, cohort channe
 ### Phase 4: Could-haves (M) — SRS phase 4
 Instalments (PAY-3), calendar sync (OTO-11), waitlists (COH-2 optional), transcripts (REC-4), recommendations from onboarding data, download tracking (RES-5).
 **Built so far:** download tracking (RES-5): opening a file or link records an access for the learner, who sees when they first opened it; instructors see "opened by X of Y" per material and who opened it, when and how often. Not recorded while an admin views as the learner. Contract: `resources.yaml` (`/resources/{id}/opens`).
+Then: recommendations from onboarding data: up to six published trainings on the learner dashboard, chosen by interest category and topics and boosted by level fit and a start before the exam date, each with its reasons; trainings already enrolled or booked are left out. Contract: `recommendations.yaml`.
 
 ### Cutover
 Pre-launch product, so no data migration: run the new app on staging, get PO sign-off, then merge `redesign/lmp` into `main`.

@@ -290,6 +290,19 @@ function seedOnboarding(): State["onboarding"] {
         },
       },
     },
+    // Goals and background for the demo learner, so the dashboard has recommendations (Phase 4).
+    usr_learner_1: {
+      completed_steps: ["profile", "goals", "background"],
+      sections: {
+        profile: { name: "Test Learner", avatar: null, timezone: "Africa/Lagos", country: "NG" },
+        goals: {
+          learning_goals: "Pass my ICAN professional exams next year and get better at working with data.",
+          interest_category_ids: ["cat_prof_exam", "cat_topic"],
+          topics: ["Financial reporting", "SQL"],
+        },
+        background: { education_level: "PROFESSIONAL", exam_target_date: "2027-05-15" },
+      },
+    },
   };
 }
 
@@ -791,7 +804,7 @@ function seedTrainings(): Training[] {
   ];
 }
 
-const STORE_KEY = "edubridge.mock.db.v22";
+const STORE_KEY = "edubridge.mock.db.v23";
 
 function load(): State {
   try {

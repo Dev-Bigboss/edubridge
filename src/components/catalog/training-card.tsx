@@ -14,7 +14,8 @@ import { PersonAvatar, TrainingImage } from "./bits";
  * Catalogue card in the original course-card style: image, category tag, title, a short line
  * of facts, instructor and the "from" price (PRC-7). The whole card is one link.
  */
-export function TrainingCard({ training }: { training: PublicTrainingCard }) {
+/** `note` adds a line above the footer, e.g. why it was recommended. */
+export function TrainingCard({ training, note }: { training: PublicTrainingCard; note?: React.ReactNode }) {
   const t = useTranslations("catalog");
   const isCohort = training.modality.code === MODALITY.COHORT;
   const lead = training.instructors[0];
@@ -61,6 +62,8 @@ export function TrainingCard({ training }: { training: PublicTrainingCard }) {
           {languageName(training.language)}
         </li>
       </ul>
+
+      {note}
 
       <div className="mt-auto flex items-center justify-between gap-3 border-t border-border-subtle pt-4">
         {lead ? (

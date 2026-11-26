@@ -16,6 +16,7 @@ import { onboardingHandlers } from "./onboarding";
 import { pricingHandlers } from "./pricing";
 import { recordingHandlers } from "./recordings";
 import { reportHandlers } from "./reports";
+import { recommendationHandlers } from "./recommendations";
 import { resourceHandlers } from "./resources";
 import { reviewHandlers } from "./reviews";
 import { sessionHandlers } from "./sessions";
@@ -38,6 +39,7 @@ export const handlers = [
   ...recordingHandlers,
   ...reportHandlers,
   ...resourceHandlers,
+  ...recommendationHandlers,
   ...reviewHandlers,
   ...earningsHandlers,
   ...feedbackHandlers,
